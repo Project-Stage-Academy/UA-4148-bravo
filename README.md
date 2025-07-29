@@ -83,5 +83,46 @@ We are committed to delivering a platform that is not just a marketplace for ide
 - Each user story can be broken down into smaller tasks and developed in sprints.
 - Regular feedback from both user groups (startups and investors) should be incorporated.
 
+---
+
+### General Git Flow
+
+1. Clone the repo and create your own feature branch from `main`.
+2. Make sure to follow naming conventions below.
+3. Commit frequently with clear, concise messages.
+4. Push to remote and open a Pull Request (PR).
+5. Wait for at least **3 code review approvals** before merging to `main`.
+
+### Branch Naming Convention
+
+Branch names should follow this format:
+
+```
+
+issue-\<ISSUE\_NUMBER>-<short-task-summary>
+
+```
+
+Examples:
+```
+- `issue-23-add-multimodal-upload`
+- `issue-17-fix-langchain-vectorbug`
+- `issue-12-improve-prompt-formatting`
+```
+
+> _Tip: Reference the GitHub Issue in your PR for context._
+
+---
+
+## Pull Request Guidelines
+
+- Always link the related issue (e.g., "Closes #17").
+- Add a clear title and description of your changes.
+- Include screenshots or examples if UI-related.
+- Run all tests before submitting a PR.
+- Mark as **"Ready for Review"** only when complete.
+
+---
+
 
 
