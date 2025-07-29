@@ -1,7 +1,5 @@
 function ProfileEditing() {
-    return (
-        <></>
-    );
+    return <></>;
 }
 
 export default ProfileEditing;
