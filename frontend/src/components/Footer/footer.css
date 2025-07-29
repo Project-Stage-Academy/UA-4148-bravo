@@ -1,0 +1,88 @@
+.footer {
+    display: flex;
+    background-color: var(--footer-bcg-color);
+    padding: 32px 104px 48px;
+    color: #fff;
+}
+
+.contacts {
+    font-weight: 400;
+}
+
+.contacts--logo {
+    margin-bottom: 35px;
+}
+
+.contacts--link {
+    display: flex;
+    gap: 10px;
+}
+
+.contacts--info > :not(:last-child) {
+    margin-bottom: 10px;
+}
+
+.contacts--info {
+    margin-bottom: 32px;
+}
+
+.contacts--links > :not(:last-child) {
+    margin-bottom: 14px;
+}
+
+.link-tree {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.branch-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    gap: 35px;
+}
+
+.branch-list--branch {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.branch-list--title {
+    font-weight: 700;
+    margin-bottom: 14px;
+}
+
+.branch-list--link-list {
+    display: flex;
+    gap: 24px;
+}
+
+.branch-list--item {
+    font-weight: 400;
+}
+
+.dev-contact {
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+}
+
+.dev-contact--list {
+    display: flex;
+    flex-direction: column;
+    margin: 31px 0;
+    color: #959595;
+    gap: 14px;
+}
+
+.dev-contact--copyright {
+    font-weight: 300;
+    line-height: 150%;
+    height: 21px;
+    font-size: 14px;
+}
+
