@@ -1,3 +1,16 @@
 :root {
+    /* text font */
+    --text-font: 'Geologica';
+
+    /* text colors  */
+    --primary-text-color: #000;
+    --secondary-text-color: #959595;
+    --alternative-text-color: #fff;
+    --error-text-color: #F15831;
+
+    /* header */
+    --header-bcg-color: #fff;
+
+    /* footer */
     --footer-bcg-color: #232424;
 }

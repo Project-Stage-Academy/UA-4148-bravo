@@ -1,5 +1,11 @@
+import Header from "../../components/Header/header";
+
 function ProfileEditing() {
-    return <></>;
+    return (
+        <>
+            <Header />
+        </>
+    );
 }
 
 export default ProfileEditing;
