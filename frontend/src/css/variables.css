@@ -7,6 +7,10 @@
     --secondary-text-color: #959595;
     --alternative-text-color: #fff;
     --error-text-color: #F15831;
+    --gray-text-color: #25292C;
+
+    /* background colors */
+    --green-bcg-color: #B4D27A;
 
     /* header */
     --header-bcg-color: #fff;

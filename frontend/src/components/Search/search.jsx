@@ -8,7 +8,7 @@ function Search(props) {
                    className={"search--input"}
             />
             <button className={"search--button"}>
-                <img src={"./pictures/svg/loupe.svg"} alt={"Search"}/>
+                <img src={"/pictures/svg/loupe.svg"} alt={"Search"}/>
             </button>
         </div>
 );

@@ -2,14 +2,18 @@ import "./header.css";
 import {Link} from "react-router-dom";
 import Search from "../Search/search";
 import {useAuth} from "../../context/AuthContext/authContext";
+import { useEffect } from 'react';
 
 function Header() {
     const { auth, setAuth } = useAuth();
-    setAuth(false);
+
+    useEffect(() => {
+        setAuth(false);
+    }, [auth, setAuth]);
 
     return (
         <header className={"header"}>
-            <img src="./pictures/svg/header-logo.svg" alt={"Logo"}/>
+            <img src="/pictures/svg/header-logo.svg" alt={"Logo"}/>
             <nav className={"nav-panel"}>
                 <Link to={"#TODO"} className={"nav-panel--link"}>
                     <p>Про нас</p>
@@ -21,7 +25,7 @@ function Header() {
                 {auth ? (
                     <>
                         <Link to={"#TODO"} className={"nav-panel--link"}>
-                            <img src="./pictures/svg/avatar.svg" alt={"User avatar"}/>
+                            <img src="/pictures/svg/avatar.svg" alt={"User avatar"}/>
                             <p>Мій профіль</p>
                         </Link>
                     </>

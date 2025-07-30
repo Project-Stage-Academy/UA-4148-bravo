@@ -2,7 +2,9 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import React from 'react';
 import Layout from '../Layout/layout';
 import ProfileEditing from '../../pages/ProfileEditing/profileEditing';
-import {AuthProvider} from "../../context/AuthContext/authContext";
+import { AuthProvider } from '../../context/AuthContext/authContext';
+import NotFound from '../../pages/NotFound/notFound';
+import HomePage from '../../pages/Home/home';
 
 function App() {
     return (
@@ -10,8 +12,21 @@ function App() {
             <React.StrictMode>
                 <BrowserRouter>
                     <Routes>
+
+                        {/* Main layout */}
                         <Route path="/" element={<Layout />}>
-                            <Route path="/" element={<ProfileEditing />} />
+
+                            {/* Home page */}
+                            <Route index element={<HomePage />} />
+
+                            {/* Profile */}
+                            <Route path="profile">
+                                {/* Profile editing */}
+                                <Route path="edit" element={<ProfileEditing />} />
+                            </Route>
+
+                            {/* Page not found */}
+                            <Route path="*" element={<NotFound />} />
                         </Route>
                     </Routes>
                 </BrowserRouter>

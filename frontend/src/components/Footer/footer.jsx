@@ -7,7 +7,7 @@ function Footer() {
             <section className={'contacts'}>
                 <div className={'contacts--logo'}>
                     <img
-                        src="./pictures/svg/footer-logo.svg"
+                        src="/pictures/svg/footer-logo.svg"
                         alt="Footer Logo"
                     />
                 </div>
@@ -21,14 +21,14 @@ function Footer() {
                             to={'mailto:qwerty@gmail.com'}
                             className={'contacts--link'}
                         >
-                            <img src="./pictures/svg/mail.svg" alt="Mail" />
+                            <img src="/pictures/svg/mail.svg" alt="Mail" />
                             <p>qwerty@gmail.com</p>
                         </Link>
                         <Link
                             to={'tel:+380502342323'}
                             className={'contacts--link'}
                         >
-                            <img src="./pictures/svg/phone.svg" alt="Phone" />
+                            <img src="/pictures/svg/phone.svg" alt="Phone" />
                             <p>+38 050 234 23 23</p>
                         </Link>
                     </div>
@@ -73,7 +73,7 @@ function Footer() {
             <section className={'dev-contact'}>
                 <div>
                     <img
-                        src="./pictures/svg/opentech-logo.svg"
+                        src="/pictures/svg/opentech-logo.svg"
                         alt="Dev-Company Logo"
                     />
                 </div>
