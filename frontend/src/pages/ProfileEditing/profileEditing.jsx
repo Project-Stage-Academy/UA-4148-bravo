@@ -1,9 +1,9 @@
-import Header from "../../components/Header/header";
+import './profileEditing.css';
 
 function ProfileEditing() {
     return (
         <>
-            <Header />
+
         </>
     );
 }

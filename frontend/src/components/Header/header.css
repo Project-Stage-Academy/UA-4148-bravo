@@ -7,11 +7,26 @@
     color: var(--primary-text-color);
 }
 
+/* logo */
+.header--logo {
+    display: flex;
+    gap: 10px;
+}
+
+.header--logo__disposal {
+    display: block;
+}
+
 /* navigation */
 .nav-panel {
     flex: 1;
     display: flex;
     justify-content: right;
+    gap: 24px;
+}
+
+.nav-panel--set {
+    display: flex;
     gap: 24px;
 }
 
@@ -23,4 +38,32 @@
 
 .nav-panel--link > :not(:last-child) {
     margin-right: 6px;
+}
+
+.nav-panel--menu-btn {
+    display: none;
+    height: 40px;
+    width: 40px;
+    line-height: 0;
+    user-select: none;
+}
+
+@media screen and (max-width: 1481px) {
+    .header {
+        padding: 16px;
+    }
+
+    .nav-panel--set__disposal {
+        display: none;
+    }
+
+    .nav-panel--menu-btn {
+        display: block;
+    }
+}
+
+@media screen and (max-width: 646px) {
+    .header--logo__disposal {
+        display: none;
+    }
 }
