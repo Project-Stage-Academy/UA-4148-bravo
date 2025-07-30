@@ -10,7 +10,7 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    libpq-dev gcc curl netcat \
+    libpq-dev gcc curl netcat-openbsd postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pip requirements
@@ -25,6 +25,3 @@ EXPOSE 8000
 
 # Run server for production
 CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
-
-# Run server for development
-# CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

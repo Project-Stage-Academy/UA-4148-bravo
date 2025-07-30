@@ -4,10 +4,10 @@ services:
   web:
     build: .
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             gunicorn core.wsgi:application --bind 0.0.0.0:8000"
-    # command: python manage.py runserver 0.0.0.0:8000
+      sh -c "./wait-for-postgres.sh $DB_HOST
+      && python manage.py migrate
+      && python manage.py collectstatic --noinput
+      && gunicorn core.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
@@ -17,13 +17,11 @@ services:
     depends_on:
       - db
     environment:
-      - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=${DEBUG}
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=${POSTGRES_HOST}
-      - DB_PORT=${POSTGRES_PORT}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
 
   db:
     image: postgres:14
