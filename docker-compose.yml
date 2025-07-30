@@ -3,11 +3,6 @@ version: '3.9'
 services:
   web:
     build: .
-    command: >
-      sh -c "./wait-for-postgres.sh $DB_HOST
-      && python manage.py migrate
-      && python manage.py collectstatic --noinput
-      && gunicorn core.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
@@ -33,6 +28,11 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $DB_USER" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
