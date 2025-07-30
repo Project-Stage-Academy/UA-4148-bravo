@@ -4,12 +4,20 @@ import Search from "../Search/search";
 import {useAuth} from "../../context/AuthContext/authContext";
 import { useEffect } from 'react';
 
+/**
+ * Header component
+ * @param show - function to show the header
+ * @param hide - function to hide the header
+ * @param toggle - function to toggle the header visibility
+ * @param visible - boolean indicating if the header is visible
+ * @returns {JSX.Element}
+ */
 function Header({ show, hide, toggle, visible }) {
     const navigate = useNavigate();
     const { auth, setAuth } = useAuth();
 
     useEffect(() => {
-        setAuth(true);
+        setAuth(false);
     }, [auth, setAuth]);
 
     return (

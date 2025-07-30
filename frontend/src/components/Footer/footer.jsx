@@ -1,6 +1,12 @@
 import './footer.css';
 import { Link } from 'react-router-dom';
 
+/**
+ * Footer component that renders the footer section of the application.
+ * It includes contact information, a link tree for navigation,
+ * and developer contact information.
+ * @returns {JSX.Element}
+ */
 function Footer() {
     return (
         <footer className={'footer'}>

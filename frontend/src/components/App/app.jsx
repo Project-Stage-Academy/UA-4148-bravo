@@ -15,6 +15,25 @@ import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
 import RegistrationPage from '../../pages/Registration/registration';
 
+/**
+ * Main application component that sets up routing and context providers.
+ * It wraps the application in an AuthProvider for authentication context
+ * and uses React Router for navigation.
+ * The main layout is defined in the Layout component, which includes
+ * the header, sidebar, and footer.
+ * The Routes define the various pages of the application, including:
+ * - Home page
+ * - Company list
+ * - Feedback form
+ * - Policy page
+ * - Who we are page
+ * - Log in page
+ * - Registration page
+ * - Password management (forgot and restore)
+ * - User and company profile pages with editing capabilities
+ * - A catch-all route for 404 Not Found
+ * @returns {JSX.Element} The main application component.
+ */
 function App() {
     return (
         <AuthProvider>

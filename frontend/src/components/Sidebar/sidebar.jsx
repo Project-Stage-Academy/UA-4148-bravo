@@ -3,6 +3,15 @@ import Dimmer from '../Dimmer/dimmer';
 import Search from '../Search/search';
 import { Link } from 'react-router-dom';
 
+/**
+ * Sidebar component
+ * @param show - function to show the sidebar
+ * @param hide - function to hide the sidebar
+ * @param toggle - function to toggle the sidebar visibility
+ * @param visible - boolean indicating if the sidebar is visible
+ * @param children - children elements to be rendered inside the sidebar
+ * @returns {JSX.Element}
+ */
 function Sidebar({ show, hide, toggle, visible, children }) {
     return (
         <div className={"sidebar-wrapper"}>
