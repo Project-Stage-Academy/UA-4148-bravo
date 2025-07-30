@@ -1,8 +1,8 @@
 import './dimmer.css';
 
-function Dimmer({ isActive ,children }) {
+function Dimmer({ isActive, hideDimmer, children }) {
     return <>
-        {isActive && <div className="dimmer-overlay">
+        {isActive && <div className="dimmer-overlay" onClick={hideDimmer}>
             { children }
         </div>}
     </>;

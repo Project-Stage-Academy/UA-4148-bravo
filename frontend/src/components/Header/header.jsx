@@ -4,7 +4,7 @@ import Search from "../Search/search";
 import {useAuth} from "../../context/AuthContext/authContext";
 import { useEffect } from 'react';
 
-function Header({ visible ,onMenuClick }) {
+function Header({ show, hide, toggle, visible }) {
     const navigate = useNavigate();
     const { auth, setAuth } = useAuth();
 
@@ -64,16 +64,21 @@ function Header({ visible ,onMenuClick }) {
                     className={
                         'button button__transparent-color nav-panel--menu-btn'
                     }
-                    onClick={onMenuClick}
+                    onClick={toggle}
                 >
-                    <img
-                        src={
-                            !visible
-                                ? '/pictures/svg/menu-open-btn.svg'
-                                : '/pictures/svg/menu-close-btn.svg'
-                        }
-                        alt={'Menu open'}
-                    />
+                    {
+                        !visible
+                            ? (
+                                <svg width="30" height="28" viewBox="0 0 30 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M0 0.666626H30V3.99996H0V0.666626ZM0 12.3333H30V15.6666H0V12.3333ZM0 24H30V27.3333H0V24Z" fill="black"/>
+                                </svg>
+                            )
+                            : (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M23.6673 2.68337L21.3173 0.333374L12.0007 9.65004L2.68398 0.333374L0.333984 2.68337L9.65065 12L0.333984 21.3167L2.68398 23.6667L12.0007 14.35L21.3173 23.6667L23.6673 21.3167L14.3507 12L23.6673 2.68337Z" fill="#767676"/>
+                                </svg>
+                            )
+                    }
                 </button>
             </nav>
         </header>

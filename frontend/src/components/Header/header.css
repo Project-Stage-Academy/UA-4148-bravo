@@ -50,7 +50,7 @@
 
 @media screen and (max-width: 1481px) {
     .header {
-        padding: 16px;
+        padding: 16px 24px;
     }
 
     .nav-panel--set__disposal {
