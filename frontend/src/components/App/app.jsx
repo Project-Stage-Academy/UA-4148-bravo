@@ -12,6 +12,8 @@ import RestorePassword from '../../pages/RestorePassword/restorePassword';
 import ProfilePage from '../../pages/ProfilePage/profilePage';
 import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
+import LogInPage from '../../pages/LogIn/logIn';
+import RegistrationPage from '../../pages/Registration/registration';
 
 function App() {
     return (
@@ -37,6 +39,12 @@ function App() {
 
                             {/* Who we are */}
                             <Route path="who-we-are" element={<WhoWeAre />} />
+
+                            {/* Log in */}
+                            <Route path="login" element={<LogInPage />} />
+
+                            {/* Registration */}
+                            <Route path="register" element={<RegistrationPage />} />
 
                             {/* Password */}
                             <Route path="password">

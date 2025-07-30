@@ -1,10 +1,11 @@
 import "./header.css";
-import {Link} from "react-router-dom";
+import { Link, useNavigate } from 'react-router-dom';
 import Search from "../Search/search";
 import {useAuth} from "../../context/AuthContext/authContext";
 import { useEffect } from 'react';
 
 function Header({ visible ,onMenuClick }) {
+    const navigate = useNavigate();
     const { auth, setAuth } = useAuth();
 
     useEffect(() => {
@@ -13,20 +14,20 @@ function Header({ visible ,onMenuClick }) {
 
     return (
         <header className={'header'}>
-            <div className={'header--logo'}>
+            <Link to={"/"} className={'header--logo'}>
                 <img src="/pictures/svg/header-logo.svg" alt={'Logo'} />
                 <img
                     src="/pictures/svg/header-logo-text.svg"
                     alt={'Logo text'}
                     className={'header--logo__disposal'}
                 />
-            </div>
+            </Link>
             <nav className={'nav-panel'}>
                 <div className={'nav-panel--set nav-panel--set__disposal'}>
-                    <Link to={'#TODO'} className={'nav-panel--link'}>
+                    <Link to={'/who-we-are'} className={'nav-panel--link'}>
                         <p>Про нас</p>
                     </Link>
-                    <Link to={'#TODO'} className={'nav-panel--link'}>
+                    <Link to={'/companies'} className={'nav-panel--link'}>
                         <p>Підприємства та сектори</p>
                     </Link>
                     <Search width={'225px'} />
@@ -46,13 +47,14 @@ function Header({ visible ,onMenuClick }) {
                     </div>
                 ) : (
                     <div className={'nav-panel--set'}>
-                        <Link to={'#TODO'} className={'nav-panel--link'}>
+                        <Link to={'/login'} className={'nav-panel--link'}>
                             <p>Увійти</p>
                         </Link>
                         <button
                             className={
                                 'button button__primary-padding button__primary-color'
                             }
+                            onClick={() => navigate('/register')}
                         >
                             Зареєструватися
                         </button>
