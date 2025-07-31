@@ -12,8 +12,9 @@ shift
 
 port="${DB_PORT:-5432}"
 
-# Maximum number of attempts (0 = wait indefinitely)
-max_retries=30
+# Max retries and sleep duration configurable via environment variables
+max_retries="${MAX_RETRIES}"
+sleep_duration="${SLEEP_DURATION}"
 count=0
 
 echo "Waiting for PostgreSQL to be ready at $host:$port..."
@@ -25,7 +26,7 @@ while ! pg_isready -h "$host" -p "$port" > /dev/null 2>&1; do
     echo "PostgreSQL is still not available after $max_retries attempts, exiting."
     exit 1
   fi
-  sleep 2
+  sleep "$sleep_duration"
 done
 
 echo "PostgreSQL is ready - continuing..."
