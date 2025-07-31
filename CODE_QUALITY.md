@@ -9,7 +9,11 @@ Install the linting tools into your Python environment:
 
 **Usage**
 
-To run Pylint on a specific Django app (e.g., users), use:
+To run Pylint on a specific Django app, replace `<app_name>` with the name of the app directory you want to lint:
+
+    pylint --load-plugins pylint_django <app_name>/
+
+For example, to run it on the `users` app:
 
     pylint --load-plugins pylint_django users/
 
@@ -28,11 +32,11 @@ Example:
     users/models.py:1:0: C0114: Missing module docstring (missing-module-docstring)
 
 Messages are categorized by type:
-    C – convention (style issues)
-    R – refactor (design recommendations)
-    W – warning (potential issues)
-    E – error (likely bugs)
-    F – fatal (breaks analysis)
++ C – convention (style issues)
++ R – refactor (design recommendations)
++ W – warning (potential issues)
++ E – error (likely bugs)
++ F – fatal (breaks analysis)
 
 Aim for a score as close to 10.00/10.00 as possible.
 
@@ -40,4 +44,9 @@ Aim for a score as close to 10.00/10.00 as possible.
 
 - Please run Pylint before submitting code for review.
 - Fix as many warnings as possible, or leave comments if a warning is known and safe to ignore.
-- You may customize .pylintrc further if needed — discuss changes with the team.
+- You may customize `.pylintrc` further if needed — discuss changes with the team.
+
+**Reminder for contributors**
+
+To avoid discrepancies in linting results across different environments, make sure you have the latest versions of Pylint and its dependencies installed. Regularly update them using:
+    pip install -U pylint pylint-django

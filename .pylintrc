@@ -1,6 +1,8 @@
 [MAIN]
 
+# Load pylint-django plugin for Django-specific linting
 load-plugins=pylint_django
+
 # Analyse import fallback blocks. This can be used to support both Python 2 and
 # 3 compatible code, which means that the block might have code that exists
 # only in one or another interpreter, leading to false positives when analysed.
@@ -430,16 +432,23 @@ confidence=HIGH,
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
-disable=raw-checker-failed,
-        bad-inline-option,
-        locally-disabled,
-        file-ignored,
-        suppressed-message,
-        useless-suppression,
-        deprecated-pragma,
-        use-symbolic-message-instead,
-        use-implicit-booleaness-not-comparison-to-string,
-        use-implicit-booleaness-not-comparison-to-zero
+disable=
+
+      #Configuration and Pylint internal behavior
+      raw-checker-failed,              # Failure inside one of the checkers
+      bad-inline-option,               # Invalid or misplaced inline option (e.g., # pylint: disable=)
+      deprecated-pragma,               # Use of deprecated directives (e.g., # pylint: disable-msg=...)
+
+      #File and local disabling behavior
+      file-ignored,                   # Entire file marked as ignored
+      locally-disabled,               # Checks disabled locally in code
+      suppressed-message,             # Message explicitly suppressed
+      useless-suppression,            # Suppression that has no effect (not needed)
+
+      #Code style
+      use-symbolic-message-instead,                      # Prefer symbolic message names (e.g., C0114 instead of missing-module-docstring)
+      use-implicit-booleaness-not-comparison-to-string,  # Use `if var:` instead of `if var == ""`
+      use-implicit-booleaness-not-comparison-to-zero     # Use `if var:` instead of `if var == 0`
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
