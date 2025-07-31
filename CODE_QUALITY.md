@@ -49,4 +49,5 @@ Aim for a score as close to 10.00/10.00 as possible.
 **Reminder for contributors**
 
 To avoid discrepancies in linting results across different environments, make sure you have the latest versions of Pylint and its dependencies installed. Regularly update them using:
+
     pip install -U pylint pylint-django
