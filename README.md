@@ -123,6 +123,11 @@ Examples:
 - Mark as **"Ready for Review"** only when complete.
 
 ---
+## 🔐 Environment Variables
 
+This project uses environment variables defined in a `.env` file at the root of the project.
 
+### How it's loaded
 
+- ✅ When using Docker Compose, the `.env` file is loaded automatically via the `env_file` directive.
+- ✅ Inside Django, the variables are accessed using `python-decouple` (`config('SECRET_KEY')` etc).

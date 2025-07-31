@@ -53,19 +53,25 @@ EXPOSE 8000
 ENTRYPOINT ["/entrypoint.sh"]
 
 # --------------------------------------------------
-# 📝 Required environment variables (loaded from .env)
+# 📝 Required Environment Variables (.env)
 #
-# These are read in settings.py via python-decouple:
+# This project uses a `.env` file located at the root of the repository
+# to configure environment-specific settings.
 #
+# ✅ How it's loaded:
+# - Docker Compose loads the `.env` file via the `env_file` directive
+# - Django accesses variables using `python-decouple` (`config(...)`)
+#
+# 📌 Variables used in `settings.py`:
 #   SECRET_KEY     - Django secret key
-#   DEBUG          - Set to "False" in production
+#   DEBUG          - "True" for development, "False" for production
 #   DB_NAME        - PostgreSQL database name
 #   DB_USER        - PostgreSQL username
 #   DB_PASSWORD    - PostgreSQL password
-#   DB_HOST        - PostgreSQL host (e.g., "db" for Docker)
+#   DB_HOST        - PostgreSQL host (e.g., "db" when using Docker)
 #   DB_PORT        - PostgreSQL port (default: 5432)
 #
-# These variables should be defined in a `.env` file, which is automatically read by Docker Compose.
+# 📄 Example: see `.env.example` for a template
 # --------------------------------------------------
 
 # Run server for production
