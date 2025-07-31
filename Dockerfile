@@ -49,4 +49,4 @@ ENTRYPOINT ["/entrypoint.sh"]
 # --------------------------------------------------
 
 # Run server for production
-CMD ["db", "gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers=3", "--timeout=120"]
+CMD ["db", "gunicorn", "--log-level=debug", "core.wsgi:application", "--bind=0.0.0.0:8000", "--workers=3", "--timeout=120"]

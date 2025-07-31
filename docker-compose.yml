@@ -3,6 +3,8 @@ version: '3.9'
 services:
   web:
     build: .
+    container_name: api-dev
+    restart: on-failure
     volumes:
       - .:/app
     ports:
@@ -17,10 +19,15 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
+    networks:
+      - forum
 
   db:
     image: postgres:14
+    container_name: db
+    restart: always
     volumes:
+      - ./configs/postgres:/docker-entrypoint-initdb.d
       - postgres_data:/var/lib/postgresql/data/
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -33,6 +40,27 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - forum
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin/data
+    depends_on:
+      - db
+    networks:
+      - forum
 
 volumes:
   postgres_data:
+  pgadmin_data:
+networks:
+  forum:
