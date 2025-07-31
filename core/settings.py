@@ -137,6 +137,10 @@ LOGGING = {
     'disable_existing_loggers': False,
 
     'formatters': {
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
+        },
         'verbose': {
             'format': '{asctime} {levelname} {name} - {message}',
             'style': '{',
@@ -151,27 +155,27 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
-            'level': 'DEBUG',
+            'level': 'INFO',
         },
-        'file_warning': {
-            'level': 'WARNING',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': os.path.join(LOG_DIR, 'warnings.log'),
-            'when': 'midnight',
-            'backupCount': 7,
-            'formatter': 'verbose',
-            'encoding': 'utf8',
-        },
-        'file_info': {
+        'file_django': {
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': os.path.join(LOG_DIR, 'info.log'),
+            'filename': os.path.join(LOG_DIR, 'django.log'),
             'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
             'encoding': 'utf8',
         },
-        'file_error': {
+        'file_apps': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'apps.log'),
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'verbose',
+            'encoding': 'utf8',
+        },
+        'file_errors': {
             'level': 'ERROR',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'errors.log'),
@@ -180,55 +184,79 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf8',
         },
+        'db_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'db_queries.log'),
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'verbose',
+            'encoding': 'utf8',
+        },
+        'file_json': {
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'json_logs.log'),
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'json',
+            'level': 'INFO',
+            'encoding': 'utf8',
+        },
     },
 
     'loggers': {
-        # Django event logging (including request/response and security)
+        # Django core logging (middleware, queries, security, etc.)
         'django': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': True,
-        },
-
-        # Database - queries
-        'django.db.backends': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'file_django', 'file_errors'],
             'level': 'INFO',
             'propagate': False,
         },
 
-        # Security logs
+        # Logging database queries
+        'django.db.backends': {
+            'handlers': ['console', 'db_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+
+        # Django security logging
         'django.security': {
-            'handlers': ['console', 'file_warning', 'file_error'],
+            'handlers': ['console', 'file_django'],
             'level': 'WARNING',
             'propagate': False,
         },
 
-        # All applications in the project
+        # Logging user applications
         'users': {
-            'handlers': ['console', 'file_info', 'file_error'],
+            'handlers': ['console', 'file_apps'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'profiles': {
-            'handlers': ['console', 'file_info', 'file_error'],
+            'handlers': ['console', 'file_apps'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'projects': {
-            'handlers': ['console', 'file_info', 'file_error'],
+            'handlers': ['console', 'file_apps'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'communications': {
-            'handlers': ['console', 'file_info', 'file_error'],
+            'handlers': ['console', 'file_apps'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'dashboard': {
-            'handlers': ['console', 'file_info', 'file_error'],
+            'handlers': ['console', 'file_apps'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
+    },
+
+    # Root logger - logs that do not fall under any of the above
+    'root': {
+        'handlers': ['console', 'file_errors', 'file_json'],
+        'level': 'INFO',
     },
 }
