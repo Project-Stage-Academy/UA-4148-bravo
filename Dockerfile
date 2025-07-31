@@ -9,11 +9,11 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install system dependencies and curl
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-     libpq-dev gcc curl netcat-openbsd postgresql-client \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -q && \
+    apt-get install -y -q --no-install-recommends --no-install-suggests \
+        libpq-dev gcc curl netcat-openbsd postgresql-client && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install pip requirements
 COPY requirements.txt .
