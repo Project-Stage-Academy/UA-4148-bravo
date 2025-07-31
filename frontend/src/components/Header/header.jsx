@@ -32,10 +32,10 @@ function Header({ show, hide, toggle, visible }) {
             </Link>
             <nav className={'nav-panel'}>
                 <div className={'nav-panel--set nav-panel--set__disposal'}>
-                    <Link to={'/who-we-are'} className={'nav-panel--link'}>
+                    <Link to={'/who-we-are'} className={'link__underline nav-panel--link'}>
                         <p>Про нас</p>
                     </Link>
-                    <Link to={'/companies'} className={'nav-panel--link'}>
+                    <Link to={'/companies'} className={'link__underline nav-panel--link'}>
                         <p>Підприємства та сектори</p>
                     </Link>
                     <Search width={'225px'} />
@@ -55,12 +55,12 @@ function Header({ show, hide, toggle, visible }) {
                     </div>
                 ) : (
                     <div className={'nav-panel--set'}>
-                        <Link to={'/login'} className={'nav-panel--link'}>
+                        <Link to={'/login'} className={'link__underline nav-panel--link'}>
                             <p>Увійти</p>
                         </Link>
                         <button
                             className={
-                                'button button__primary-padding button__primary-color'
+                                'button button__padding button__primary-color'
                             }
                             onClick={() => navigate('/register')}
                         >

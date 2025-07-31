@@ -19,7 +19,7 @@ function NotFound() {
                     </p>
                     <div>
                         <button
-                            className={'button button__primary-padding button__primary-color'}
+                            className={'button button__padding button__primary-color'}
                             onClick={returnToHomePage}
                         >
                             <span>Повернутися на головну</span>
