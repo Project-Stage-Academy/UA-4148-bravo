@@ -9,8 +9,9 @@ function Search(props) {
     return (
         <div style={{ width: props.width }}
              className={"search"}>
-            <input placeholder={"Пошук"}
-                   className={"search--input"}
+            <input type="text"
+                   placeholder={"Пошук"}
+                   className={"input search--input"}
             />
             <button className={"search--button"}>
                 <img src={"/pictures/svg/loupe.svg"} alt={"Search"}/>
