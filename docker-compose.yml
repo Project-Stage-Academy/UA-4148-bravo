@@ -13,6 +13,16 @@ services:
       - db
     networks:
       - forum
+    
+  fastapi:
+    build: .
+    command: uvicorn core.asgi:application --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
 
   db:
     image: postgres:14

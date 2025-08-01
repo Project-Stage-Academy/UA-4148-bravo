@@ -1,16 +1,15 @@
-"""
-ASGI config for core project.
-
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
-"""
-
 import os
-
 from django.core.asgi import get_asgi_application
+from fastapi_app.main import app as fastapi_app
+from django.urls import path
+from django.conf.urls import re_path
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', os.getenv('DJANGO_SETTINGS_MODULE', 'core.settings'))
+django_asgi_app = get_asgi_application()
 
-application = get_asgi_application()
+from fastapi.middleware.asgi import ASGIApp
+
+application = ASGIApp(
+    app=django_asgi_app,
+    lifespan=None,
+    sub_apps=[("/api/fastapi", fastapi_app)],
+)
