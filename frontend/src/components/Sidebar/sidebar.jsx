@@ -2,6 +2,7 @@ import './sidebar.css';
 import Dimmer from '../Dimmer/dimmer';
 import Search from '../Search/search';
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 
 /**
  * Sidebar component
@@ -13,6 +14,22 @@ import { Link } from 'react-router-dom';
  * @returns {JSX.Element}
  */
 function Sidebar({ show, hide, toggle, visible, children }) {
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && visible) {
+                hide();
+            }
+        }
+
+        if (visible) {
+            window.addEventListener("keydown", handleKeyDown);
+        }
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [visible, hide]);
+
     return (
         <div className={"sidebar-wrapper"}>
             <Dimmer isActive={visible} hideDimmer={hide}>
