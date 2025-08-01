@@ -132,3 +132,135 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOG_DIR = BASE_DIR / 'logs'
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
+        },
+        'verbose': {
+            'format': '{asctime} {levelname} {name} - {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname}: {message}',
+            'style': '{',
+        },
+    },
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'INFO',
+        },
+        'file_django': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'django.log'),
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'verbose',
+            'encoding': 'utf8',
+        },
+        'file_apps': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'apps.log'),
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'verbose',
+            'encoding': 'utf8',
+        },
+        'file_errors': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'errors.log'),
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'verbose',
+            'encoding': 'utf8',
+        },
+        'db_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'db_queries.log'),
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'verbose',
+            'encoding': 'utf8',
+        },
+        'file_json': {
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'json_logs.log'),
+            'when': 'midnight',
+            'backupCount': 7,
+            'formatter': 'json',
+            'level': 'INFO',
+            'encoding': 'utf8',
+        },
+    },
+
+    'loggers': {
+        # Django core logging (middleware, queries, security, etc.)
+        'django': {
+            'handlers': ['console', 'file_django', 'file_errors'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+
+        # Logging database queries
+        'django.db.backends': {
+            'handlers': ['console', 'db_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+
+        # Django security logging
+        'django.security': {
+            'handlers': ['console', 'file_django'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+
+        # Logging user applications
+        'users': {
+            'handlers': ['console', 'file_apps'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'profiles': {
+            'handlers': ['console', 'file_apps'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'projects': {
+            'handlers': ['console', 'file_apps'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'communications': {
+            'handlers': ['console', 'file_apps'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'dashboard': {
+            'handlers': ['console', 'file_apps'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+
+    # Root logger - logs that do not fall under any of the above
+    'root': {
+        'handlers': ['console', 'file_errors', 'file_json'],
+        'level': 'INFO',
+    },
+}
