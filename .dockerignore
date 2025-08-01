@@ -13,10 +13,6 @@ __pycache__/
 .git/
 .gitignore
 
-# Ignore Docker-related files
-Dockerfile
-docker-compose.yml
-
 # Ignore IDE/editor config
 .vscode/
 .idea/
