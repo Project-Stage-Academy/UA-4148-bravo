@@ -9,11 +9,15 @@ import CompanyList from '../../pages/CompanyList/companyList';
 import FeedbackForm from '../../pages/FeedbackForm/feedbackForm';
 import ForgotPassword from '../../pages/ForgotPassword/forgotPassword';
 import RestorePassword from '../../pages/RestorePassword/restorePassword';
-import ProfilePage from '../../pages/ProfilePage/profilePage';
 import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
-import RegistrationPage from '../../pages/Registration/registration';
+import Registration from '../Registration/registration';
+import AuthorizationWrapper from '../../pages/AuthorizationWrapper/authorizationWrapper';
+import RegistrationConfirmation from '../RegistrationConfirmation/registrationConfirmation';
+import RegisterReconfirmation from '../RegisterReconfirmation/registerReconfirmation';
+import RegistrationError from '../RegistrationError/registrationError';
+import RegistrationDone from '../RegistrationDone/registrationDone';
 
 /**
  * Main application component that sets up routing and context providers.
@@ -59,14 +63,17 @@ function App() {
                             {/* Who we are */}
                             <Route path="who-we-are" element={<WhoWeAre />} />
 
-                            {/* Log in */}
-                            <Route path="login" element={<LogInPage />} />
+                            <Route path={"auth"} element={<AuthorizationWrapper />}>
 
-                            {/* Registration */}
-                            <Route path="register" element={<RegistrationPage />} />
+                                {/* Log in */}
+                                <Route path="login" element={<LogInPage />} />
 
-                            {/* Password */}
-                            <Route path="password">
+                                {/* Registration */}
+                                <Route path="register" element={<Registration />} />
+                                <Route path="register/confirmation" element={<RegistrationConfirmation />} />
+                                <Route path="register/re-confirmation" element={<RegisterReconfirmation />} />
+                                <Route path="register/error" element={<RegistrationError />} />
+                                <Route path="register/done" element={<RegistrationDone />} />
 
                                 {/* Forgot password */}
                                 <Route path="forgot" element={<ForgotPassword />} />
@@ -78,19 +85,8 @@ function App() {
                             {/* Profile */}
                             <Route path="profile">
 
-                                {/* User profile */}
-                                <Route path="user" element={<ProfilePage />}>
-
-                                    {/* Profile editing */}
-                                    <Route path="edit" element={<ProfileEditing />} />
-                                </Route>
-
-                                {/* Company profile */}
-                                <Route path="company" element={<ProfilePage />}>
-
-                                    {/* Profile editing */}
-                                    <Route path="edit" element={<ProfileEditing />} />
-                                </Route>
+                                {/* Profile editing */}
+                                <Route path="edit" element={<ProfileEditing />} />
                             </Route>
 
                             {/* Page not found */}

@@ -1,10 +1,11 @@
 .panel {
     background-color: var(--secondary-bcg-color);
     border-radius: 6px;
+    width: 572px;
 }
 
 .panel__margin {
-    margin: 40px 40px 0 40px;
+    margin: 40px 40px 24px;
 }
 
 .panel--hr {
@@ -58,12 +59,8 @@
     margin-bottom: 4px;
 }
 
-.panel--button {
-    margin: 10px 24px;
-}
-
 .panel--under-panel {
-    margin: 24px 0;
+    margin-bottom: 40px;
 }
 
 .panel--under-panel > *:not(:last-child) {
@@ -75,4 +72,14 @@
     line-height: 22px;
     font-size: 14px;
     color: var(--error-text-color);
+}
+
+.panel--font-size {
+    font-size: 14px;
+}
+
+.panel--navigation {
+    display: flex;
+    gap: 8px;
+    margin: 10px 24px;
 }

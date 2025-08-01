@@ -27,6 +27,7 @@
 }
 
 .button__secondary-color {
+    border: 1px solid var(--secondary-btn-text-color-active);
     background-color: var(--secondary-btn-bcg-color-active);
     color: var(--secondary-btn-text-color-active);
 }

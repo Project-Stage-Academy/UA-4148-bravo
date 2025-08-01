@@ -1,12 +1,9 @@
-.registration {
+.authorization-wrapper {
     display: flex;
     flex-flow: column nowrap;
     justify-content: center;
     align-items: center;
     height: 100%;
     background-color: var(--primary-bcg-color);
-}
-
-.registration--policy-term {
     font-size: 14px;
 }

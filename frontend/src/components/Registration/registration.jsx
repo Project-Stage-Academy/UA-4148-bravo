@@ -1,8 +1,12 @@
 import './registration.css';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { Validator } from '../../utils/validation/validate';
 
-function RegistrationPage() {
+function Registration() {
+    const validator = new Validator();
+    const navigate = useNavigate();
+
     const [formData, setFormData] = useState(
         {
             companyName: "",
@@ -25,7 +29,7 @@ function RegistrationPage() {
         companyName: (value) => /^[\w\s]{2,}$/.test(value),
         email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
         password: (value) => /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value),
-        confirmPassword: (value, data) => value === data.password,
+        confirmPassword: (value, data) => typeof value === "string" && value.trim() !== "" && value === data.password,
         firstName: (value) => /^[A-Za-z]{2,}$/.test(value),
         lastName: (value) => /^[A-Za-z]{2,}$/.test(value),
         representation: (value) => Object.values(value).some(v => v),
@@ -34,101 +38,39 @@ function RegistrationPage() {
 
     const [errors, setErrors] = useState({});
 
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        const realValue = type === "checkbox" ? checked : value;
+    const errorZeroLengthMessages = {
+        companyName: "Не ввели назву компанії",
+        email: "Не ввели електронну пошту",
+        password: "Не ввели пароль",
+        confirmPassword: "Не ввели пароль ще раз",
+        firstName: "Не ввели ім’я",
+        lastName: "Не ввели прізвище",
+        representation: "Виберіть кого ви представляєте",
+        businessType: "Виберіть який суб’єкт господарювання ви представляєте"
+    }
 
-        if (name.includes(".")) {
-            const [group, field] = name.split(".");
-
-            const updatedGroup = {
-                ...formData[group],
-                [field]: realValue
-            };
-
-            setFormData(prev => ({
-                ...prev,
-                [group]: updatedGroup
-            }));
-
-            const error = validateField(group, updatedGroup, {
-                ...formData,
-                [group]: updatedGroup
-            });
-
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                if (!error) {
-                    delete newErrors[group];
-                } else {
-                    newErrors[group] = error;
-                }
-                return newErrors;
-            });
-
-        } else {
-            setFormData(prev => ({ ...prev, [name]: realValue }));
-
-            const error = validateField(name, realValue, {
-                ...formData,
-                [name]: realValue
-            });
-
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                if (!error) {
-                    delete newErrors[name];
-                } else {
-                    newErrors[name] = error;
-                }
-                return newErrors;
-            });
-        }
-    };
-
-    const validateField = (key, value, data) => {
-        const validator = validators[key];
-        if (!validator) return null;
-
-        const isValid = validator.length === 2
-            ? validator(value, data)
-            : validator(value);
-
-        return isValid ? null : "Invalid value";
-    };
-
-    const validate = (data, validators) => {
-        const errors = {};
-
-        for (const key in validators) {
-            const validator = validators[key];
-            const value = data[key];
-
-            const isValid = validator.length === 2
-                ? validator(value, data)
-                : validator(value);
-
-            if (!isValid) {
-                errors[key] = "Invalid value";
-            }
-        }
-
-        return errors;
-    };
+    const errorValidationMessages = {
+        companyName: "Назва компанії не відповідає вимогам",
+        email: "Пошта не відповідає вимогам",
+        password: "Пароль не відповідає вимогам",
+        confirmPassword: "Паролі не співпадають. Будь ласка, введіть однакові паролі в обидва поля",
+        firstName: "Ім’я не відповідає вимогам",
+        lastName: "Прізвище не відповідає вимогам"
+    }
 
     const handleSubmit = () => {
-        const validationErrors = validate(formData, validators);
+        const validationErrors = validator.validate(formData, validators, errorZeroLengthMessages, errorValidationMessages);
         setErrors(validationErrors);
 
         if (Object.keys(validationErrors).length === 0) {
-            console.log("Ready to go...");
+            navigate("/auth/register/confirmation");
         } else {
             console.log("Errors:", validationErrors);
         }
     };
 
     return (
-        <div className={'registration'}>
+        <>
             <div className={'panel panel__margin'}>
                 <h2 className={'panel--title'}>Реєстрація</h2>
                 <hr className={'panel--hr'} />
@@ -165,11 +107,11 @@ function RegistrationPage() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.companyName}
-                            onChange={handleChange}
+                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                             placeholder={'Введіть назву вашої компанії'}
                             className={`input input-text input__width ${errors['companyName'] ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['companyName'] ? <p className={"panel--error-text"}>Не ввели назву компанії</p> : "" }
+                        { errors['companyName'] ? <p className={"panel--error-text"}>{ errors['companyName'] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container__margin'}>
@@ -191,11 +133,11 @@ function RegistrationPage() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.email}
-                            onChange={handleChange}
+                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                             placeholder={'Введіть свою електронну пошту'}
-                            className={`input input-text input__width ${errors['email'] ? 'input__error-border-color' : ''}`}
+                            className={`input input-text input__width ${(errors['email'] || errors['email-exist']) ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['email'] ? <p className={"panel--error-text"}>Не ввели електронну пошту</p> : "" }
+                        { errors['email'] ? <p className={"panel--error-text"}>{ errors['email'] }</p> : ""}
                     </div>
                     <div>
                         <div
@@ -226,11 +168,11 @@ function RegistrationPage() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.password}
-                            onChange={handleChange}
+                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                             placeholder={'Введіть пароль'}
                             className={`input input-text input__width ${errors['password'] ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['password'] ? <p className={"panel--error-text"}>Не ввели пароль</p> : "" }
+                        { errors['password'] ? <p className={"panel--error-text"}>{ errors['password'] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container__margin'}>
@@ -252,11 +194,11 @@ function RegistrationPage() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.confirmPassword}
-                            onChange={handleChange}
+                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                             placeholder={'Введіть пароль ще раз'}
-                            className={`input input-text input__width ${errors['confirmPassword'] ? 'input__error-border-color' : ''}`}
+                            className={`input input-text input__width ${(errors['confirmPassword'] || errors['confirmPassword-passwords-dont-match']) ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['confirmPassword'] ? <p className={"panel--error-text"}>Не ввели пароль ще раз</p> : "" }
+                        { errors['confirmPassword'] ? <p className={"panel--error-text"}>{ errors["confirmPassword"] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container__margin'}>
@@ -276,11 +218,11 @@ function RegistrationPage() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.lastName}
-                            onChange={handleChange}
+                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                             placeholder={'Введіть ваше прізвище'}
                             className={`input input-text input__width ${errors['lastName'] ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['lastName'] ? <p className={"panel--error-text"}>Не ввели прізвище</p> : "" }
+                        { errors['lastName'] ? <p className={"panel--error-text"}>{ errors["lastName"] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container__margin'}>
@@ -300,11 +242,11 @@ function RegistrationPage() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.firstName}
-                            onChange={handleChange}
+                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                             placeholder={'Введіть ваше ім’я'}
                             className={`input input-text input__width ${errors['firstName'] ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['firstName'] ? <p className={"panel--error-text"}>Не ввели ім’я</p> : "" }
+                        { errors['firstName'] ? <p className={"panel--error-text"}>{ errors["firstName"] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container__margin'}>
@@ -325,23 +267,23 @@ function RegistrationPage() {
                                     type="checkbox"
                                     name="representation.company"
                                     checked={formData.representation.company}
-                                    onChange={handleChange}
+                                    onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                                     className={`checkbox ${errors['representation'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
                                 />
-                                <label htmlFor="html">Зареєстрована компанія</label>
+                                <label htmlFor="html" className={"panel--font-size"}>Зареєстрована компанія</label>
                             </div>
                             <div className={"checkbox--item"}>
                                 <input
                                     type="checkbox"
                                     name="representation.startup"
                                     checked={formData.representation.startup}
-                                    onChange={handleChange}
+                                    onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                                     className={`checkbox ${errors['representation'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
                                 />
-                                <label htmlFor="html">Стартап проєкт, який шукає інвестиції</label>
+                                <label htmlFor="html" className={"panel--font-size"}>Стартап проєкт, який шукає інвестиції</label>
                             </div>
                         </div>
-                        { errors['representation'] ? <p className={"panel--error-text"}>Виберіть кого ви представляєте</p> : "" }
+                        { errors['representation'] ? <p className={"panel--error-text"}>{ errors["representation"] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container__margin'}>
@@ -362,39 +304,41 @@ function RegistrationPage() {
                                     type="checkbox"
                                     name="businessType.individual"
                                     checked={formData.businessType.individual}
-                                    onChange={handleChange}
+                                    onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                                     className={`checkbox ${errors['businessType'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
                                 />
-                                <label htmlFor="html">Фізична особа-підприємець</label>
+                                <label htmlFor="html" className={"panel--font-size"}>Фізична особа-підприємець</label>
                             </div>
                             <div className={"checkbox--item"}>
                                 <input
                                     type="checkbox"
                                     name="businessType.legal"
                                     checked={formData.businessType.legal}
-                                    onChange={handleChange}
+                                    onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
                                     className={`checkbox ${errors['businessType'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
                                 />
-                                <label htmlFor="html">Юридична особа</label>
+                                <label htmlFor="html" className={"panel--font-size"}>Юридична особа</label>
                             </div>
                         </div>
-                        { errors['businessType'] ? <p className={"panel--error-text"}>Виберіть який суб’єкт господарювання ви представляєте</p> : "" }
+                        { errors['businessType'] ? <p className={"panel--error-text"}>{ errors["businessType"] }</p> : "" }
                     </div>
                     <div>
-                        <span className={"registration--policy-term"}>Реєструючись, я погоджуюсь з </span>
-                        <Link className={"registration--policy-term text-underline text-bold"} to={"/policy"}>правилами використання</Link>
-                        <span className={"registration--policy-term"}> сайту Craftmerge</span>
+                        <span className={"panel--font-size"}>Реєструючись, я погоджуюсь з </span>
+                        <Link className={"panel--font-size text-underline text-bold"} to={"/policy"}>правилами використання</Link>
+                        <span className={"panel--font-size"}> сайту Craftmerge</span>
                     </div>
                 </div>
                 <hr className={'panel--hr'} />
-                <button
-                    onClick={handleSubmit}
-                    className={
-                        'button button__padding button__primary-color panel--button'
-                    }
-                >
-                    Зареєструватися
-                </button>
+                <div className={"panel--navigation"}>
+                    <button
+                        onClick={handleSubmit}
+                        className={
+                            'button button__padding button__primary-color panel--button'
+                        }
+                    >
+                        Зареєструватися
+                    </button>
+                </div>
             </div>
             <div className={"panel--under-panel"}>
                 <span>
@@ -404,8 +348,8 @@ function RegistrationPage() {
                     Увійти
                 </Link>
             </div>
-        </div>
+        </>
     );
 }
 
-export default RegistrationPage;
+export default Registration;

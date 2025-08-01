@@ -14,7 +14,7 @@
 }
 
 .input__width {
-    width: calc(524px - 12px * 2);
+    width: calc(100% - 12px * 2);
 }
 
 .input__error-border-color {

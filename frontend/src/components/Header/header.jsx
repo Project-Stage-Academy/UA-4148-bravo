@@ -62,7 +62,7 @@ function Header({ show, hide, toggle, visible }) {
                             className={
                                 'button button__padding button__primary-color'
                             }
-                            onClick={() => navigate('/register')}
+                            onClick={() => navigate('/auth/register')}
                         >
                             Зареєструватися
                         </button>
