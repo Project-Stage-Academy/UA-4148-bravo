@@ -131,3 +131,18 @@ This project uses environment variables defined in a `.env` file at the root of 
 
 - ✅ When using Docker Compose, the `.env` file is loaded automatically via the `env_file` directive.
 - ✅ Inside Django, the variables are accessed using `python-decouple` (`config('SECRET_KEY')` etc).
+
+### Hybrid Django + FastAPI Setup
+
+This project integrates **Django** and **FastAPI** into a single ASGI application to support both traditional Django views and modern asynchronous FastAPI endpoints.
+
+#### ASGI Application Structure
+
+- `core/asgi.py` mounts both apps using `Starlette`'s `Mount` routing:
+  - Django app is mounted at `/`
+  - FastAPI app is mounted at `/api/fastapi`
+
+#### Running Locally
+
+```bash
+uvicorn core.asgi:application --reload
