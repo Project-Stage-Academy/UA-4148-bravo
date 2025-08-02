@@ -1,0 +1,35 @@
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+a:disabled,
+Link:disabled {
+    color: var(--link-btn-text-color-inactive);
+    text-decoration: none;
+}
+
+.link__underline {
+    position: relative;
+}
+
+.link__underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--link-btn-text-color-active);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--animation-normal) ease;
+}
+
+.link__underline:hover::after {
+    transform: scaleX(1);
+}
+
+.link__underline:disabled::after {
+    background-color: var(--link-btn-text-color-inactive);
+}
