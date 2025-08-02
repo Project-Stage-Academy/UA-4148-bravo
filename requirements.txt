@@ -9,7 +9,7 @@ cryptography==45.0.5
 defusedxml==0.7.1
 Django==5.2.4
 djangorestframework==3.16.0
-djangorestframework-simplejwt==5.5.1
+djangorestframework_simplejwt==5.5.1
 djoser==2.3.3
 fastapi==0.116.1
 h11==0.16.0
@@ -44,3 +44,4 @@ typing-inspection==0.4.1
 typing_extensions==4.14.1
 urllib3==2.5.0
 uvicorn==0.35.0
+
