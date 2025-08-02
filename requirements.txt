@@ -1,0 +1,14 @@
+# Django и PostgreSQL
+Django==5.2.4
+psycopg2-binary==2.9.9
+
+# Робота з .env файлами
+python-decouple==3.8
+
+# Django REST Framework и JWT
+djangorestframework==3.15.1
+djoser==2.2.2
+djangorestframework-simplejwt==5.3.1
+
+# Логування в JSON
+python-json-logger==2.0.7
