@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'communications',
     'dashboard',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'djoser',
 ]
@@ -57,8 +58,12 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ROTATE_REFRESH_TOKENS': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'AUTH_TOKEN_CLASSES': 
+    ('rest_framework_simplejwt.tokens.AccessToken'
+    'rest_framework_simplejwt.tokens.RefreshToken',),
 }
 
 DJOSER = {
