@@ -23,5 +23,4 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
     path('api/projects/', include('projects.urls')),
-    path('api/fastapi/', include('fastapi_app.main')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

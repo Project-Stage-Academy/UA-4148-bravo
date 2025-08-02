@@ -27,6 +27,8 @@ pydantic_core==2.33.2
 Pygments==2.19.2
 PyJWT==2.10.1
 pytest==8.4.1
+pytest-asyncio==1.1.0
+pytest-django==4.11.1
 python-decouple==3.8
 python-dotenv==1.1.1
 python-json-logger==3.3.0
