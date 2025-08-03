@@ -2,9 +2,7 @@ import './profileEditing.css';
 
 function ProfileEditing() {
     return (
-        <>
-
-        </>
+        <></>
     );
 }
 

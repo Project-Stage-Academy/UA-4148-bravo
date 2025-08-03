@@ -3,6 +3,7 @@ import Dimmer from '../Dimmer/dimmer';
 import Search from '../Search/search';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * Sidebar component
@@ -17,7 +18,6 @@ function Sidebar({ show, hide, toggle, visible, children }) {
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape' && visible) {
-                hide();
             }
         }
 
@@ -50,5 +50,19 @@ function Sidebar({ show, hide, toggle, visible, children }) {
         </div>
     );
 }
+
+/**
+ * PropTypes for Header component
+ * @property {function} show - Function to show the header
+ * @property {function} hide - Function to hide the header
+ * @property {function} toggle - Function to toggle the header visibility
+ * @property {boolean} visible - Boolean indicating if the header is visible
+ */
+Sidebar.porpTypes = {
+    show: PropTypes.func.isRequired,
+    hide: PropTypes.func.isRequired,
+    toggle: PropTypes.func.isRequired,
+    visible: PropTypes.bool.isRequired
+};
 
 export default Sidebar;

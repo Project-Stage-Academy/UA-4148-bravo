@@ -1,14 +1,12 @@
 import "./search.css";
+import PropTypes from 'prop-types';
 
 /**
  * Search component
- * @param {Object} props - Component properties
- * @param {string} props.width - Width of the search component
  */
-function Search(props) {
+function Search({ className = '' }) {
     return (
-        <div style={{ width: props.width }}
-             className={"search"}>
+        <div className={`search ${className}`}>
             <input placeholder={"Пошук"}
                    className={"search--input"}
             />
@@ -16,7 +14,15 @@ function Search(props) {
                 <img src={"/pictures/svg/loupe.svg"} alt={"Search"}/>
             </button>
         </div>
-);
+    );
 }
+
+/**
+ * PropTypes for Search component
+ * @type {{className: string}}
+ */
+Search.propTypes = {
+    className: PropTypes.string,
+};
 
 export default Search;

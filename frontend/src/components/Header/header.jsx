@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Search from "../Search/search";
 import {useAuth} from "../../context/AuthContext/authContext";
 import { useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * Header component
@@ -38,7 +39,7 @@ function Header({ show, hide, toggle, visible }) {
                     <Link to={'/companies'} className={'link__underline nav-panel--link'}>
                         <p>Підприємства та сектори</p>
                     </Link>
-                    <Search width={'225px'} />
+                    <Search className={'nav-panel--search'} />
                 </div>
                 {auth ? (
                     <div className={'nav-panel--set'}>
@@ -92,5 +93,19 @@ function Header({ show, hide, toggle, visible }) {
         </header>
     );
 }
+
+/**
+ * PropTypes for Header component
+ * @property {function} show - Function to show the header
+ * @property {function} hide - Function to hide the header
+ * @property {function} toggle - Function to toggle the header visibility
+ * @property {boolean} visible - Boolean indicating if the header is visible
+ */
+Header.porpTypes = {
+    show: PropTypes.func.isRequired,
+    hide: PropTypes.func.isRequired,
+    toggle: PropTypes.func.isRequired,
+    visible: PropTypes.bool.isRequired
+};
 
 export default Header;
