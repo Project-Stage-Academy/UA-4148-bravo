@@ -100,8 +100,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
-    objects = ActiveUserManager()
-    all_objects = CustomUserManager()
+    objects = CustomUserManager()
+    active_users = ActiveUserManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name', 'role']
@@ -162,7 +162,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         Returns:
             User or None: The user instance if found, else None.
         """
-        return cls.objects.filter(user_id=user_id).first()
+        return cls.active_users.filter(user_id=user_id).first()
 
     @classmethod
     def get_by_email(cls, email):
@@ -175,7 +175,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         Returns:
             User or None: The user instance if found, else None.
         """
-        return cls.objects.filter(email=email).first()
+        return cls.active_users.filter(email=email).first()
 
     @classmethod
     def create(cls, email, password, first_name, last_name,
@@ -204,7 +204,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         except ValidationError:
             raise ValueError("Invalid email format")
 
-        if cls.all_objects.filter(email=email).exists():
+        if cls.objects.filter(email=email).exists():
             raise ValueError("Email already exists")
 
         if len(email) > 50:
@@ -320,7 +320,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         Returns:
             bool: True if user was found and deactivated, else False.
         """
-        user = cls.objects.filter(user_id=user_id, is_active=True).first()
+        user = cls.active_users.filter(user_id=user_id, is_active=True).first()
         if user:
             user.is_active = False
             user.save()
@@ -335,7 +335,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         Returns:
             QuerySet: QuerySet of all users.
         """
-        return cls.objects.all()
+        return cls.active_users.all()
 
 
 class UserRole(models.Model):
