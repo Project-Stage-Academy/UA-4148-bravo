@@ -4,6 +4,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, DataError
 from django.utils import timezone
+from django.forms.models import model_to_dict
 
 
 class ActiveUserManager(models.Manager):
@@ -137,19 +138,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         Returns:
             dict: Dictionary containing user data.
         """
-        return {
-            "user_id": self.user_id,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "email": self.email,
-            "user_phone": self.user_phone,
-            "title": self.title,
-            "role": self.role,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            "is_active": self.is_active,
-            "is_staff": self.is_staff
-        }
+        data = model_to_dict(
+            self,
+            fields=[
+                "user_id", "first_name", "last_name", "email",
+                "user_phone", "title", "role", "created_at",
+                "updated_at", "is_active", "is_staff"
+            ]
+        )
 
     @classmethod
     def get_by_id(cls, user_id):
