@@ -2,7 +2,6 @@ import "./header.css";
 import { Link, useNavigate } from 'react-router-dom';
 import Search from "../Search/search";
 import {useAuth} from "../../context/AuthContext/authContext";
-import { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import Button from '../Button/button';
 
@@ -16,11 +15,7 @@ import Button from '../Button/button';
  */
 function Header({ show, hide, toggle, visible }) {
     const navigate = useNavigate();
-    const { auth, setAuth } = useAuth();
-
-    useEffect(() => {
-        setAuth(false);
-    }, [auth, setAuth]);
+    const { user } = useAuth();
 
     return (
         <header className={'header'}>
@@ -42,7 +37,7 @@ function Header({ show, hide, toggle, visible }) {
                     </Link>
                     <Search className={'nav-panel--search'} />
                 </div>
-                {auth ? (
+                {user ? (
                     <div className={'nav-panel--set'}>
                         <Link
                             to={'/profile/user/edit'}

@@ -1,10 +1,17 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 /**
+ * @typedef {Object} User - Represents a user in the application
+ * @property {string} id - Unique identifier for the user
+ * @property {string} name - Name of the user
+ * @property {string} role - Role of the user (e.g., 'admin', 'user')
+ */
+
+/**
  * @typedef {Object} AuthContextType
- * @property {*} auth - User authorization data
- * @property {function(*):void} setAuth - Function for updating authorization data
+ * @property {User | null} user - Current user or null
+ * @property {(user: User | null) => void} setUser - Function for user installation
  */
 
 /** @type {import('react').Context<AuthContextType | null>} */
@@ -23,10 +30,14 @@ export const useAuth = () => useContext(AuthContext);
  * @returns {JSX.Element}
  */
 function AuthProvider({ children }) {
-    const [auth, setAuth] = useState(null);
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        // Load user data from localStorage or API
+    }, []);
 
     return (
-        <AuthContext.Provider value={{ auth, setAuth }}>
+        <AuthContext.Provider value={{ user, setUser }}>
             {children}
         </AuthContext.Provider>
     );
