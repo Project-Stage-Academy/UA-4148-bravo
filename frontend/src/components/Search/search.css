@@ -15,10 +15,9 @@
 }
 
 .search--button {
-    border: 1px solid #AAAAAA;
-    border-left: 0;
-    border-radius: 0 4px 4px 0;
+    border: 1px solid #AAAAAA !important;
+    border-left: 0 !important;
+    border-radius: 0 4px 4px 0 !important;
     padding: 11px 11px 11px 12px;
     line-height: 0;
-    cursor: pointer;
 }

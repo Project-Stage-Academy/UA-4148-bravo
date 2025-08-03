@@ -4,6 +4,7 @@ import Search from "../Search/search";
 import {useAuth} from "../../context/AuthContext/authContext";
 import { useEffect } from 'react';
 import PropTypes from 'prop-types';
+import Button from '../Button/button';
 
 /**
  * Header component
@@ -59,22 +60,15 @@ function Header({ show, hide, toggle, visible }) {
                         <Link to={'/login'} className={'link__underline nav-panel--link'}>
                             <p>Увійти</p>
                         </Link>
-                        <button
-                            className={
-                                'button button__padding button__primary-color'
-                            }
-                            onClick={() => navigate('/register')}
-                        >
+                        <Button className={"button__padding"}
+                                onClick={() => navigate('/register')}>
                             Зареєструватися
-                        </button>
+                        </Button>
                     </div>
                 )}
-                <button
-                    className={
-                        'button button__transparent-color nav-panel--menu-btn'
-                    }
-                    onClick={toggle}
-                >
+                <Button variant="outline"
+                        className={"nav-panel--menu-btn"}
+                        onClick={toggle}>
                     {
                         !visible
                             ? (
@@ -88,7 +82,7 @@ function Header({ show, hide, toggle, visible }) {
                                 </svg>
                             )
                     }
-                </button>
+                </Button>
             </nav>
         </header>
     );

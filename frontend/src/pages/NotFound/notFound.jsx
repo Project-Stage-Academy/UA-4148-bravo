@@ -1,5 +1,6 @@
 import './notFound.css';
 import { useNavigate } from 'react-router-dom';
+import Button from '../../components/Button/button';
 
 function NotFound() {
     const navigate = useNavigate();
@@ -18,12 +19,10 @@ function NotFound() {
                         перейменована або тимчасово недоступна.
                     </p>
                     <div>
-                        <button
-                            className={'button button__padding button__primary-color'}
-                            onClick={returnToHomePage}
-                        >
-                            <span>Повернутися на головну</span>
-                        </button>
+                        <Button className={"button__padding"}
+                                onClick={returnToHomePage}>
+                            Повернутися на головну
+                        </Button>
                     </div>
                 </div>
             </section>

@@ -1,5 +1,6 @@
 import "./search.css";
 import PropTypes from 'prop-types';
+import Button from '../Button/button';
 
 /**
  * Search component
@@ -10,9 +11,9 @@ function Search({ className = '' }) {
             <input placeholder={"Пошук"}
                    className={"search--input"}
             />
-            <button className={"search--button"}>
+            <Button variant="secondary" className={"search--button"}>
                 <img src={"/pictures/svg/loupe.svg"} alt={"Search"}/>
-            </button>
+            </Button>
         </div>
     );
 }
