@@ -4,7 +4,6 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, DataError
 from django.utils import timezone
-from django.contrib.auth.models import Group, Permission
 
 
 class ActiveUserManager(models.Manager):
@@ -82,23 +81,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         is_active (bool): User active status.
         is_staff (bool): User staff status.
     """
-    
-    groups = models.ManyToManyField(
-        Group,
-        related_name='custom_users', 
-        blank=True,
-        help_text='The groups this user belongs to.',
-        verbose_name='groups',
-        related_query_name='custom_user',
-    )
-    user_permissions = models.ManyToManyField(
-        Permission,
-        related_name='custom_users',
-        blank=True,
-        help_text='Specific permissions for this user.',
-        verbose_name='user permissions',
-        related_query_name='custom_user',
-    )
 
     class Role(models.TextChoices):
         ADMIN = 'admin', 'Admin'
