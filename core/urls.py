@@ -18,9 +18,11 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from .healthcheck import elasticsearch_healthcheck
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
     path('api/projects/', include('projects.urls')),
+    path('health/elasticsearch/', elasticsearch_healthcheck),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

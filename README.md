@@ -151,6 +151,11 @@ uvicorn core.asgi:application --reload
 - `/api/startups/search/` — full-text search by `company_name`, `description`, etc.
 - `/api/projects/search/` — full-text search by `title`, `description`, etc.
 
+Setup
+Install dependencies: pip install django-elasticsearch-dsl django-elasticsearch-dsl-drf
+Build indexes: python manage.py runserver
+Synchronise with Elasticsearch: python manage.py search_index --rebuild
+
 Filters (GET params):
 - `q`: keyword to search in text fields
 - `funding_stage`, `location` (for startups)
