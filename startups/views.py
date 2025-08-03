@@ -1,23 +1,22 @@
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
-from .documents import ProjectDocument
-from .serializers import ProjectDocumentSerializer
+from .documents import StartupDocument
+from .serializers import StartupDocumentSerializer
 from django_elasticsearch_dsl_drf.filter_backends import (
     FilteringFilterBackend,
     OrderingFilterBackend,
     CompoundSearchFilterBackend,
 )
 
-
-class ProjectSearchViewSet(DocumentViewSet):
-    document = ProjectDocument
-    serializer_class = ProjectDocumentSerializer
+class StartupSearchViewSet(DocumentViewSet):
+    document = StartupDocument
+    serializer_class = StartupDocumentSerializer
     filter_backends = [
         FilteringFilterBackend,
         OrderingFilterBackend,
         CompoundSearchFilterBackend,
     ]
-    search_fields = ('title', 'description')
+    search_fields = ('company_name', 'description')
     filter_fields = {
-        'status': 'exact',
-        'required_amount': 'exact',
+        'funding_stage': 'exact',
+        'location': 'exact',
     }

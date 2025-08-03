@@ -146,3 +146,12 @@ This project integrates **Django** and **FastAPI** into a single ASGI applicatio
 
 ```bash
 uvicorn core.asgi:application --reload
+
+### Search API (Elasticsearch)
+- `/api/startups/search/` — full-text search by `company_name`, `description`, etc.
+- `/api/projects/search/` — full-text search by `title`, `description`, etc.
+
+Filters (GET params):
+- `q`: keyword to search in text fields
+- `funding_stage`, `location` (for startups)
+- `status`, `required_amount` (for projects)

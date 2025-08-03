@@ -10,6 +10,8 @@ defusedxml==0.7.1
 Django==5.2.4
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.1
+django-elasticsearch-dsl==8.0.0
+django-elasticsearch-dsl-drf==0.22.0
 djoser==2.3.3
 fastapi==0.116.1
 h11==0.16.0

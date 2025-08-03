@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 class StartupsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'projects'
+    name = 'startups'
 
     def ready(self):
-        import startups.signals, projects.documents
+        import startups.signals
