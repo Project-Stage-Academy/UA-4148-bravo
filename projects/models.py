@@ -13,6 +13,12 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Category'
+        verbose_name_plural = 'Categories'
+        db_table = 'categories'
+
 
 class Project(models.Model):
     STATUS_CHOICES = [
@@ -38,7 +44,7 @@ class Project(models.Model):
         null=True,
         validators=[
             MinValueValidator(1),
-            MaxValueValidator(3650)  # до 10 років
+            MaxValueValidator(3650)
         ]
     )
 
@@ -79,6 +85,15 @@ class Project(models.Model):
         return f"Project '{self.title}' by {self.startup}"
 
     class Meta:
+        db_table = 'projects'
         ordering = ['-created_at']
         verbose_name = 'Project'
         verbose_name_plural = 'Projects'
+        indexes = [
+            models.Index(fields=['status'], name='project_status_idx'),
+            models.Index(fields=['created_at'], name='project_created_at_idx'),
+            models.Index(fields=['startup', 'investor'], name='project_startup_investor_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['title', 'startup'], name='unique_startup_project_title')
+        ]

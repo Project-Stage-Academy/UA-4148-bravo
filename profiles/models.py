@@ -28,6 +28,12 @@ class Country(models.Model):
     def __str__(self):
         return f"{self.name} ({self.code})"
 
+    class Meta:
+        db_table = "countries"
+        ordering = ["name"]
+        verbose_name = "Country"
+        verbose_name_plural = "Countries"
+
 
 class City(models.Model):
     country = models.ForeignKey('Country', on_delete=models.CASCADE, related_name='cities')
@@ -43,11 +49,15 @@ class City(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ('country', 'name')
-
     def __str__(self):
         return f"{self.name}, {self.country.name}"
+
+    class Meta:
+        db_table = "cities"
+        unique_together = ('country', 'name')
+        ordering = ["country__name", "name"]
+        verbose_name = "City"
+        verbose_name_plural = "Cities"
 
 
 class Location(models.Model):
@@ -72,6 +82,12 @@ class Location(models.Model):
         parts = [self.address_line, self.city.name]
         return ", ".join(filter(None, parts))
 
+    class Meta:
+        db_table = "locations"
+        ordering = ["city__country__name", "city__name", "address_line"]
+        verbose_name = "Location"
+        verbose_name_plural = "Locations"
+
 
 class Industry(models.Model):
     name = models.CharField(
@@ -84,6 +100,12 @@ class Industry(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        db_table = "industries"
+        ordering = ["name"]
+        verbose_name = "Industry"
+        verbose_name_plural = "Industries"
 
 
 class Stage(models.TextChoices):
@@ -127,7 +149,7 @@ class Company(models.Model):
 
 class Startup(Company):
     user = models.OneToOneField(
-        'users.CustomUser',
+        'users.User',
         on_delete=models.CASCADE,
         related_name='startup'
     )
@@ -158,10 +180,19 @@ class Startup(Company):
     def __str__(self):
         return f"{self.company_name} (Startup, User ID: {self.user_id})"
 
+    class Meta:
+        db_table = "startups"
+        ordering = ["company_name"]
+        verbose_name = "Startup"
+        verbose_name_plural = "Startups"
+        constraints = [
+            models.UniqueConstraint(fields=["user"], name="unique_startup_user")
+        ]
+
 
 class Investor(Company):
     user = models.OneToOneField(
-        'users.CustomUser',
+        'users.User',
         on_delete=models.CASCADE,
         related_name='investor'
     )
@@ -199,6 +230,15 @@ class Investor(Company):
     def __str__(self):
         return f"{self.company_name} (Investor, User ID: {self.user_id})"
 
+    class Meta:
+        db_table = "investors"
+        ordering = ["company_name"]
+        verbose_name = "Investor"
+        verbose_name_plural = "Investors"
+        constraints = [
+            models.UniqueConstraint(fields=["user"], name="unique_investor_user")
+        ]
+
 
 class StartupSocialMedia(models.Model):
     startup = models.ForeignKey(
@@ -212,6 +252,13 @@ class StartupSocialMedia(models.Model):
 
     def __str__(self):
         return f"{self.platform} for {self.startup.company_name}"
+
+    class Meta:
+        db_table = "startup_social_media"
+        ordering = ["-created_at"]
+        verbose_name = "Startup Social Media"
+        verbose_name_plural = "Startup Social Media Links"
+        unique_together = ("startup", "platform")
 
 
 class Interest(models.Model):
@@ -230,6 +277,13 @@ class Interest(models.Model):
     def __str__(self):
         return f"Interest from {self.investor.company_name} in {self.startup.company_name} - Status: {self.status}"
 
+    class Meta:
+        db_table = "interests"
+        ordering = ["-created_at"]
+        verbose_name = "Investor Interest"
+        verbose_name_plural = "Investor Interests"
+        unique_together = ("investor", "startup")
+
 
 class SavedStartup(models.Model):
     STATUS_CHOICES = [
@@ -244,11 +298,15 @@ class SavedStartup(models.Model):
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ('investor', 'startup')
-
     def __str__(self):
         return f"{self.investor.company_name} saved {self.startup.company_name} ({self.status})"
+
+    class Meta:
+        db_table = "saved_startups"
+        ordering = ["-created_at"]
+        verbose_name = "Saved Startup"
+        verbose_name_plural = "Saved Startups"
+        unique_together = ("investor", "startup")
 
 
 class Investment(models.Model):
@@ -294,6 +352,22 @@ class Investment(models.Model):
         percent_str = f", {self.percent}%" if self.percent is not None else ""
         return f"Investment of {self.amount} by {self.investor.company_name} in project {self.project} {percent_str}"
 
+    class Meta:
+        db_table = "investments"
+        ordering = ["-created_at"]
+        verbose_name = "Investment"
+        verbose_name_plural = "Investments"
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(amount__gte=0),
+                name="amount_non_negative"
+            ),
+            models.CheckConstraint(
+                check=models.Q(percent__gte=0) & models.Q(percent__lte=100),
+                name="percent_between_0_and_100"
+            )
+        ]
+
 
 class Tag(models.Model):
     TAG_TYPES = [
@@ -320,17 +394,36 @@ class Tag(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_tag_type_display()})"
 
+    class Meta:
+        db_table = 'tags'
+        ordering = ['tag_type', 'name']
+        verbose_name = 'Tag'
+        verbose_name_plural = 'Tags'
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['tag_type']),
+        ]
+
 
 class StartupTag(models.Model):
     startup = models.ForeignKey('Startup', on_delete=models.CASCADE)
     tag = models.ForeignKey('Tag', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ('startup', 'tag')
-
     def __str__(self):
         return f"Startup: {self.startup}, Tag: {self.tag.name}"
+
+    class Meta:
+        db_table = 'startup_tags'
+        verbose_name = 'Startup Tag'
+        verbose_name_plural = 'Startup Tags'
+        constraints = [
+            models.UniqueConstraint(fields=['startup', 'tag'], name='unique_startup_tag')
+        ]
+        indexes = [
+            models.Index(fields=['startup']),
+            models.Index(fields=['tag']),
+        ]
 
 
 class InvestorTag(models.Model):
@@ -338,8 +431,17 @@ class InvestorTag(models.Model):
     tag = models.ForeignKey('Tag', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ('investor', 'tag')
-
     def __str__(self):
         return f"Investor: {self.investor}, Tag: {self.tag.name}"
+
+    class Meta:
+        db_table = 'investor_tags'
+        verbose_name = 'Investor Tag'
+        verbose_name_plural = 'Investor Tags'
+        constraints = [
+            models.UniqueConstraint(fields=['investor', 'tag'], name='unique_investor_tag')
+        ]
+        indexes = [
+            models.Index(fields=['investor']),
+            models.Index(fields=['tag']),
+        ]

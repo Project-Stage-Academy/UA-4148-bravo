@@ -163,7 +163,3 @@ cython_debug/
 staticfiles/
 
 /logs
-
-# Ignore Django migration files
-**/migrations/
-!**/migrations/__init__.py
