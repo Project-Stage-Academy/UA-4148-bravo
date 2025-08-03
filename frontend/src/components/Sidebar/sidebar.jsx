@@ -33,9 +33,16 @@ function Sidebar({ show, hide, toggle, visible, children }) {
     return (
         <div className={"sidebar-wrapper"}>
             <Dimmer isActive={visible} hideDimmer={hide}>
-                <div onClick={(e) => e.stopPropagation()}>
-                    <hr className={"sidebar--hr"}/>
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden={!visible}
+                    aria-labelledby="sidebar-title"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <hr className={"sidebar--hr"} />
                     <div className={"sidebar--menu"}>
+                        <h2 id="sidebar-title" className="visually-hidden">Меню сайдбара</h2>
                         <Search width={'100%'} />
                         <Link to={"/who-we-are"} className={"sidebar--link"}>
                             <p>Про нас</p>
