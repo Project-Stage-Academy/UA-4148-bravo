@@ -43,6 +43,10 @@ function AuthProvider({ children }) {
     );
 }
 
+/**
+ * PropTypes for AuthProvider component.
+ * @type {{children: any}}
+ */
 AuthProvider.propTypes = {
     children: PropTypes.node.isRequired,
 };

@@ -2,6 +2,13 @@ import './notFound.css';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button/button';
 
+/**
+ * NotFound component renders a 404 Not Found page.
+ * It provides a message indicating that the requested page could not be found
+ * and includes a button to navigate back to the home page.
+ * @returns {JSX.Element}
+ * @constructor
+ */
 function NotFound() {
     const navigate = useNavigate();
     const returnToHomePage = () => {

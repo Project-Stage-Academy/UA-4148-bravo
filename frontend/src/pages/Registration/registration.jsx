@@ -1,5 +1,10 @@
 import './registration.css';
 
+/**
+ * RegistrationPage component
+ * @returns {JSX.Element}
+ * @constructor
+ */
 function RegistrationPage() {
     return (
         <></>

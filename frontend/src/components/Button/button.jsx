@@ -15,6 +15,14 @@ function Button({  variant = 'primary', className = '', children, ...rest }) {
     );
 }
 
+/**
+ * Button component
+ * @param {Object} props
+ * @param {'primary' | 'secondary' | 'danger' | 'outline'} [props.variant] - Button variant
+ * @param {string} [props.className] - Additional classes
+ * @param {React.ReactNode} props.children - Button contents
+ * @returns {JSX.Element}
+ */
 Button.propTypes = {
     variant: PropTypes.oneOf(['primary', 'secondary', 'danger', 'outline']),
     className: PropTypes.string,
