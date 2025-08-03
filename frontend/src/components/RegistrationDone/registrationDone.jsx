@@ -9,7 +9,7 @@ function RegistrationDone() {
     }
 
     return (
-        <div className={'panel panel__margin'}>
+        <div className={'panel panel__margin panel__margin-large'}>
             <h2 className={'panel--title'}>Реєстрація завершена!</h2>
             <hr className={'panel--hr'} />
             <div className={'panel--content'}>

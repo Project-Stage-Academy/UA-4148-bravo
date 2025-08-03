@@ -3,7 +3,7 @@
     border: 0;
     border-radius: 4px;
     font-family: var(--text-font), sans-serif;
-    font-size: 16px;
+    font-size: 14px;
     transition: all var(--animation-normal) ease;
 }
 

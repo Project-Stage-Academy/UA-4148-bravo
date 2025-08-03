@@ -39,7 +39,7 @@ function RegisterReconfirmation() {
     }
 
     return (
-        <div className={'panel panel__margin'}>
+        <div className={'panel panel__margin panel__margin-large'}>
             <h2 className={'panel--title'}>Надіслати лист для активації ще раз</h2>
             <hr className={'panel--hr'} />
             <div className={'panel--content'}>

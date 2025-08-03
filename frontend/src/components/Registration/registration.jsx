@@ -75,7 +75,7 @@ function Registration() {
                 <h2 className={'panel--title'}>Реєстрація</h2>
                 <hr className={'panel--hr'} />
                 <div className={'panel--content'}>
-                    <div>
+                    <div className={"content--text-container"}>
                         <span
                             className={
                                 'content--text content--text__starred content--text__margin'
@@ -88,7 +88,7 @@ function Registration() {
                         </span>
                     </div>
                     <div>
-                        <div className={'content--text-container__margin'}>
+                        <div className={'content--text-container content--text-container__margin'}>
                             <span
                                 className={
                                     'content--text content--text__starred content--text__margin'
@@ -114,7 +114,7 @@ function Registration() {
                         { errors['companyName'] ? <p className={"panel--error-text"}>{ errors['companyName'] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container__margin'}>
+                        <div className={'content--text-container content--text-container__margin'}>
                             <span
                                 className={
                                     'content--text content--text__starred content--text__margin'
@@ -175,7 +175,7 @@ function Registration() {
                         { errors['password'] ? <p className={"panel--error-text"}>{ errors['password'] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container__margin'}>
+                        <div className={'content--text-container content--text-container__margin'}>
                             <span
                                 className={
                                     'content--text content--text__starred content--text__margin'
@@ -201,7 +201,7 @@ function Registration() {
                         { errors['confirmPassword'] ? <p className={"panel--error-text"}>{ errors["confirmPassword"] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container__margin'}>
+                        <div className={'content--text-container content--text-container__margin'}>
                             <span
                                 className={
                                     'content--text content--text__starred content--text__margin'
@@ -225,7 +225,7 @@ function Registration() {
                         { errors['lastName'] ? <p className={"panel--error-text"}>{ errors["lastName"] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container__margin'}>
+                        <div className={'content--text-container content--text-container__margin'}>
                             <span
                                 className={
                                     'content--text content--text__starred content--text__margin'
@@ -249,7 +249,7 @@ function Registration() {
                         { errors['firstName'] ? <p className={"panel--error-text"}>{ errors["firstName"] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container__margin'}>
+                        <div className={'content--text-container content--text-container__margin'}>
                             <span
                                 className={
                                     'content--text content--text__starred content--text__margin'

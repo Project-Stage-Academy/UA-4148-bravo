@@ -2,10 +2,16 @@
     background-color: var(--secondary-bcg-color);
     border-radius: 6px;
     width: 572px;
+    transition: width var(--animation-fast);
 }
 
 .panel__margin {
     margin: 40px 40px 24px;
+}
+
+.panel__margin-large {
+    margin-top: 80px !important;
+    margin-bottom: 80px !important;
 }
 
 .panel--hr {
@@ -82,4 +88,10 @@
     display: flex;
     gap: 8px;
     margin: 10px 24px;
+}
+
+@media screen and (max-width: 646px) {
+    .panel {
+        width: 100%;
+    }
 }
