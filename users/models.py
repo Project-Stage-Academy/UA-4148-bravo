@@ -109,6 +109,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = 'users'
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
+        indexes = [
+            models.Index(fields=['email']),
+            models.Index(fields=['is_active']),
+        ]
 
     def __str__(self):
         """
@@ -352,6 +358,12 @@ class UserRole(models.Model):
 
     class Meta:
         db_table = 'user_roles'
+        verbose_name = 'User Role'
+        verbose_name_plural = 'User Roles'
+        indexes = [
+            models.Index(fields=['role']),
+            models.Index(fields=['user', 'role']),
+        ]
 
     def __str__(self):
         """
