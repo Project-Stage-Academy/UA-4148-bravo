@@ -306,7 +306,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self
 
     @classmethod
-    def delete_by_id(cls, user_id):
+    def deactivate_by_id(cls, user_id):
         """
         Deactivate a user by setting is_active to False.
 
