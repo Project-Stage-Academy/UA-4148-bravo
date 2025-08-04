@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'communications',
     'dashboard',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'djoser',
     'corsheaders',  # Added for CORS support
@@ -48,8 +49,13 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ROTATE_REFRESH_TOKENS': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'AUTH_TOKEN_CLASSES': (
+        'rest_framework_simplejwt.tokens.AccessToken',
+        'rest_framework_simplejwt.tokens.RefreshToken',
+    ),
 }
 
 DJOSER = {
@@ -122,6 +128,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -247,3 +256,34 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+AUTH_USER_MODEL = 'users.User'
+
+ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
+ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png"]
+
+ALLOWED_DOCUMENT_EXTENSIONS = [
+    "pdf", "doc", "docx", "txt", "odt", "rtf",
+    "xls", "xlsx", "ppt", "pptx", "zip", "rar"
+]
+
+ALLOWED_DOCUMENT_MIME_TYPES = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+    "application/vnd.oasis.opendocument.text",
+    "application/rtf",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+    "application/x-rar-compressed",
+]
+
+MAX_IMAGE_SIZE_MB = 10
+MAX_DOCUMENT_SIZE_MB = 20
+MAX_IMAGE_DIMENSIONS = (5000, 5000)
+ALLOWED_IMAGE_MODES = ["RGB", "RGBA", "L"]
+
