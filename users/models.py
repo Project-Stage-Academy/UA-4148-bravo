@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.forms.models import model_to_dict
 from validation.validate_email import validate_email_custom
 from validation.validate_string_fields import validate_max_length
-from validation.validate_role import validate_role_exists
+from validation.validate_role import validate_role_exists, get_default_role_id
 
 
 class ActiveUserManager(models.Manager):
@@ -100,6 +100,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         'UserRole',
         on_delete=models.PROTECT,
         related_name='users',
+        default=get_default_role_id,
         help_text="Current role of the user"
     )
     created_at = models.DateTimeField(default=timezone.now, editable=False)
