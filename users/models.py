@@ -101,7 +101,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     password = models.CharField(max_length=128)
     user_phone = models.CharField(max_length=20, null=True, blank=True)
     title = models.CharField(max_length=100, null=True, blank=True)
-    role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER)
+    role = models.ForeignKey(
+        'UserRole',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='users',
+        help_text="Current role of the user"
+    )
     created_at = models.DateTimeField(default=timezone.now, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -136,7 +143,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             f"'email': '{self.email}', "
             f"'user_phone': '{self.user_phone}', "
             f"'title': '{self.title}', "
-            f"'role': {self.role}, "
+            f"'role': '{self.role.role if self.role else None}', "
             f"'created_at': {int(self.created_at.timestamp())}, "
             f"'updated_at': {int(self.updated_at.timestamp())}, "
             f"'is_active': {self.is_active}, "
@@ -160,6 +167,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         )
         data["created_at"] = int(self.created_at.timestamp())
         data["updated_at"] = int(self.updated_at.timestamp())
+        data["role"] = self.role.role if self.role else None
         return data
 
     @classmethod
@@ -222,8 +230,11 @@ class User(AbstractBaseUser, PermissionsMixin):
             validate_max_length(user_phone, 20, "User phone")
         if title:
             validate_max_length(title, 100, "Title")
-        if role and role not in dict(cls.Role.choices):
-             ValidationError("Invalid role value")
+        role_obj = None
+        if role:
+            role_obj = UserRole.objects.filter(role=role).first()
+            if not role_obj:
+                raise ValidationError(f"Role '{role}' does not exist")
         if not password or not isinstance(password, str) or len(password) < 8:
             raise ValidationError("Password must be a string at least 8 characters long")
 
@@ -233,7 +244,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             last_name=last_name,
             user_phone=user_phone,
             title=title,
-            role=role or cls.Role.USER,
+            role=role_obj,
             **other_fields
         )
         user.set_password(password)
@@ -270,7 +281,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             return v is None or (isinstance(v, str) and len(v) <= 100)
 
         def validate_role(v):
-            return v in dict(self.Role.choices)
+            return isinstance(v, str) and UserRole.objects.filter(role=v).exists()
 
         def validate_is_active(v):
             return isinstance(v, bool)
@@ -303,7 +314,14 @@ class User(AbstractBaseUser, PermissionsMixin):
                 value = kwargs[attr]
                 if not validator(value):
                     raise ValidationError(f"Invalid value for field '{attr}': {value}")
-                setattr(self, attr, value)
+                
+                if attr == 'role':
+                    role_obj = UserRole.objects.filter(role=value).first()
+                    if not role_obj:
+                        raise ValidationError(f"Role '{value}' does not exist")
+                    setattr(self, 'role', role_obj)
+                else:
+                    setattr(self, attr, value)
 
         if 'password' in kwargs:
             password = kwargs['password']
@@ -350,14 +368,12 @@ class UserRole(models.Model):
     User role model.
 
     Attributes:
-        user (ForeignKey): Related user instance.
         role (str): Role name.
         created_at (datetime): Creation timestamp.
         updated_at (datetime): Last update timestamp.
     """
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="roles")
-    role = models.CharField(max_length=20)
+    role = models.CharField(max_length=20, unique=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -367,7 +383,6 @@ class UserRole(models.Model):
         verbose_name_plural = 'User Roles'
         indexes = [
             models.Index(fields=['role']),
-            models.Index(fields=['user', 'role']),
         ]
 
     def __str__(self):
@@ -375,6 +390,6 @@ class UserRole(models.Model):
         String representation of the user role.
 
         Returns:
-            str: User email and role name.
+            str: Role name.
         """
-        return f"{self.user.email} - {self.role}"
+        return self.role
