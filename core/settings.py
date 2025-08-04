@@ -57,6 +57,14 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '5/minute',
+        'anon': '2/minute',
+    },
 }
 
 SIMPLE_JWT = {
@@ -66,18 +74,28 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # for testing letters in terminal
+# Backend for password recovery system
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'apikey'
+EMAIL_HOST_PASSWORD = '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' # API key for SendGrid service
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
     'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',  # link for front-end developer
     'SEND_ACTIVATION_EMAIL': False,
+    'PASSWORD_RESET_TIMEOUT': 3600,
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
     'SERIALIZERS': {
         'user_create': 'users.serializers.CustomUserCreateSerializer',
         'user': 'users.serializers.CustomUserSerializer',
         'current_user': 'users.serializers.CustomUserSerializer',
+        'password_reset_confirm': 'users.serializers.PasswordResetConfirmSerializer',
     },
 }
 
@@ -136,12 +154,16 @@ else:
         },
         {
             'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+            'OPTIONS': {'min_length': 8}
         },
         {
             'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
         },
         {
             'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        },
+        {
+            'NAME': 'users.validators.CustomPasswordValidator',
         },
     ]
 
