@@ -147,18 +147,55 @@ This project integrates **Django** and **FastAPI** into a single ASGI applicatio
 ```bash
 uvicorn core.asgi:application --reload
 
-### Search API (Elasticsearch)
-Our platform integrates Elasticsearch to provide fast and accurate full-text search capabilities across startup and project data. This allows investors to find relevant opportunities and startups to be easily discovered.
+###Elasticsearch Integration
 
-- `/api/startups/search/` — full-text search by `company_name`, `description`, etc.
-- `/api/projects/search/` — full-text search by `title`, `description`, etc.
+This project integrates Django with Elasticsearch using:
+- `django-elasticsearch-dsl`
+- `django-elasticsearch-dsl-drf`
 
-Setup
+Features
+- Full-text search on startups and projects
+- Filter by name, location, and funding_stage
+- Real-time indexing with Django signals
+
+How to Run Elasticsearch Locally
+
+Using Docker:
+
+```bash
+docker-compose up -d elasticsearch
+
+Setup:
 Install dependencies: pip install django-elasticsearch-dsl django-elasticsearch-dsl-drf
 Build indexes: python manage.py runserver
 Synchronise with Elasticsearch: python manage.py search_index --rebuild
 
-Filters (GET params):
-- `q`: keyword to search in text fields
-- `funding_stage`, `location` (for startups)
-- `status`, `required_amount` (for projects)
+Endpoints:
+- `/api/startups/search/` — full-text search by `company_name`, `description`, etc.
+- `/api/projects/search/` — full-text search by `title`, `description`, etc.
+
+Startup Search Endpoint
+Endpoint: /api/startups/search/
+Method: GET
+Description: Perform full-text search and filtering on startup data indexed in Elasticsearch.
+
+Query Parameters:
+
+q: Full-text keyword to match in company_name, description.
+location: Filters startups by city or location.
+funding_stage: Filters by funding stage (e.g., seed, pre-seed).
+
+Example: curl "http://localhost:8000/api/startups/search/?q=AI&location=Kyiv&funding_stage=seed"
+
+Project Search Endpoint
+Endpoint: /api/projects/search/
+Method: GET
+Description: Search and filter projects using Elasticsearch.
+
+Query Parameters:
+
+q: Full-text keyword to match in title, description.
+status:	Filters projects by status (e.g., active, closed).
+required_amount: Filters by requested funding amount.
+
+Example: curl "http://localhost:8000/api/projects/search/?q=solar&status=active&required_amount=100000"

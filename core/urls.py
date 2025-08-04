@@ -24,5 +24,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
     path('api/projects/', include('projects.urls')),
+    path("api/startups/", include("startups.urls")),
     path('health/elasticsearch/', elasticsearch_healthcheck),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

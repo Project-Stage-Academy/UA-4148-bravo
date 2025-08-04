@@ -1,7 +1,13 @@
-from rest_framework import serializers
+from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
 from .documents import StartupDocument
 
-class StartupDocumentSerializer(serializers.ModelSerializer):
+class StartupDocumentSerializer(DocumentSerializer):
     class Meta:
-        model = StartupDocument
-        fields = '__all__'
+        document = StartupDocument
+        fields = (
+            "company_name",
+            "description",
+            "funding_stage",
+            "location",
+            "industries",
+        )

@@ -1,6 +1,8 @@
 from django.urls import path
-from .views import StartupSearchViewSet
+from rest_framework.routers import DefaultRouter
+from startups.views import StartupSearchViewSet
 
-urlpatterns = [
-    path('search/', StartupSearchViewSet.as_view({'get': 'list'}), name='startup-search'),
-]
+router = DefaultRouter()
+router.register(r'search', StartupSearchViewSet, basename='startup-search')
+
+urlpatterns = router.urls
