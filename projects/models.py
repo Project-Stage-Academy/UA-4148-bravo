@@ -1,24 +1,142 @@
+import re
+from decimal import Decimal
+
 from django.db import models
-from startups.models import Startup
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
+
+from validation.validate_document import validate_document_file
+from validation.validate_email import validate_email_custom
+from validation.validate_names import validate_forbidden_names
+
+
+class Category(models.Model):
+    """
+    Represents a category for projects or other entities.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        validate_forbidden_names(self.name, field_name="name")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Category'
+        verbose_name_plural = 'Categories'
+        db_table = 'categories'
+
 
 class Project(models.Model):
+    """
+    Represents a startup project with details about funding, status, and documentation.
+    """
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled')
+    ]
+
+    # Якщо модель Startup в apps.startups.models
+    startup = models.ForeignKey(
+        'startups.Startup',  # або 'profiles.Startup' якщо модель там
+        on_delete=models.CASCADE,
+        related_name='projects'
+    )
+
     title = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(blank=True, default="")
+
+    business_plan = models.FileField(
+        upload_to='projects/business_plans/',
+        blank=True,
+        null=True,
+        validators=[validate_document_file]
+    )
+
+    media_files = models.FileField(
+        upload_to='projects/media/',
+        blank=True,
+        null=True,
+        validators=[validate_document_file]
+    )
+
     status = models.CharField(
-        max_length=100,
-        choices=[
-            ('draft', 'Draft'),
-            ('active', 'Active'),
-            ('completed', 'Completed'),
-            ('archived', 'Archived'),
-        ],
+        max_length=50,
+        choices=STATUS_CHOICES,
         default='draft'
     )
-    required_amount = models.DecimalField(max_digits=12, decimal_places=2)
-    startup = models.ForeignKey(Startup, on_delete=models.CASCADE, related_name='projects')
+
+    duration = models.PositiveIntegerField(
+        help_text="Duration in days",
+        blank=True,
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(3650)]
+    )
+
+    funding_goal = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+
+    current_funding = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
+
+    category = models.ForeignKey('Category', on_delete=models.PROTECT)
+    website = models.URLField(blank=True, default="")
+    email = models.EmailField(
+        max_length=255,
+        validators=[validate_email_custom],
+        unique=True
+    )
+
+    has_patents = models.BooleanField(default=False)
+    is_participant = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def clean(self):
+        errors = {}
+
+        if self.funding_goal is not None and self.current_funding > self.funding_goal:
+            errors['current_funding'] = 'Current funding cannot exceed funding goal.'
+
+        if self.status in ['in_progress', 'completed'] and not self.business_plan:
+            errors['business_plan'] = 'Business plan is required for projects in progress or completed.'
+
+        if self.is_participant and not self.funding_goal:
+            errors['funding_goal'] = 'Funding goal is required for participant projects.'
+
+        if errors:
+            raise ValidationError(errors)
+
     def __str__(self):
-        return self.title
+        return f"Project '{self.title}' by {self.startup}"
+
+    class Meta:
+        db_table = 'projects'
+        ordering = ['-created_at']
+        verbose_name = 'Project'
+        verbose_name_plural = 'Projects'
+        indexes = [
+            models.Index(fields=['status'], name='project_status_idx'),
+            models.Index(fields=['created_at'], name='project_created_at_idx'),
+            models.Index(fields=['startup'], name='project_startup_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['title', 'startup'], name='unique_startup_project_title')
+        ]
