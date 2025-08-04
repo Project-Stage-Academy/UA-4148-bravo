@@ -1,4 +1,3 @@
-import re
 from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
@@ -6,9 +5,8 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django_countries.fields import CountryField
 
-from common.company import Company
-
-LATIN_REGEX = re.compile(r'^[A-Za-z\s\-]*$')
+from common.company import Company, Stage
+from validation.validate_names import validate_forbidden_names, validate_latin
 
 
 class Location(models.Model):
@@ -57,25 +55,36 @@ class Location(models.Model):
         errors = {}
 
         if self.postal_code:
-            if len(self.postal_code.strip()) < 3:
+            postal = self.postal_code.strip()
+            if len(postal) < 3:
                 errors['postal_code'] = "Postal code must be at least 3 characters."
-            elif not LATIN_REGEX.match(self.postal_code):
-                errors['postal_code'] = "Postal code must contain only Latin letters, spaces, or hyphens."
+            elif not validate_latin(postal):
+                errors['postal_code'] = (
+                    "Postal code must contain only Latin letters, spaces, hyphens, or apostrophes."
+                )
 
         for field_name in ['city', 'region', 'address_line']:
-            value = getattr(self, field_name)
-            if value and not LATIN_REGEX.match(value.strip()):
-                errors[
-                    field_name] = f"{field_name.replace('_', ' ').capitalize()} must contain only Latin letters, spaces, or hyphens."
+            raw_value = getattr(self, field_name)
+            if raw_value:
+                value = raw_value.strip()
+                if not value:
+                    errors[field_name] = (
+                        f"{field_name.replace('_', ' ').capitalize()} must not be empty or just spaces."
+                    )
+                elif not validate_latin(value):
+                    errors[field_name] = (
+                        f"{field_name.replace('_', ' ').capitalize()} must contain only Latin letters, spaces, hyphens, or apostrophes."
+                    )
 
         if self.address_line:
-            if not self.city:
+            if not self.city or not self.city.strip():
                 errors['city'] = "City is required when address_line is provided."
-            if not self.region:
+            if not self.region or not self.region.strip():
                 errors['region'] = "Region is required when address_line is provided."
 
-        if self.city and not self.region:
-            errors['region'] = "Region is required when city is provided."
+        if self.city:
+            if not self.region or not self.region.strip():
+                errors['region'] = "Region is required when city is provided."
 
         if errors:
             raise ValidationError(errors)
@@ -124,18 +133,8 @@ class Industry(models.Model):
         Ensures the name is in Latin characters only, not reserved,
         and not too generic. Strips spaces.
         """
-        self.name = self.name.strip()
-
-        if not self.name:
-            raise ValidationError({'name': "The name field cannot be empty."})
-
-        if re.search(r'[^\x00-\x7F]', self.name):
-            raise ValidationError({'name': "The name must contain only Latin characters."})
-
-        forbidden_names = {"other", "none", "misc", "default"}
-        if self.name.lower() in forbidden_names:
-            raise ValidationError({'name': "This name is too generic or reserved. "
-                                           "Please write a more specific category name."})
+        super().clean()
+        validate_forbidden_names(self.name, field_name="name")
 
     def __str__(self):
         return self.name
@@ -147,28 +146,9 @@ class Industry(models.Model):
         verbose_name_plural = "Industries"
 
 
-class Stage(models.TextChoices):
-    """
-    Enumeration of possible stages for companies (startups and investors).
-
-    Stages represent the lifecycle or maturity of a company, such as idea, prototype,
-    MVP, growth, scale, and enterprise.
-
-    Class methods provide default stages based on the company type:
-    - Startups default to 'idea'
-    - Investors default to 'mvp'
-    """
-    IDEA = 'idea', 'Idea'
-    PROTOTYPE = 'prototype', 'Prototype'
-    MVP = 'mvp', 'MVP'
-    GROWTH = 'growth', 'Growth'
-    SCALE = 'scale', 'Scale'
-    ENTERPRISE = 'enterprise', 'Enterprise'
-
-
 class Startup(Company):
     """
-    Model representing a startup company.
+    Model representing a Startup company.
     Inherits from the base Company model and adds specific fields:
         - stage: The stage of the startup.
         - social_links: A JSON field storing URLs to social media profiles, keyed by platform.
@@ -176,6 +156,11 @@ class Startup(Company):
     String representation includes company name and associated user ID.
     Meta options specify database table, ordering, and verbose names.
     """
+    user = models.OneToOneField(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='startup'
+    )
     stage = models.CharField(
         max_length=20,
         choices=Stage.choices,
@@ -195,13 +180,19 @@ class Startup(Company):
 
     def clean(self):
         """
-        Checks that:
-        - Social platform names are supported.
-        - Each URL's domain matches one of the valid domains for that platform.
+        Validates and prepares the Startup instance before saving.
 
+        Responsibilities:
+        - Sets a default value for `stage` if not explicitly provided.
+        - Calls base model's clean() to perform shared validation.
+        - Validates the `social_links` dictionary:
+            - Ensures each platform is among the supported platforms.
+            - Ensures each URL domain corresponds to the expected domain(s) for that platform.
         Raises:
-            ValidationError: If any platform or URL is invalid.
+            ValidationError: If the `social_links` contain unsupported platforms or mismatched domains.
         """
+        if not self.stage:
+            self.stage = Stage.IDEA
         super().clean()
         errors = {}
         for platform, url in self.social_links.items():
@@ -236,7 +227,12 @@ class Investor(Company):
     String representation includes company name and associated user ID.
     Meta options specify database table, ordering, and verbose names.
     """
-    preferred_stage = models.CharField(
+    user = models.OneToOneField(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='investor'
+    )
+    stage = models.CharField(
         max_length=20,
         choices=Stage.choices,
         default=Stage.MVP
@@ -248,6 +244,17 @@ class Investor(Company):
         default=0,
         validators=[MinValueValidator(0)]
     )
+
+    def clean(self):
+        """
+        Validates and prepares the Investor instance before saving.
+        Responsibilities:
+        - Sets a default value for `stage` if not explicitly provided.
+        - Calls base model's clean() to perform shared validation.
+        """
+        if not self.stage:
+            self.stage = Stage.MVP
+        super().clean()
 
     def __str__(self):
         return f"{self.company_name} (Investor, User ID: {self.user_id})"

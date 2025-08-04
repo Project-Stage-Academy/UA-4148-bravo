@@ -11,6 +11,33 @@ from validation.validate_email import validate_email_custom
 from validation.validate_image import validate_image_file
 
 
+class Stage(models.TextChoices):
+    """
+    Enumeration of possible stages for companies (startups and investors).
+    Stages represent the lifecycle or maturity of a company, such as idea, prototype,
+    MVP, growth, scale, and enterprise.
+    """
+    IDEA = 'idea', 'Idea'
+    PROTOTYPE = 'prototype', 'Prototype'
+    MVP = 'mvp', 'MVP'
+    GROWTH = 'growth', 'Growth'
+    SCALE = 'scale', 'Scale'
+    ENTERPRISE = 'enterprise', 'Enterprise'
+
+    @classmethod
+    def display(cls, value: str) -> str:
+        """
+        Returns the human-readable label for a given stage value.
+
+        Example:
+            Stage.display("mvp") -> "MVP"
+        """
+        try:
+            return cls(value).label
+        except ValueError:
+            return value
+
+
 class Company(models.Model):
     """
     Abstract base model representing common attributes of companies such as
@@ -46,20 +73,22 @@ class Company(models.Model):
         on_delete=models.CASCADE
     )
     industry = models.ForeignKey(
-        'Industry',
+        'profiles.Industry',
         on_delete=models.PROTECT
     )
-    company_name = models.CharField(max_length=254)
+    company_name = models.CharField(max_length=254, unique=True)
     location = models.ForeignKey(
-        'Location',
+        'profiles.Location',
         on_delete=models.PROTECT
     )
     logo = models.ImageField(
         upload_to='company/logos/',
-        validators=[validate_image_file]
+        validators=[validate_image_file],
+        blank=True,
+        null=True
     )
     description = models.TextField(blank=True, default="")
-    website = models.URLField()
+    website = models.URLField(blank=True, default="")
     email = models.EmailField(
         max_length=254,
         validators=[validate_email_custom],
@@ -76,13 +105,22 @@ class Company(models.Model):
         default=1,
         validators=[MinValueValidator(1)]
     )
+    stage = models.CharField(
+        max_length=20,
+        choices=Stage.choices,
+        blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
         """ Description must be at least 10 characters if provided. """
-        if self.description and len(self.description.strip()) < 10:
-            raise ValidationError({'description': "Description must be at least 10 characters long if provided."})
+        if self.description:
+            trimmed_description = self.description.strip()
+            if len(trimmed_description) < 10:
+                raise ValidationError({
+                    'description': "Description must be at least 10 characters long if provided."
+                })
 
     class Meta:
         abstract = True

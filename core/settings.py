@@ -27,7 +27,8 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost',
+                       cast=lambda v: [s.strip() for s in v.split(',')])
 
 # Application definition
 
@@ -296,3 +297,31 @@ LOGGING = {
 }
 
 AUTH_USER_MODEL = 'users.User'
+
+ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
+ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png"]
+
+ALLOWED_DOCUMENT_EXTENSIONS = [
+    "pdf", "doc", "docx", "txt", "odt", "rtf",
+    "xls", "xlsx", "ppt", "pptx", "zip", "rar"
+]
+
+ALLOWED_DOCUMENT_MIME_TYPES = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+    "application/vnd.oasis.opendocument.text",
+    "application/rtf",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+    "application/x-rar-compressed",
+]
+
+MAX_IMAGE_SIZE_MB = 10
+MAX_DOCUMENT_SIZE_MB = 20
+MAX_IMAGE_DIMENSIONS = (5000, 5000)
+ALLOWED_IMAGE_MODES = ["RGB", "RGBA", "L"]

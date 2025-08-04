@@ -8,6 +8,8 @@ from validation.validate_document import validate_document_file
 from validation.validate_email import validate_email_custom
 from django.core.exceptions import ValidationError
 
+from validation.validate_names import validate_forbidden_names
+
 
 class Category(models.Model):
     """
@@ -27,24 +29,13 @@ class Category(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        '''
-        Disallow non-Latin letters (allow any characters as long as letters are Latin)
-        Disallow vague or reserved category names
-        '''
+        """
+        Validates the Category instance before saving.
+        Ensures the name is in Latin characters only, not reserved,
+        and not too generic. Strips spaces.
+        """
         super().clean()
-
-        if re.search(r'[^\x00-\x7F]', self.name):
-            raise ValidationError({
-                'name': "The name must contain only Latin characters. "
-                        "Non-Latin characters are not allowed."
-            })
-
-        forbidden_names = {"other", "none", "misc", "default"}
-        if self.name.strip().lower() in forbidden_names:
-            raise ValidationError({
-                'name': "This name is too generic or reserved. "
-                        "Please write a more specific category name."
-            })
+        validate_forbidden_names(self.name, field_name="name")
 
     def __str__(self):
         return self.name
@@ -132,8 +123,6 @@ class Project(models.Model):
     funding_goal = models.DecimalField(
         max_digits=20,
         decimal_places=2,
-        blank=True,
-        null=True,
         validators=[
             MinValueValidator(Decimal('0.01'))
         ]
