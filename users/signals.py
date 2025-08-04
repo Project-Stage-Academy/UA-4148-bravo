@@ -38,7 +38,7 @@ def create_default_roles(sender, **kwargs):
     except LookupError:
         return
     
-    if sender.name == app_config:
+    if sender.name == app_config.name:
         UserRole = apps.get_model(sender.label, 'UserRole')
         for role_value, _ in UserRole.Role.choices:
             UserRole.objects.get_or_create(role=role_value)

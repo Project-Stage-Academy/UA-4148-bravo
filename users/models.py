@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.forms.models import model_to_dict
 from validation.validate_email import validate_email_custom
 from validation.validate_string_fields import validate_max_length
-from validation.validate_role import validate_role_exists, get_default_role_id
+from validation.validate_role import validate_role_exists
 
 
 class ActiveUserManager(models.Manager):
@@ -40,6 +40,12 @@ class CustomUserManager(BaseUserManager):
         Returns:
             User: The created user instance.
         """
+        if 'role' not in other_fields or other_fields['role'] is None:
+            default_role = UserRole.objects.filter(role=UserRole.Role.USER).first()
+            if not default_role:
+                raise ValueError("Default role USER does not exist. Please create it first.")
+            other_fields['role'] = default_role
+        
         validate_max_length(email, 50, "Email")
         
         if self.model.all_objects.filter(email=email).exists():
@@ -67,6 +73,7 @@ class CustomUserManager(BaseUserManager):
         """
         other_fields.setdefault('is_staff', True)
         other_fields.setdefault('is_superuser', True)
+        other_fields.setdefault('role', UserRole.objects.filter(role=UserRole.Role.ADMIN).first())
         return self.create_user(email, password, **other_fields)
 
 
@@ -100,7 +107,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         'UserRole',
         on_delete=models.PROTECT,
         related_name='users',
-        default=get_default_role_id,
         help_text="Current role of the user"
     )
     created_at = models.DateTimeField(default=timezone.now, editable=False)
