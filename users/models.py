@@ -40,10 +40,10 @@ class CustomUserManager(BaseUserManager):
             User: The created user instance.
         """
         if len(email) > 50:
-            raise ValueError("Email must be 50 characters or fewer")
+            raise ValidationError("Email must be 50 characters or fewer")
         
         if self.model.all_objects.filter(email=email).exists():
-            raise ValueError("Email already exists")
+            raise ValidationError("Email already exists")
         
         validate_email_custom(email)
         
@@ -207,28 +207,25 @@ class User(AbstractBaseUser, PermissionsMixin):
         Returns:
             User: The created user instance.
         """
-        try:
-            validate_email(email)
-        except ValidationError:
-            raise ValueError("Invalid email format")
+        validate_email_custom(email)
 
         if cls.objects.filter(email=email).exists():
-            raise ValueError("Email already exists")
+            raise ValidationError("Email already exists")
 
         if len(email) > 50:
-            raise ValueError("Email must be 50 characters or fewer")
+            raise ValidationError("Email must be 50 characters or fewer")
         if len(first_name) > 50:
-            raise ValueError("First name must be 50 characters or fewer")
+            raise ValidationError("First name must be 50 characters or fewer")
         if len(last_name) > 50:
-            raise ValueError("Last name must be 50 characters or fewer")
+            raise ValidationError("Last name must be 50 characters or fewer")
         if user_phone is not None and len(user_phone) > 20:
-            raise ValueError("User phone must be 20 characters or fewer")
+            raise ValidationError("User phone must be 20 characters or fewer")
         if title is not None and len(title) > 100:
-            raise ValueError("Title must be 100 characters or fewer")
+            raise ValidationError("Title must be 100 characters or fewer")
         if role is not None and role not in dict(cls.Role.choices):
-            raise ValueError("Invalid role value")
+            raise ValidationError("Invalid role value")
         if not password or not isinstance(password, str) or len(password) < 8:
-            raise ValueError("Password must be a string at least 8 characters long")
+            raise ValidationError("Password must be a string at least 8 characters long")
 
         user = cls(
             email=email,
@@ -285,7 +282,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             if not isinstance(v, str) or len(v) > 50:
                 return False
             try:
-                validate_email(v)
+                validate_email_custom(v)
                 return True
             except ValidationError:
                 return False
@@ -305,13 +302,13 @@ class User(AbstractBaseUser, PermissionsMixin):
             if attr in kwargs:
                 value = kwargs[attr]
                 if not validator(value):
-                    raise ValueError(f"Invalid value for field '{attr}': {value}")
+                    raise ValidationError(f"Invalid value for field '{attr}': {value}")
                 setattr(self, attr, value)
 
         if 'password' in kwargs:
             password = kwargs['password']
             if not isinstance(password, str) or len(password) < 8 or len(password) > 128:
-                raise ValueError("Password must be a string between 8 and 128 characters.")
+                raise ValidationError("Password must be a string between 8 and 128 characters.")
             self.set_password(password)
 
         self.save()
