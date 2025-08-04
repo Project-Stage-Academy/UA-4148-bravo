@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import Button from '../Button/button';
 import { registerUser } from '../../api';
+import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../Panel/panel';
 
 function Registration() {
     const navigate = useNavigate();
@@ -69,24 +70,10 @@ function Registration() {
 
     return (
         <>
-            <div className={'panel panel__margin'}>
-                <h2 className={'panel--title'}>Реєстрація</h2>
-                <hr className={'panel--hr'} />
-                <div className={'panel--content'}>
+            <Panel>
+                <PanelTitle>Реєстрація</PanelTitle>
+                <PanelBody>
                     <div className={"content--text-container"}>
-                        <span
-                            className={
-                                'content--text content--text__starred content--text__margin'
-                            }
-                        >
-                            *
-                        </span>
-                        <span className={'content--text'}>
-                            Обов’язкові поля позначені зірочкою
-                        </span>
-                    </div>
-                    <div>
-                        <div className={'content--text-container content--text-container__margin'}>
                             <span
                                 className={
                                     'content--text content--text__starred content--text__margin'
@@ -94,9 +81,22 @@ function Registration() {
                             >
                                 *
                             </span>
-                            <span className={'content--text'}>
-                                Назва компанії
+                        <span className={'content--text'}>
+                                Обов’язкові поля позначені зірочкою
                             </span>
+                    </div>
+                    <div>
+                        <div className={'content--text-container content--text-container__margin'}>
+                                <span
+                                    className={
+                                        'content--text content--text__starred content--text__margin'
+                                    }
+                                >
+                                    *
+                                </span>
+                            <span className={'content--text'}>
+                                    Назва компанії
+                                </span>
                         </div>
                         <input
                             type="text"
@@ -113,16 +113,16 @@ function Registration() {
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
-                            <span
-                                className={
-                                    'content--text content--text__starred content--text__margin'
-                                }
-                            >
-                                *
-                            </span>
+                                <span
+                                    className={
+                                        'content--text content--text__starred content--text__margin'
+                                    }
+                                >
+                                    *
+                                </span>
                             <span className={'content--text'}>
-                                Електронна пошта
-                            </span>
+                                    Електронна пошта
+                                </span>
                         </div>
                         <input
                             type="text"
@@ -143,13 +143,13 @@ function Registration() {
                                 'content--text-container content--text-container__margin'
                             }
                         >
-                            <span
-                                className={
-                                    'content--text content--text__starred content--text__margin'
-                                }
-                            >
-                                *
-                            </span>
+                                <span
+                                    className={
+                                        'content--text content--text__starred content--text__margin'
+                                    }
+                                >
+                                    *
+                                </span>
                             <div className={'content--substring-container'}>
                                 <span className={'content--text'}>Пароль</span>
                                 <p className={'content--subtext'}>
@@ -174,16 +174,16 @@ function Registration() {
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
-                            <span
-                                className={
-                                    'content--text content--text__starred content--text__margin'
-                                }
-                            >
-                                *
-                            </span>
+                                <span
+                                    className={
+                                        'content--text content--text__starred content--text__margin'
+                                    }
+                                >
+                                    *
+                                </span>
                             <span className={'content--text'}>
-                                Повторіть пароль
-                            </span>
+                                    Повторіть пароль
+                                </span>
                         </div>
                         <input
                             type="password"
@@ -200,13 +200,13 @@ function Registration() {
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
-                            <span
-                                className={
-                                    'content--text content--text__starred content--text__margin'
-                                }
-                            >
-                                *
-                            </span>
+                                <span
+                                    className={
+                                        'content--text content--text__starred content--text__margin'
+                                    }
+                                >
+                                    *
+                                </span>
                             <span className={'content--text'}>Прізвище</span>
                         </div>
                         <input
@@ -224,13 +224,13 @@ function Registration() {
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
-                            <span
-                                className={
-                                    'content--text content--text__starred content--text__margin'
-                                }
-                            >
-                                *
-                            </span>
+                                <span
+                                    className={
+                                        'content--text content--text__starred content--text__margin'
+                                    }
+                                >
+                                    *
+                                </span>
                             <span className={'content--text'}>Ім‘я</span>
                         </div>
                         <input
@@ -248,16 +248,16 @@ function Registration() {
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
-                            <span
-                                className={
-                                    'content--text content--text__starred content--text__margin'
-                                }
-                            >
-                                *
-                            </span>
+                                <span
+                                    className={
+                                        'content--text content--text__starred content--text__margin'
+                                    }
+                                >
+                                    *
+                                </span>
                             <span className={'content--text'}>
-                                Кого ви представляєте?
-                            </span>
+                                    Кого ви представляєте?
+                                </span>
                         </div>
                         <div className={"checkbox--container"}>
                             <div className={"checkbox--item"}>
@@ -285,16 +285,16 @@ function Registration() {
                     </div>
                     <div>
                         <div className={'content--text-container__margin'}>
-                            <span
-                                className={
-                                    'content--text content--text__starred content--text__margin'
-                                }
-                            >
-                                *
-                            </span>
+                                <span
+                                    className={
+                                        'content--text content--text__starred content--text__margin'
+                                    }
+                                >
+                                    *
+                                </span>
                             <span className={'content--text'}>
-                                Який суб’єкт господарювання ви представляєте?
-                            </span>
+                                    Який суб’єкт господарювання ви представляєте?
+                                </span>
                         </div>
                         <div className={"checkbox--container"}>
                             <div className={"checkbox--item"}>
@@ -326,17 +326,16 @@ function Registration() {
                         <Link className={"panel--font-size text-underline text-bold"} to={"/policy"}>правилами використання</Link>
                         <span className={"panel--font-size"}> сайту Craftmerge</span>
                     </div>
-                </div>
-                <hr className={'panel--hr'} />
-                <div className={"panel--navigation"}>
+                </PanelBody>
+                <PanelNavigation>
                     <Button
                         onClick={handleSubmit}
                         className={'button__padding panel--button'}
                     >
                         Зареєструватися
                     </Button>
-                </div>
-            </div>
+                </PanelNavigation>
+            </Panel>
             <div className={"panel--under-panel"}>
                 <span>
                     Ви вже зареєстровані у нас?

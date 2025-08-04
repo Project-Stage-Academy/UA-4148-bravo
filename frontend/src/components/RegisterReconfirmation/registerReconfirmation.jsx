@@ -4,6 +4,7 @@ import { Validator } from '../../utils/validation/validate';
 import { useNavigate } from 'react-router-dom';
 import Button from '../Button/button';
 import { registerUser } from '../../api';
+import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../Panel/panel';
 
 function RegisterReconfirmation() {
     const navigate = useNavigate();
@@ -57,10 +58,9 @@ function RegisterReconfirmation() {
     };
 
     return (
-        <div className={'panel panel__margin panel__margin-large'}>
-            <h2 className={'panel--title'}>Надіслати лист для активації ще раз</h2>
-            <hr className={'panel--hr'} />
-            <div className={'panel--content'}>
+        <Panel className={"panel__margin-large"}>
+            <PanelTitle>Надіслати лист для активації ще раз</PanelTitle>
+            <PanelBody>
                 <div>
                     <p className={"panel--font-size"}>
                         Введіть електронну адресу вказану при реєстрації для повторного надіслення листа.
@@ -94,9 +94,8 @@ function RegisterReconfirmation() {
                     { errors['email'] ? <p className={"panel--danger-text"}>{ errors['email'] }</p> : ""}
                 </div>
                 { errors['unexpected'] ? <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> : ""}
-            </div>
-            <hr className={'panel--hr'} />
-            <div className={"panel--navigation"}>
+            </PanelBody>
+            <PanelNavigation>
                 <Button
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
@@ -110,8 +109,8 @@ function RegisterReconfirmation() {
                 >
                     Скасувати
                 </Button>
-            </div>
-        </div>
+            </PanelNavigation>
+        </Panel>
     );
 }
 

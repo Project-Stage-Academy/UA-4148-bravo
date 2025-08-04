@@ -1,6 +1,7 @@
 import "./registrationConfirmation.css";
 import { useNavigate } from 'react-router-dom';
 import Button from '../Button/button';
+import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../Panel/panel';
 
 function RegistrationConfirmation() {
     const navigate = useNavigate();
@@ -14,10 +15,9 @@ function RegistrationConfirmation() {
     }
 
     return (
-        <div className={'panel panel__margin panel__margin-large'}>
-            <h2 className={'panel--title'}>Реєстрація  майже завершена</h2>
-            <hr className={'panel--hr'} />
-            <div className={'panel--content'}>
+        <Panel className={"panel__margin-large"}>
+            <PanelTitle>Реєстрація  майже завершена</PanelTitle>
+            <PanelBody>
                 <div>
                     <p className={"panel--font-size"}>
                         На зазначену вами електронну пошту відправлено листа.
@@ -32,17 +32,16 @@ function RegistrationConfirmation() {
                         Надіслати ще раз
                     </Button>
                 </div>
-            </div>
-            <hr className={'panel--hr'} />
-            <div className={"panel--navigation"}>
+            </PanelBody>
+            <PanelNavigation>
                 <Button
                     onClick={handleReturn}
                     className={'button__padding panel--button'}
                 >
                     Повернутися до входу
                 </Button>
-            </div>
-        </div>
+            </PanelNavigation>
+        </Panel>
     );
 }
 
