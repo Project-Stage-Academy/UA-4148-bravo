@@ -125,24 +125,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         """
-        Return a string representation of the user.
+        Return a simplified string representation of the user for safe logging.
 
         Returns:
-            str: String with user details.
+            str: Concise user info without sensitive data.
         """
-        return (
-            f"'id': {self.user_id}, "
-            f"'first_name': '{self.first_name}', "
-            f"'last_name': '{self.last_name}', "
-            f"'email': '{self.email}', "
-            f"'user_phone': '{self.user_phone}', "
-            f"'title': '{self.title}', "
-            f"'role': '{self.role.role if self.role else None}', "
-            f"'created_at': {int(self.created_at.timestamp())}, "
-            f"'updated_at': {int(self.updated_at.timestamp())}, "
-            f"'is_active': {self.is_active}, "
-            f"'is_staff': {self.is_staff}"
-        )
+        return f"User(id={self.user_id}, name={self.first_name} {self.last_name})"
 
     def to_dict(self):
         """
