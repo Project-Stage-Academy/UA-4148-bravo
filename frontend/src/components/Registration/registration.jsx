@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 
 function Registration() {
-    const validator = new Validator();
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState(
@@ -25,48 +24,28 @@ function Registration() {
             }
         });
 
-    const validators = {
-        companyName: (value) => /^[\w\s]{2,}$/.test(value),
-        email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-        password: (value) => /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value),
-        confirmPassword: (value, data) => typeof value === "string" && value.trim() !== "" && value === data.password,
-        firstName: (value) => /^[A-Za-z]{2,}$/.test(value),
-        lastName: (value) => /^[A-Za-z]{2,}$/.test(value),
-        representation: (value) => Object.values(value).some(v => v),
-        businessType: (value) => Object.values(value).some(v => v)
-    };
-
     const [errors, setErrors] = useState({});
 
-    const errorZeroLengthMessages = {
-        companyName: "Не ввели назву компанії",
-        email: "Не ввели електронну пошту",
-        password: "Не ввели пароль",
-        confirmPassword: "Не ввели пароль ще раз",
-        firstName: "Не ввели ім’я",
-        lastName: "Не ввели прізвище",
-        representation: "Виберіть кого ви представляєте",
-        businessType: "Виберіть який суб’єкт господарювання ви представляєте"
-    }
-
-    const errorValidationMessages = {
-        companyName: "Назва компанії не відповідає вимогам",
-        email: "Пошта не відповідає вимогам",
-        password: "Пароль не відповідає вимогам",
-        confirmPassword: "Паролі не співпадають. Будь ласка, введіть однакові паролі в обидва поля",
-        firstName: "Ім’я не відповідає вимогам",
-        lastName: "Прізвище не відповідає вимогам"
-    }
-
     const handleSubmit = () => {
-        const validationErrors = validator.validate(formData, validators, errorZeroLengthMessages, errorValidationMessages);
+        const validationErrors = Validator.validate(
+            formData
+        );
         setErrors(validationErrors);
 
         if (Object.keys(validationErrors).length === 0) {
-            navigate("/auth/register/confirmation");
+            navigate('/auth/register/confirmation');
         } else {
-            console.log("Errors:", validationErrors);
+            console.log('Errors:', validationErrors);
         }
+    };
+
+    const handleChange = (e) => {
+        return Validator.handleChange(
+            e,
+            formData,
+            setFormData,
+            setErrors
+        );
     };
 
     return (
@@ -107,7 +86,7 @@ function Registration() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.companyName}
-                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                            onChange={handleChange}
                             placeholder={'Введіть назву вашої компанії'}
                             className={`input input-text input__width ${errors['companyName'] ? 'input__error-border-color' : ''}`}
                         />
@@ -133,7 +112,7 @@ function Registration() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.email}
-                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                            onChange={handleChange}
                             placeholder={'Введіть свою електронну пошту'}
                             className={`input input-text input__width ${(errors['email'] || errors['email-exist']) ? 'input__error-border-color' : ''}`}
                         />
@@ -168,7 +147,7 @@ function Registration() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.password}
-                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                            onChange={handleChange}
                             placeholder={'Введіть пароль'}
                             className={`input input-text input__width ${errors['password'] ? 'input__error-border-color' : ''}`}
                         />
@@ -194,7 +173,7 @@ function Registration() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.confirmPassword}
-                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                            onChange={handleChange}
                             placeholder={'Введіть пароль ще раз'}
                             className={`input input-text input__width ${(errors['confirmPassword'] || errors['confirmPassword-passwords-dont-match']) ? 'input__error-border-color' : ''}`}
                         />
@@ -218,7 +197,7 @@ function Registration() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.lastName}
-                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                            onChange={handleChange}
                             placeholder={'Введіть ваше прізвище'}
                             className={`input input-text input__width ${errors['lastName'] ? 'input__error-border-color' : ''}`}
                         />
@@ -242,7 +221,7 @@ function Registration() {
                             autoCorrect="off"
                             spellCheck="false"
                             value={formData.firstName}
-                            onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                            onChange={handleChange}
                             placeholder={'Введіть ваше ім’я'}
                             className={`input input-text input__width ${errors['firstName'] ? 'input__error-border-color' : ''}`}
                         />
@@ -267,7 +246,7 @@ function Registration() {
                                     type="checkbox"
                                     name="representation.company"
                                     checked={formData.representation.company}
-                                    onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                                    onChange={handleChange}
                                     className={`checkbox ${errors['representation'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
                                 />
                                 <label htmlFor="html" className={"panel--font-size"}>Зареєстрована компанія</label>
@@ -277,7 +256,7 @@ function Registration() {
                                     type="checkbox"
                                     name="representation.startup"
                                     checked={formData.representation.startup}
-                                    onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                                    onChange={handleChange}
                                     className={`checkbox ${errors['representation'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
                                 />
                                 <label htmlFor="html" className={"panel--font-size"}>Стартап проєкт, який шукає інвестиції</label>
@@ -304,7 +283,7 @@ function Registration() {
                                     type="checkbox"
                                     name="businessType.individual"
                                     checked={formData.businessType.individual}
-                                    onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                                    onChange={handleChange}
                                     className={`checkbox ${errors['businessType'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
                                 />
                                 <label htmlFor="html" className={"panel--font-size"}>Фізична особа-підприємець</label>
@@ -314,7 +293,7 @@ function Registration() {
                                     type="checkbox"
                                     name="businessType.legal"
                                     checked={formData.businessType.legal}
-                                    onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                                    onChange={handleChange}
                                     className={`checkbox ${errors['businessType'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
                                 />
                                 <label htmlFor="html" className={"panel--font-size"}>Юридична особа</label>

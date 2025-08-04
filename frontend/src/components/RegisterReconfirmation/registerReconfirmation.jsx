@@ -4,27 +4,14 @@ import { Validator } from '../../utils/validation/validate';
 import { useNavigate } from 'react-router-dom';
 
 function RegisterReconfirmation() {
-    const validator = new Validator();
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({ email: "" });
 
-    const validators = {
-        email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-    };
-
     const [errors, setErrors] = useState({});
 
-    const errorZeroLengthMessages = {
-        email: "Не ввели електронну пошту"
-    }
-
-    const errorValidationMessages = {
-        email: "Пошта не відповідає вимогам"
-    }
-
     const handleSubmit = () => {
-        const validationErrors = validator.validate(formData, validators, errorZeroLengthMessages, errorValidationMessages);
+        const validationErrors = Validator.validate(formData);
         setErrors(validationErrors);
 
         if (Object.keys(validationErrors).length === 0) {
@@ -37,6 +24,15 @@ function RegisterReconfirmation() {
     const handleCancel = () => {
         navigate("/");
     }
+
+    const handleChange = (e) => {
+        Validator.handleChange(
+            e,
+            formData,
+            setFormData,
+            setErrors
+        );
+    };
 
     return (
         <div className={'panel panel__margin panel__margin-large'}>
@@ -69,7 +65,7 @@ function RegisterReconfirmation() {
                         autoCorrect="off"
                         spellCheck="false"
                         value={formData.email}
-                        onChange={(e) => validator.handleChange(e, formData, setFormData, setErrors, validators, errorZeroLengthMessages, errorValidationMessages)}
+                        onChange={handleChange}
                         placeholder={'Введіть свою електронну пошту'}
                         className={`input input-text input__width ${(errors['email'] || errors['email-exist']) ? 'input__error-border-color' : ''}`}
                     />
