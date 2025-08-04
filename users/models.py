@@ -132,21 +132,30 @@ class User(AbstractBaseUser, PermissionsMixin):
         """
         return f"User(id={self.user_id}, name={self.first_name} {self.last_name})"
 
-    def to_dict(self):
+    def to_dict(self, include_sensitive=False):
         """
         Convert the user instance to a dictionary.
-
+        
+        Args:
+            include_sensitive (bool): If True, includes sensitive fields like email and phone.
+                                  Defaults to False to protect private data.
+        
         Returns:
-            dict: Dictionary containing user data.
+            dict: User data dictionary with timestamps as UNIX ints and role as a string.
+             
+        Note:
+            Use include_sensitive=True only in trusted contexts with proper authorization.
         """
-        data = model_to_dict(
-            self,
-            fields=[
-                "user_id", "first_name", "last_name", "email",
-                "user_phone", "title", "role", "created_at",
-                "updated_at", "is_active", "is_staff"
-            ]
-        )
+        fields=[
+            "user_id", "first_name", "last_name", "email",
+            "user_phone", "title", "role", "created_at",
+            "updated_at", "is_active", "is_staff"
+        ]
+        
+        if include_sensitive:
+            fields += ["email", "user_phone"]
+        
+        data = model_to_dict(self, fields=fields)
         data["created_at"] = int(self.created_at.timestamp())
         data["updated_at"] = int(self.updated_at.timestamp())
         data["role"] = self.role.role if self.role else None
