@@ -388,3 +388,11 @@ class UserRole(models.Model):
             str: Role name.
         """
         return self.role
+    
+    def clean(self):
+        if self.role not in dict(self.Role.choices):
+            raise ValidationError(f"Invalid role: {self.role}")
+
+    def save(self, *args, **kwargs):
+        self.clean() 
+        super().save(*args, **kwargs)
