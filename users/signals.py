@@ -1,4 +1,6 @@
 from django.db.models.signals import post_save
+from django.db.models.signals import post_migrate
+from django.apps import apps
 from django.dispatch import receiver
 from .models import User
 
@@ -21,3 +23,17 @@ def handle_user_created(sender, instance, created, **kwargs):
         print(f"[SIGNAL] New user created: {instance.email}")
     else:
         print(f"[SIGNAL] User updated: {instance.email}")
+        
+@receiver(post_migrate)
+def create_default_roles(sender, **kwargs):
+    """
+    Creates default UserRole entries after migrations for the 'users' app.
+
+    Args:
+        sender: The app config that sent the signal.
+        **kwargs: Additional signal arguments.
+    """
+    if sender.name == 'users':
+        UserRole = apps.get_model(sender.label, 'UserRole')
+        for role_value, _ in UserRole.Role.choices:
+            UserRole.objects.get_or_create(role=role_value)

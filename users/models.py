@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, DataError
 from django.utils import timezone
@@ -89,11 +88,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         is_active (bool): User active status.
         is_staff (bool): User staff status.
     """
-
-    class Role(models.TextChoices):
-        ADMIN = 'admin', 'Admin'
-        USER = 'user', 'User'
-        MODERATOR = 'moderator', 'Moderator'
 
     user_id = models.AutoField(primary_key=True)
     first_name = models.CharField(max_length=50)
@@ -369,8 +363,12 @@ class UserRole(models.Model):
         created_at (datetime): Creation timestamp.
         updated_at (datetime): Last update timestamp.
     """
+    class Role(models.TextChoices):
+        ADMIN = 'admin', 'Admin'
+        USER = 'user', 'User'
+        MODERATOR = 'moderator', 'Moderator'
 
-    role = models.CharField(max_length=20, unique=True)
+    role = models.CharField(max_length=20, unique=True, choices=Role.choices)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
