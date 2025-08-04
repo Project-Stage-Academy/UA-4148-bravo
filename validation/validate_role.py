@@ -1,5 +1,4 @@
 from django.core.exceptions import ValidationError
-from users.models import UserRole 
 
 def validate_role_exists(role_name):
     """
@@ -14,6 +13,7 @@ def validate_role_exists(role_name):
     Returns:
         UserRole: The role object if found.
     """
+    from users.models import UserRole
     role_obj = UserRole.objects.filter(role=role_name).first()
     if not role_obj:
         raise ValidationError(f"Role '{role_name}' does not exist")
