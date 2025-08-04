@@ -50,7 +50,7 @@
 }
 
 .content--text__starred {
-    color: var(--error-text-color);
+    color: var(--danger-text-color);
 }
 
 .content--text__margin {
@@ -73,11 +73,11 @@
     margin-right: 8px;
 }
 
-.panel--error-text {
+.panel--danger-text {
     margin-top: 4px;
     line-height: 22px;
     font-size: 14px;
-    color: var(--error-text-color);
+    color: var(--danger-text-color);
 }
 
 .panel--font-size {

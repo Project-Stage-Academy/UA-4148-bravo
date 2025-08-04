@@ -4,8 +4,6 @@ import Button from '../Button/button';
 
 /**
  * Search component
- * @param {Object} props - Component properties
- * @param {string} props.width - Width of the search component
  */
 function Search({ className = '' }) {
     return (

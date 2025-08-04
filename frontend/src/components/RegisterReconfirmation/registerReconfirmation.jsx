@@ -2,6 +2,7 @@ import "./registerReconfirmation.css";
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import { useNavigate } from 'react-router-dom';
+import Button from '../Button/button';
 
 function RegisterReconfirmation() {
     const navigate = useNavigate();
@@ -69,27 +70,24 @@ function RegisterReconfirmation() {
                         placeholder={'Введіть свою електронну пошту'}
                         className={`input input-text input__width ${(errors['email'] || errors['email-exist']) ? 'input__error-border-color' : ''}`}
                     />
-                    { errors['email'] ? <p className={"panel--error-text"}>{ errors['email'] }</p> : ""}
+                    { errors['email'] ? <p className={"panel--danger-text"}>{ errors['email'] }</p> : ""}
                 </div>
             </div>
             <hr className={'panel--hr'} />
             <div className={"panel--navigation"}>
-                <button
+                <Button
                     onClick={handleSubmit}
-                    className={
-                        'button button__padding button__primary-color panel--button'
-                    }
+                    className={'button__padding panel--button'}
                 >
                     Надіслати
-                </button>
-                <button
+                </Button>
+                <Button
+                    variant='secondary'
                     onClick={handleCancel}
-                    className={
-                        'button button__padding button__secondary-color panel--button'
-                    }
+                    className={'button__padding panel--button'}
                 >
                     Скасувати
-                </button>
+                </Button>
             </div>
         </div>
     );

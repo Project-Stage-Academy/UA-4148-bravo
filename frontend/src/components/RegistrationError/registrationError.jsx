@@ -1,5 +1,6 @@
 import "./registrationError.css";
 import { useNavigate } from 'react-router-dom';
+import Button from '../Button/button';
 
 function RegistrationError() {
     const navigate = useNavigate();
@@ -21,14 +22,12 @@ function RegistrationError() {
             </div>
             <hr className={'panel--hr'} />
             <div className={"panel--navigation"}>
-                <button
+                <Button
                     onClick={handleSubmit}
-                    className={
-                        'button button__padding button__primary-color panel--button'
-                    }
+                    className={'button__padding panel--button'}
                 >
                     Повернутися до входу
-                </button>
+                </Button>
             </div>
         </div>
     );

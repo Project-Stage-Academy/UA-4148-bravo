@@ -1,5 +1,6 @@
 import "./registrationConfirmation.css";
 import { useNavigate } from 'react-router-dom';
+import Button from '../Button/button';
 
 function RegistrationConfirmation() {
     const navigate = useNavigate();
@@ -27,21 +28,19 @@ function RegistrationConfirmation() {
                     <span className={"panel--font-size"}>
                         Не отримали листа?
                     </span>
-                    <button className={'button button__transparent-color panel--font-size text-underline text-bold'} onClick={sendEmailAgain}>
+                    <Button variant='outline' className={'panel--font-size text-underline text-bold'} onClick={sendEmailAgain}>
                         Надіслати ще раз
-                    </button>
+                    </Button>
                 </div>
             </div>
             <hr className={'panel--hr'} />
             <div className={"panel--navigation"}>
-                <button
+                <Button
                     onClick={handleSubmit}
-                    className={
-                        'button button__padding button__primary-color panel--button'
-                    }
+                    className={'button__padding panel--button'}
                 >
                     Повернутися до входу
-                </button>
+                </Button>
             </div>
         </div>
     );

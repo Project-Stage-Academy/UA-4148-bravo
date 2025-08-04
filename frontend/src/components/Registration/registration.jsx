@@ -2,6 +2,7 @@ import './registration.css';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
+import Button from '../Button/button';
 
 function Registration() {
     const navigate = useNavigate();
@@ -90,7 +91,7 @@ function Registration() {
                             placeholder={'Введіть назву вашої компанії'}
                             className={`input input-text input__width ${errors['companyName'] ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['companyName'] ? <p className={"panel--error-text"}>{ errors['companyName'] }</p> : "" }
+                        { errors['companyName'] ? <p className={"panel--danger-text"}>{ errors['companyName'] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
@@ -116,7 +117,7 @@ function Registration() {
                             placeholder={'Введіть свою електронну пошту'}
                             className={`input input-text input__width ${(errors['email'] || errors['email-exist']) ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['email'] ? <p className={"panel--error-text"}>{ errors['email'] }</p> : ""}
+                        { errors['email'] ? <p className={"panel--danger-text"}>{ errors['email'] }</p> : ""}
                     </div>
                     <div>
                         <div
@@ -151,7 +152,7 @@ function Registration() {
                             placeholder={'Введіть пароль'}
                             className={`input input-text input__width ${errors['password'] ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['password'] ? <p className={"panel--error-text"}>{ errors['password'] }</p> : "" }
+                        { errors['password'] ? <p className={"panel--danger-text"}>{ errors['password'] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
@@ -177,7 +178,7 @@ function Registration() {
                             placeholder={'Введіть пароль ще раз'}
                             className={`input input-text input__width ${(errors['confirmPassword'] || errors['confirmPassword-passwords-dont-match']) ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['confirmPassword'] ? <p className={"panel--error-text"}>{ errors["confirmPassword"] }</p> : "" }
+                        { errors['confirmPassword'] ? <p className={"panel--danger-text"}>{ errors["confirmPassword"] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
@@ -201,7 +202,7 @@ function Registration() {
                             placeholder={'Введіть ваше прізвище'}
                             className={`input input-text input__width ${errors['lastName'] ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['lastName'] ? <p className={"panel--error-text"}>{ errors["lastName"] }</p> : "" }
+                        { errors['lastName'] ? <p className={"panel--danger-text"}>{ errors["lastName"] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
@@ -225,7 +226,7 @@ function Registration() {
                             placeholder={'Введіть ваше ім’я'}
                             className={`input input-text input__width ${errors['firstName'] ? 'input__error-border-color' : ''}`}
                         />
-                        { errors['firstName'] ? <p className={"panel--error-text"}>{ errors["firstName"] }</p> : "" }
+                        { errors['firstName'] ? <p className={"panel--danger-text"}>{ errors["firstName"] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container content--text-container__margin'}>
@@ -262,7 +263,7 @@ function Registration() {
                                 <label htmlFor="html" className={"panel--font-size"}>Стартап проєкт, який шукає інвестиції</label>
                             </div>
                         </div>
-                        { errors['representation'] ? <p className={"panel--error-text"}>{ errors["representation"] }</p> : "" }
+                        { errors['representation'] ? <p className={"panel--danger-text"}>{ errors["representation"] }</p> : "" }
                     </div>
                     <div>
                         <div className={'content--text-container__margin'}>
@@ -299,7 +300,7 @@ function Registration() {
                                 <label htmlFor="html" className={"panel--font-size"}>Юридична особа</label>
                             </div>
                         </div>
-                        { errors['businessType'] ? <p className={"panel--error-text"}>{ errors["businessType"] }</p> : "" }
+                        { errors['businessType'] ? <p className={"panel--danger-text"}>{ errors["businessType"] }</p> : "" }
                     </div>
                     <div>
                         <span className={"panel--font-size"}>Реєструючись, я погоджуюсь з </span>
@@ -309,14 +310,12 @@ function Registration() {
                 </div>
                 <hr className={'panel--hr'} />
                 <div className={"panel--navigation"}>
-                    <button
+                    <Button
                         onClick={handleSubmit}
-                        className={
-                            'button button__padding button__primary-color panel--button'
-                        }
+                        className={'button__padding panel--button'}
                     >
                         Зареєструватися
-                    </button>
+                    </Button>
                 </div>
             </div>
             <div className={"panel--under-panel"}>

@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import React from 'react';
-import { AuthProvider } from '../../context/AuthContext/authContext';
+import AuthProvider from '../../context/AuthContext/authContext';
 import Layout from '../Layout/layout';
 import ProfileEditing from '../../pages/ProfileEditing/profileEditing';
 import NotFound from '../../pages/NotFound/notFound';
@@ -9,7 +9,6 @@ import CompanyList from '../../pages/CompanyList/companyList';
 import FeedbackForm from '../../pages/FeedbackForm/feedbackForm';
 import ForgotPassword from '../../pages/ForgotPassword/forgotPassword';
 import RestorePassword from '../../pages/RestorePassword/restorePassword';
-import ProfilePage from '../../pages/ProfilePage/profilePage';
 import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
