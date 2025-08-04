@@ -146,3 +146,27 @@ This project integrates **Django** and **FastAPI** into a single ASGI applicatio
 
 ```bash
 uvicorn core.asgi:application --reload
+```
+
+---
+## Authentication API Guide
+
+### 🔐 JWT Logout
+
+The `POST /api/users/auth/jwt/logout/` endpoint logs out a user by **blacklisting the refresh token**.
+
+### ✅ Requirements
+
+- The **refresh token must be included** in the request body.
+- The **client must delete both access and refresh tokens** from local storage (or other storage) after a successful logout.
+
+### 📤 Example Request
+
+```http
+POST /api/users/auth/jwt/logout/
+Content-Type: application/json
+
+{
+  "refresh": "<your_refresh_token>"
+}
+```
