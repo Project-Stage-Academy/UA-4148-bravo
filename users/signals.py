@@ -33,7 +33,12 @@ def create_default_roles(sender, **kwargs):
         sender: The app config that sent the signal.
         **kwargs: Additional signal arguments.
     """
-    if sender.name == 'users':
+    try:
+        app_config = apps.get_app_config('users')
+    except LookupError:
+        return
+    
+    if sender.name == app_config:
         UserRole = apps.get_model(sender.label, 'UserRole')
         for role_value, _ in UserRole.Role.choices:
             UserRole.objects.get_or_create(role=role_value)
