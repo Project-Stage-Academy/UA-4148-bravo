@@ -1,4 +1,4 @@
-import magic
+import filetype
 from django.core.exceptions import ValidationError
 
 
@@ -29,7 +29,12 @@ def validate_document_file(file):
         raise ValidationError(f"The file size must not exceed {max_size_mb}MB.")
 
     file.seek(0)
-    mime_type = magic.from_buffer(file.read(2048), mime=True)
+    kind = filetype.guess(file.read(262))  # Read up to 262 bytes (enough for filetype)
+
+    if kind is None:
+        raise ValidationError("Unable to detect the file type. The file may be corrupted or unsupported.")
+
+    mime_type = kind.mime
 
     allowed_mime_types = [
         "application/pdf",
@@ -48,3 +53,5 @@ def validate_document_file(file):
 
     if mime_type not in allowed_mime_types:
         raise ValidationError(f"Invalid MIME type: {mime_type}. This file type is not allowed.")
+
+    file.seek(0)  # Reset pointer in case file needs to be read later
