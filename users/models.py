@@ -158,6 +158,9 @@ class User(AbstractBaseUser, PermissionsMixin):
                 "updated_at", "is_active", "is_staff"
             ]
         )
+        data["created_at"] = int(self.created_at.timestamp())
+        data["updated_at"] = int(self.updated_at.timestamp())
+        return data
 
     @classmethod
     def get_by_id(cls, user_id):
