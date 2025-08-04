@@ -7,7 +7,10 @@ import Button from '../Button/button';
 function RegisterReconfirmation() {
     const navigate = useNavigate();
 
-    const [formData, setFormData] = useState({ email: "" });
+    const [formData, setFormData] = useState(
+        {
+            email: ""
+        });
 
     const [errors, setErrors] = useState({});
 

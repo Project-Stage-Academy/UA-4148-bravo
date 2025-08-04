@@ -60,4 +60,8 @@
 
     /* footer */
     --footer-bcg-color: #232424;
+
+    /* loading */
+    --loading-dot-active-color: rgba(180, 210, 122, 0.75);
+    --loading-dot-inactive-color: rgba(180, 210, 122, 0.3);
 }

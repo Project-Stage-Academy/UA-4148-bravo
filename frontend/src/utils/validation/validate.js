@@ -1,4 +1,15 @@
+/**
+ * Validator class for form validation.
+ * It provides methods to validate individual fields and entire forms,
+ * as well as handling changes in form fields.
+ */
 export class Validator {
+    /**
+     * Validators for different fields.
+     * Each validator is a function that takes a value (and optionally the entire form data)
+     * and returns true if the value is valid, or false otherwise.
+     * @type {Object<string, function(value: any, data?: Object): boolean>}
+     */
     static validators = {
         companyName: (value) => /^[\w\s]{2,}$/.test(value),
         email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
@@ -10,6 +21,12 @@ export class Validator {
         businessType: (value) => Object.values(value).some(v => v)
     };
 
+    /**
+     * Error messages for fields that have zero length.
+     * These messages are shown when a field is required but not filled.
+     * The keys should match the keys in the `validators` object.
+     * @type {Object<string, string>}
+     */
     static errorZeroLengthMessages = {
         companyName: "Не ввели назву компанії",
         email: "Не ввели електронну пошту",
@@ -21,6 +38,12 @@ export class Validator {
         businessType: "Виберіть який суб’єкт господарювання ви представляєте"
     }
 
+    /**
+     * Error messages for fields that do not pass validation.
+     * These messages are shown when a field is filled but does not meet the validation criteria.
+     * The keys should match the keys in the `validators` object.
+     * @type {Object<string, string>}
+     */
     static errorValidationMessages = {
         companyName: "Назва компанії не відповідає вимогам",
         email: "Пошта не відповідає вимогам",
@@ -30,6 +53,18 @@ export class Validator {
         lastName: "Прізвище не відповідає вимогам"
     }
 
+    /**
+     * Validates a single field based on its key, value, and the entire form data.
+     * It checks if the field is required and has a zero length, and if it passes the validation criteria.
+     * If the field is valid, it returns null; otherwise, it returns the corresponding error message.
+     * @param key - The key/name of the field to validate.
+     * @param value - The value of the field to validate.
+     * @param data - The entire form data object, used for validation that requires context from other fields.
+     * @param errorZeroLengthMessages - Error messages for fields that have zero length.
+     * @param errorValidationMessages - Error messages for fields that do not pass validation.
+     * @param validators - An object containing validation functions for each field.
+     * @return {string|null} - Returns an error message if the field is invalid, or null if it is valid.
+     */
     static validateField(
         key,
         value,
@@ -58,6 +93,17 @@ export class Validator {
         return isValid ? null : errorValidationMessage;
     }
 
+    /**
+     * Validates an entire form by iterating over each field,
+     * applying the `validateField` method to each field's value.
+     * It returns an object where each key corresponds to a field and its value is either null
+     * (if the field is valid) or an error message (if the field is invalid).
+     * @param data - The form data object containing all fields to validate.
+     * @param errorZeroLengthMessages - Error messages for fields that have zero length.
+     * @param errorValidationMessages - Error messages for fields that do not pass validation.
+     * @param validators - An object containing validation functions for each field.
+     * @returns {Object<string, string|null>} - An object with field names as keys and error messages or null as values.
+     */
     static validate(
         data,
         errorZeroLengthMessages = Validator.errorZeroLengthMessages,
@@ -74,6 +120,21 @@ export class Validator {
         return errors;
     }
 
+    /**
+     * Handles the change event for form fields.
+     * It updates the form data state and validates the field that changed.
+     * If the field is part of a group (indicated by a dot in the name),
+     * it updates the group and validates the entire group.
+     * It also updates the errors state based on the validation results.
+     * @param e - The change event object.
+     * @param formData - The current form data state.
+     * @param setFormData - Function to update the form data state.
+     * @param setErrors - Function to update the errors state.
+     * @param errorZeroLengthMessages - Error messages for fields that have zero length.
+     * @param errorValidationMessages - Error messages for fields that do not pass validation.
+     * @param validators - An object containing validation functions for each field.
+     * @return {void}
+     */
     static handleChange(
         e,
         formData,

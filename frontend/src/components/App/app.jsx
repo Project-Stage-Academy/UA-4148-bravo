@@ -18,6 +18,7 @@ import RegistrationConfirmation from '../RegistrationConfirmation/registrationCo
 import RegisterReconfirmation from '../RegisterReconfirmation/registerReconfirmation';
 import RegistrationError from '../RegistrationError/registrationError';
 import RegistrationDone from '../RegistrationDone/registrationDone';
+import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/EmailConfirmationHandler';
 
 /**
  * Main application component that sets up routing and context providers.
@@ -69,8 +70,9 @@ function App() {
 
                             {/* Registration */}
                             <Route path="register" element={<Registration />} />
-                            <Route path="register/confirmation" element={<RegistrationConfirmation />} />
-                            <Route path="register/re-confirmation" element={<RegisterReconfirmation />} />
+                            <Route path="register/confirm" element={<RegistrationConfirmation />} />
+                            <Route path="register/confirm-email" element={<EmailConfirmationHandler />} />
+                            <Route path="register/re-confirm" element={<RegisterReconfirmation />} />
                             <Route path="register/error" element={<RegistrationError />} />
                             <Route path="register/done" element={<RegistrationDone />} />
 
