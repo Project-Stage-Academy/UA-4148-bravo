@@ -23,10 +23,25 @@ function Registration() {
             businessType: {
                 individual: false,
                 legal: false
-            }
+            },
+            unexpected: ""
         });
 
     const [errors, setErrors] = useState({});
+
+    const handleError = (error) => {
+        if (error.response && error.response.status === 409) {
+            setErrors(prev => ({
+                ...prev,
+                email: Validator.serverSideErrorMessages.emailAlreadyExist
+            }));
+        } else {
+            setErrors(prev => ({
+                ...prev,
+                unexpected: Validator.serverSideErrorMessages.unexpected
+            }));
+        }
+    };
 
     const handleSubmit = () => {
         const validationErrors = Validator.validate(
@@ -34,10 +49,10 @@ function Registration() {
         );
         setErrors(validationErrors);
 
-        if (Object.keys(validationErrors).length === 0) {
+        if (Object.values(validationErrors).every(value => value === null)) {
             registerUser(formData)
                 .then(() => navigate('/auth/register/confirm'))
-                .catch(() => navigate('/auth/register/error')); // TODO Handle registration error
+                .catch(handleError);
         } else {
             console.log('Errors:', validationErrors);
         }
@@ -305,6 +320,7 @@ function Registration() {
                         </div>
                         { errors['businessType'] ? <p className={"panel--danger-text"}>{ errors["businessType"] }</p> : "" }
                     </div>
+                    { errors['unexpected'] ? <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> : ""}
                     <div>
                         <span className={"panel--font-size"}>Реєструючись, я погоджуюсь з </span>
                         <Link className={"panel--font-size text-underline text-bold"} to={"/policy"}>правилами використання</Link>

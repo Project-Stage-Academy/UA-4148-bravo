@@ -53,6 +53,11 @@ export class Validator {
         lastName: "Прізвище не відповідає вимогам"
     }
 
+    static serverSideErrorMessages = {
+        emailAlreadyExist: "Ця електронна пошта вже зареєстрована",
+        unexpected: "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз пізніше"
+    }
+
     /**
      * Validates a single field based on its key, value, and the entire form data.
      * It checks if the field is required and has a zero length, and if it passes the validation criteria.

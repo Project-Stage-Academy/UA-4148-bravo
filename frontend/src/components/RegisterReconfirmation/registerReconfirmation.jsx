@@ -10,19 +10,34 @@ function RegisterReconfirmation() {
 
     const [formData, setFormData] = useState(
         {
-            email: ""
+            email: "",
+            unexpected: ""
         });
 
     const [errors, setErrors] = useState({});
+
+    const handleError = (error) => {
+        if (error.response && error.response.status === 409) {
+            setErrors(prev => ({
+                ...prev,
+                email: Validator.serverSideErrorMessages.emailAlreadyExist
+            }));
+        } else {
+            setErrors(prev => ({
+                ...prev,
+                unexpected: Validator.serverSideErrorMessages.unexpected
+            }));
+        }
+    };
 
     const handleSubmit = () => {
         const validationErrors = Validator.validate(formData);
         setErrors(validationErrors);
 
-        if (Object.keys(validationErrors).length === 0) {
+        if (Object.values(validationErrors).every(value => value === null)) {
             registerUser(formData)
                 .then(() => navigate('/auth/register/confirm'))
-                .catch(() => navigate('/auth/register/error')); // TODO Handle registration error
+                .catch(handleError);
         } else {
             console.log("Errors:", validationErrors);
         }
@@ -54,16 +69,16 @@ function RegisterReconfirmation() {
                 </div>
                 <div>
                     <div className={'content--text-container__margin'}>
-                            <span
-                                className={
-                                    'content--text content--text__starred content--text__margin'
-                                }
-                            >
-                                *
-                            </span>
+                        <span
+                            className={
+                                'content--text content--text__starred content--text__margin'
+                            }
+                        >
+                            *
+                        </span>
                         <span className={'content--text'}>
-                                Електронна пошта
-                            </span>
+                            Електронна пошта
+                        </span>
                     </div>
                     <input
                         type="text"
@@ -78,6 +93,7 @@ function RegisterReconfirmation() {
                     />
                     { errors['email'] ? <p className={"panel--danger-text"}>{ errors['email'] }</p> : ""}
                 </div>
+                { errors['unexpected'] ? <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> : ""}
             </div>
             <hr className={'panel--hr'} />
             <div className={"panel--navigation"}>
