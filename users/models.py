@@ -99,8 +99,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.ForeignKey(
         'UserRole',
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
         related_name='users',
         help_text="Current role of the user"
     )
