@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, DataError
 from django.utils import timezone
 from django.forms.models import model_to_dict
+from validation.validate_email import validate_email_custom
 
 
 class ActiveUserManager(models.Manager):
@@ -38,9 +39,14 @@ class CustomUserManager(BaseUserManager):
         Returns:
             User: The created user instance.
         """
-        if not email:
-            raise ValueError("Email required.")
-        validate_email(email)
+        if len(email) > 50:
+            raise ValueError("Email must be 50 characters or fewer")
+        
+        if self.model.all_objects.filter(email=email).exists():
+            raise ValueError("Email already exists")
+        
+        validate_email_custom(email)
+        
         email = self.normalize_email(email)
         user = self.model(email=email, **other_fields)
         user.set_password(password)
