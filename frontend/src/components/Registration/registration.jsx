@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import Button from '../Button/button';
+import { registerUser } from '../../api';
 
 function Registration() {
     const navigate = useNavigate();
@@ -34,7 +35,9 @@ function Registration() {
         setErrors(validationErrors);
 
         if (Object.keys(validationErrors).length === 0) {
-            navigate('/auth/register/confirmation');
+            registerUser(formData)
+                .then(() => navigate('/auth/register/confirm'))
+                .catch(() => navigate('/auth/register/error')); // TODO Handle registration error
         } else {
             console.log('Errors:', validationErrors);
         }

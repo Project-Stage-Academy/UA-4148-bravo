@@ -5,12 +5,12 @@ import Button from '../Button/button';
 function RegistrationConfirmation() {
     const navigate = useNavigate();
 
-    function handleSubmit() {
+    function handleReturn() {
         navigate("/");
     }
 
     function sendEmailAgain() {
-        navigate("/auth/register/re-confirmation");
+        navigate("/auth/register/re-confirm");
     }
 
     return (
@@ -36,7 +36,7 @@ function RegistrationConfirmation() {
             <hr className={'panel--hr'} />
             <div className={"panel--navigation"}>
                 <Button
-                    onClick={handleSubmit}
+                    onClick={handleReturn}
                     className={'button__padding panel--button'}
                 >
                     Повернутися до входу

@@ -34,9 +34,7 @@ export const registerUser = (data) => API.post('/register', data);
  * @param data - The confirmation data, usually containing the user's email and confirmation code.
  * @returns {Promise<axios.AxiosResponse<any>>}
  */
-export const confirmUser = (data) => {
-    return API.post('/confirm-email', { data });
-};
+export const confirmUser = (data) => API.post('/confirm-email', { data });
 
 /**
  * Logs in a user.
