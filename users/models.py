@@ -309,7 +309,9 @@ class User(AbstractBaseUser, PermissionsMixin):
             password = kwargs['password']
             if not isinstance(password, str) or len(password) < 8 or len(password) > 128:
                 raise ValidationError("Password must be a string between 8 and 128 characters.")
-            self.set_password(password)
+            
+            if not self.check_password(password):
+                self.set_password(password)
 
         self.save()
         return self
