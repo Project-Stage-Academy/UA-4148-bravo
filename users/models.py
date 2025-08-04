@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.forms.models import model_to_dict
 from validation.validate_email import validate_email_custom
 from validation.validate_string_fields import validate_max_length
+from validation.validate_role import validate_role_exists
 
 
 class ActiveUserManager(models.Manager):
@@ -232,9 +233,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             validate_max_length(title, 100, "Title")
         role_obj = None
         if role:
-            role_obj = UserRole.objects.filter(role=role).first()
-            if not role_obj:
-                raise ValidationError(f"Role '{role}' does not exist")
+            role_obj = validate_role_exists(role)
         if not password or not isinstance(password, str) or len(password) < 8:
             raise ValidationError("Password must be a string at least 8 characters long")
 
@@ -316,9 +315,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                     raise ValidationError(f"Invalid value for field '{attr}': {value}")
                 
                 if attr == 'role':
-                    role_obj = UserRole.objects.filter(role=value).first()
-                    if not role_obj:
-                        raise ValidationError(f"Role '{value}' does not exist")
+                    role_obj = validate_role_exists(value)
                     setattr(self, 'role', role_obj)
                 else:
                     setattr(self, attr, value)
