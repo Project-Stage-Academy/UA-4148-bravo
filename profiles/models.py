@@ -1,102 +1,141 @@
+import re
+from urllib.parse import urlparse
+
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
-from django.core.validators import (
-    MaxLengthValidator,
-    MinValueValidator,
-    MaxValueValidator,
-    RegexValidator,
-)
-import datetime
-from decimal import Decimal, ROUND_HALF_UP
-from validation.validate_email import validate_email_custom
+from django_countries.fields import CountryField
 
+from common.company import Company
 
-class Country(models.Model):
-    name = models.CharField(
-        max_length=100,
-        unique=True,
-        validators=[MaxLengthValidator(100)]
-    )
-    code = models.CharField(
-        max_length=3,
-        unique=True,
-        validators=[
-            RegexValidator(regex=r'^[A-Z]{2,3}$', message='Use 2–3 uppercase letters.')
-        ]
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.name} ({self.code})"
-
-    class Meta:
-        db_table = "countries"
-        ordering = ["name"]
-        verbose_name = "Country"
-        verbose_name_plural = "Countries"
-
-
-class City(models.Model):
-    country = models.ForeignKey('Country', on_delete=models.CASCADE, related_name='cities')
-    name = models.CharField(
-        max_length=100,
-        validators=[MaxLengthValidator(100)]
-    )
-    region = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        validators=[MaxLengthValidator(100)]
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.name}, {self.country.name}"
-
-    class Meta:
-        db_table = "cities"
-        unique_together = ('country', 'name')
-        ordering = ["country__name", "name"]
-        verbose_name = "City"
-        verbose_name_plural = "Cities"
+LATIN_REGEX = re.compile(r'^[A-Za-z\s\-]*$')
 
 
 class Location(models.Model):
-    city = models.ForeignKey('City', on_delete=models.CASCADE, related_name='locations')
-    address_line = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        validators=[MaxLengthValidator(255)]
-    )
-    postal_code = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        validators=[
-            RegexValidator(regex=r'^[\w\s-]{1,20}$', message='Invalid postal code format.')
-        ]
-    )
+    """
+    Model representing a geographical location.
+
+    Fields:
+    - country: Country of the location, using a specialized CountryField.
+    - region: Optional region/state within the country.
+    - city: Optional city name.
+    - address_line: Optional detailed address line.
+    - postal_code: Optional postal or ZIP code.
+    - created_at: Timestamp when the record was created.
+    - updated_at: Timestamp when the record was last updated.
+
+    Validation rules ensure consistency among fields:
+    - If address_line is given, city and region must be provided.
+    - If city or region is provided, country must be set.
+    - City and region names must contain only alphabetic characters and spaces.
+    - Postal code must be at least 3 characters if given.
+    """
+    country = CountryField()
+    region = models.CharField(max_length=100, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    address_line = models.CharField(max_length=254, blank=True, null=True)
+    postal_code = models.CharField(max_length=20, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        """
+        Perform validation for the Location model.
+
+        Validates both:
+        - Field-level rules:
+            - All text fields must contain only Latin characters (if provided).
+            - Postal code must be at least 3 characters (if provided).
+        - Cross-field rules:
+            - If address_line is provided, city and region are required.
+            - If city or region is provided, country is required.
+            - If city is provided, region is required.
+
+        Raises:
+            ValidationError: A dictionary of field-specific error messages.
+        """
+        errors = {}
+
+        if self.postal_code:
+            if len(self.postal_code.strip()) < 3:
+                errors['postal_code'] = "Postal code must be at least 3 characters."
+            elif not LATIN_REGEX.match(self.postal_code):
+                errors['postal_code'] = "Postal code must contain only Latin letters, spaces, or hyphens."
+
+        for field_name in ['city', 'region', 'address_line']:
+            value = getattr(self, field_name)
+            if value and not LATIN_REGEX.match(value.strip()):
+                errors[
+                    field_name] = f"{field_name.replace('_', ' ').capitalize()} must contain only Latin letters, spaces, or hyphens."
+
+        if self.address_line:
+            if not self.city:
+                errors['city'] = "City is required when address_line is provided."
+            if not self.region:
+                errors['region'] = "Region is required when address_line is provided."
+
+        if self.city and not self.region:
+            errors['region'] = "Region is required when city is provided."
+
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self):
-        parts = [self.address_line, self.city.name]
-        return ", ".join(filter(None, parts))
+        values = [
+            self.address_line,
+            self.city,
+            self.region,
+            str(self.country) if self.country else None
+        ]
+        return ", ".join(s for s in values if s)
 
     class Meta:
         db_table = "locations"
-        ordering = ["city__country__name", "city__name", "address_line"]
+        ordering = ["country"]
         verbose_name = "Location"
         verbose_name_plural = "Locations"
 
 
 class Industry(models.Model):
+    """
+    Model representing an industry category for companies.
+
+    Fields:
+    - name: Unique name of the industry (Latin characters only).
+    - description: Optional textual description.
+    - created_at: Timestamp of record creation.
+
+    Validation rules:
+    - Name must be non-empty and contain only Latin characters.
+    - Certain generic or reserved names are disallowed.
+
+    Used for categorizing companies by their field of business.
+    """
     name = models.CharField(
         max_length=100,
-        unique=True,
-        validators=[MaxLengthValidator(100)]
+        unique=True
     )
-    description = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        """
+        Validates the Industry instance before saving.
+        Ensures the name is in Latin characters only, not reserved,
+        and not too generic. Strips spaces.
+        """
+        self.name = self.name.strip()
+
+        if not self.name:
+            raise ValidationError({'name': "The name field cannot be empty."})
+
+        if re.search(r'[^\x00-\x7F]', self.name):
+            raise ValidationError({'name': "The name must contain only Latin characters."})
+
+        forbidden_names = {"other", "none", "misc", "default"}
+        if self.name.lower() in forbidden_names:
+            raise ValidationError({'name': "This name is too generic or reserved. "
+                                           "Please write a more specific category name."})
 
     def __str__(self):
         return self.name
@@ -109,6 +148,16 @@ class Industry(models.Model):
 
 
 class Stage(models.TextChoices):
+    """
+    Enumeration of possible stages for companies (startups and investors).
+
+    Stages represent the lifecycle or maturity of a company, such as idea, prototype,
+    MVP, growth, scale, and enterprise.
+
+    Class methods provide default stages based on the company type:
+    - Startups default to 'idea'
+    - Investors default to 'mvp'
+    """
     IDEA = 'idea', 'Idea'
     PROTOTYPE = 'prototype', 'Prototype'
     MVP = 'mvp', 'MVP'
@@ -117,65 +166,56 @@ class Stage(models.TextChoices):
     ENTERPRISE = 'enterprise', 'Enterprise'
 
 
-class Company(models.Model):
-    company_name = models.CharField(
-        max_length=255,
-        validators=[MaxLengthValidator(255)]
-    )
-    description = models.TextField(blank=True, null=True)
-    website = models.URLField()
-    email = models.EmailField(
-        max_length=255,
-        validators=[validate_email_custom],
-        unique=True
-    )
-    founded_year = models.IntegerField(
-        validators=[
-            MinValueValidator(1900),
-            MaxValueValidator(datetime.datetime.now().year)
-        ]
-    )
-    team_size = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        validators=[MinValueValidator(1)]
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
-
-
 class Startup(Company):
-    user = models.OneToOneField(
-        'users.User',
-        on_delete=models.CASCADE,
-        related_name='startup'
-    )
-    industry = models.ForeignKey(
-        'Industry',
-        on_delete=models.PROTECT,
-        related_name='startups'
-    )
-    location = models.ForeignKey(
-        'Location',
-        on_delete=models.PROTECT,
-        related_name='startup_locations'
-    )
-    startup_logo = models.ImageField(upload_to='startups/logos/')
-    social_media = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        validators=[MaxLengthValidator(255)]
-    )
+    """
+    Model representing a startup company.
+    Inherits from the base Company model and adds specific fields:
+        - stage: The stage of the startup.
+        - social_links: A JSON field storing URLs to social media profiles, keyed by platform.
+    Includes custom validation logic to ensure social media links are valid.
+    String representation includes company name and associated user ID.
+    Meta options specify database table, ordering, and verbose names.
+    """
     stage = models.CharField(
         max_length=20,
         choices=Stage.choices,
-        blank=True,
-        null=True
+        default=Stage.IDEA
     )
+    social_links = models.JSONField(blank=True, default=dict)
+
+    ALLOWED_SOCIAL_PLATFORMS = {
+        'facebook': ['facebook.com'],
+        'twitter': ['twitter.com'],
+        'linkedin': ['linkedin.com'],
+        'instagram': ['instagram.com'],
+        'youtube': ['youtube.com', 'youtu.be'],
+        'tiktok': ['tiktok.com'],
+        'telegram': ['t.me', 'telegram.me'],
+    }
+
+    def clean(self):
+        """
+        Checks that:
+        - Social platform names are supported.
+        - Each URL's domain matches one of the valid domains for that platform.
+
+        Raises:
+            ValidationError: If any platform or URL is invalid.
+        """
+        super().clean()
+        errors = {}
+        for platform, url in self.social_links.items():
+            platform_lc = platform.lower()
+            if platform_lc not in self.ALLOWED_SOCIAL_PLATFORMS:
+                errors[platform] = f"Platform '{platform}' is not supported."
+                continue
+
+            domain = urlparse(url).netloc.lower()
+            if not any(allowed in domain for allowed in self.ALLOWED_SOCIAL_PLATFORMS[platform_lc]):
+                errors[platform] = f"Invalid URL for platform '{platform}': {url}"
+
+        if errors:
+            raise ValidationError({'social_links': errors})
 
     def __str__(self):
         return f"{self.company_name} (Startup, User ID: {self.user_id})"
@@ -185,46 +225,28 @@ class Startup(Company):
         ordering = ["company_name"]
         verbose_name = "Startup"
         verbose_name_plural = "Startups"
-        constraints = [
-            models.UniqueConstraint(fields=["user"], name="unique_startup_user")
-        ]
 
 
 class Investor(Company):
-    user = models.OneToOneField(
-        'users.User',
-        on_delete=models.CASCADE,
-        related_name='investor'
+    """
+    Model representing an investor company.
+    Extends the base Company model with:
+        - stage: The preferred stage of the investor.
+        - fund_size: Decimal field representing the size of the investment fund.
+    String representation includes company name and associated user ID.
+    Meta options specify database table, ordering, and verbose names.
+    """
+    preferred_stage = models.CharField(
+        max_length=20,
+        choices=Stage.choices,
+        default=Stage.MVP
     )
-    industry = models.ForeignKey(
-        'Industry',
-        on_delete=models.PROTECT,
-        related_name='investors'
-    )
-    location = models.ForeignKey(
-        'Location',
-        on_delete=models.PROTECT,
-        related_name='investor_locations'
-    )
-    investor_logo = models.ImageField(upload_to='investors/logos/')
-    interests = models.TextField(blank=True, null=True)
     fund_size = models.DecimalField(
         max_digits=20,
         decimal_places=2,
         blank=True,
-        null=True,
+        default=0,
         validators=[MinValueValidator(0)]
-    )
-    country = models.ForeignKey(
-        'Country',
-        on_delete=models.PROTECT,
-        related_name='investors'
-    )
-    preferred_stage = models.CharField(
-        max_length=20,
-        choices=Stage.choices,
-        blank=True,
-        null=True
     )
 
     def __str__(self):
@@ -235,213 +257,3 @@ class Investor(Company):
         ordering = ["company_name"]
         verbose_name = "Investor"
         verbose_name_plural = "Investors"
-        constraints = [
-            models.UniqueConstraint(fields=["user"], name="unique_investor_user")
-        ]
-
-
-class StartupSocialMedia(models.Model):
-    startup = models.ForeignKey(
-        'Startup',
-        on_delete=models.CASCADE,
-        related_name='social_links'
-    )
-    platform = models.CharField(max_length=50)
-    url = models.URLField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.platform} for {self.startup.company_name}"
-
-    class Meta:
-        db_table = "startup_social_media"
-        ordering = ["-created_at"]
-        verbose_name = "Startup Social Media"
-        verbose_name_plural = "Startup Social Media Links"
-        unique_together = ("startup", "platform")
-
-
-class Interest(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('acknowledged', 'Acknowledged'),
-        ('declined', 'Declined')
-    ]
-    investor = models.ForeignKey('Investor', on_delete=models.CASCADE)
-    startup = models.ForeignKey('Startup', on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    message = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Interest from {self.investor.company_name} in {self.startup.company_name} - Status: {self.status}"
-
-    class Meta:
-        db_table = "interests"
-        ordering = ["-created_at"]
-        verbose_name = "Investor Interest"
-        verbose_name_plural = "Investor Interests"
-        unique_together = ("investor", "startup")
-
-
-class SavedStartup(models.Model):
-    STATUS_CHOICES = [
-        ('watching', 'Watching'),
-        ('contacted', 'Contacted'),
-        ('negotiating', 'Negotiating'),
-        ('passed', 'Passed')
-    ]
-    investor = models.ForeignKey('Investor', on_delete=models.CASCADE)
-    startup = models.ForeignKey('Startup', on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='watching')
-    notes = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.investor.company_name} saved {self.startup.company_name} ({self.status})"
-
-    class Meta:
-        db_table = "saved_startups"
-        ordering = ["-created_at"]
-        verbose_name = "Saved Startup"
-        verbose_name_plural = "Saved Startups"
-        unique_together = ("investor", "startup")
-
-
-class Investment(models.Model):
-    investor = models.ForeignKey('Investor', on_delete=models.CASCADE)
-    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, null=True)
-    amount = models.DecimalField(
-        max_digits=18,
-        decimal_places=2,
-        validators=[MinValueValidator(0)]
-    )
-    percent = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        blank=True,
-        null=True,
-        validators=[
-            MinValueValidator(Decimal('0.00')),
-            MaxValueValidator(Decimal('100.00'))
-        ]
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def save(self, *args, **kwargs):
-        if self.project and self.amount:
-            # Calculate the total investment in this project, excluding the current record if it already exists
-            other_investments = Investment.objects.filter(project=self.project)
-            if self.pk:
-                other_investments = other_investments.exclude(pk=self.pk)
-            total_amount = other_investments.aggregate(models.Sum('amount'))['amount__sum'] or Decimal('0')
-            full_amount = total_amount + self.amount
-
-            if full_amount > 0:
-                raw_percent = (self.amount / full_amount) * 100
-                self.percent = Decimal(raw_percent).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            else:
-                self.percent = None
-        else:
-            self.percent = None
-
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        percent_str = f", {self.percent}%" if self.percent is not None else ""
-        return f"Investment of {self.amount} by {self.investor.company_name} in project {self.project} {percent_str}"
-
-    class Meta:
-        db_table = "investments"
-        ordering = ["-created_at"]
-        verbose_name = "Investment"
-        verbose_name_plural = "Investments"
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(amount__gte=0),
-                name="amount_non_negative"
-            ),
-            models.CheckConstraint(
-                check=models.Q(percent__gte=0) & models.Q(percent__lte=100),
-                name="percent_between_0_and_100"
-            )
-        ]
-
-
-class Tag(models.Model):
-    TAG_TYPES = [
-        ('industry', 'Industry'),
-        ('technology', 'Technology'),
-        ('stage', 'Stage'),
-        ('topic', 'Topic'),
-        ('custom', 'Custom'),
-    ]
-    name = models.CharField(
-        max_length=100,
-        unique=True,
-        validators=[MaxLengthValidator(100)]
-    )
-    tag_type = models.CharField(
-        max_length=50,
-        choices=TAG_TYPES,
-        default='custom',
-        validators=[MaxLengthValidator(50)]
-    )
-    usage_count = models.PositiveIntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.name} ({self.get_tag_type_display()})"
-
-    class Meta:
-        db_table = 'tags'
-        ordering = ['tag_type', 'name']
-        verbose_name = 'Tag'
-        verbose_name_plural = 'Tags'
-        indexes = [
-            models.Index(fields=['name']),
-            models.Index(fields=['tag_type']),
-        ]
-
-
-class StartupTag(models.Model):
-    startup = models.ForeignKey('Startup', on_delete=models.CASCADE)
-    tag = models.ForeignKey('Tag', on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Startup: {self.startup}, Tag: {self.tag.name}"
-
-    class Meta:
-        db_table = 'startup_tags'
-        verbose_name = 'Startup Tag'
-        verbose_name_plural = 'Startup Tags'
-        constraints = [
-            models.UniqueConstraint(fields=['startup', 'tag'], name='unique_startup_tag')
-        ]
-        indexes = [
-            models.Index(fields=['startup']),
-            models.Index(fields=['tag']),
-        ]
-
-
-class InvestorTag(models.Model):
-    investor = models.ForeignKey('Investor', on_delete=models.CASCADE)
-    tag = models.ForeignKey('Tag', on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Investor: {self.investor}, Tag: {self.tag.name}"
-
-    class Meta:
-        db_table = 'investor_tags'
-        verbose_name = 'Investor Tag'
-        verbose_name_plural = 'Investor Tags'
-        constraints = [
-            models.UniqueConstraint(fields=['investor', 'tag'], name='unique_investor_tag')
-        ]
-        indexes = [
-            models.Index(fields=['investor']),
-            models.Index(fields=['tag']),
-        ]
