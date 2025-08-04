@@ -148,6 +148,8 @@ This project integrates **Django** and **FastAPI** into a single ASGI applicatio
 uvicorn core.asgi:application --reload
 
 ### Search API (Elasticsearch)
+Our platform integrates Elasticsearch to provide fast and accurate full-text search capabilities across startup and project data. This allows investors to find relevant opportunities and startups to be easily discovered.
+
 - `/api/startups/search/` — full-text search by `company_name`, `description`, etc.
 - `/api/projects/search/` — full-text search by `title`, `description`, etc.
 
