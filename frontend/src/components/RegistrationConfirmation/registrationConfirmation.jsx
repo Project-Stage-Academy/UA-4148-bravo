@@ -4,12 +4,15 @@ import Button from '../Button/button';
 import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../Panel/panel';
 
 function RegistrationConfirmation() {
+    // This component handles user registration
     const navigate = useNavigate();
 
+    // Function to handle the return button click
     function handleReturn() {
         navigate("/");
     }
 
+    // Function to handle the resend email button click
     function sendEmailAgain() {
         navigate("/auth/register/re-confirm");
     }

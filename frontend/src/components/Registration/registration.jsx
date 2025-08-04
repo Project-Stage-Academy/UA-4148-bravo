@@ -6,9 +6,20 @@ import Button from '../Button/button';
 import { registerUser } from '../../api';
 import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../Panel/panel';
 
+/**
+ * Registration component handles user registration.
+ * It includes form fields for company name, email, password, confirmation password,
+ * last name, first name, representation of the company, and business type.
+ * It validates the input data and submits the registration request.
+ * If the registration is successful, it navigates to the confirmation page.
+ * If there are validation errors or server-side errors, it displays appropriate messages.
+ * @returns {JSX.Element}
+ */
 function Registration() {
+    // This component handles user registration
     const navigate = useNavigate();
 
+    // State to hold form data
     const [formData, setFormData] = useState(
         {
             companyName: "",
@@ -28,8 +39,10 @@ function Registration() {
             unexpected: ""
         });
 
+    // State to hold validation errors
     const [errors, setErrors] = useState({});
 
+    // Function to handle server-side errors
     const handleError = (error) => {
         if (error.response && error.response.status === 409) {
             setErrors(prev => ({
@@ -44,6 +57,7 @@ function Registration() {
         }
     };
 
+    // Function to handle form submission
     const handleSubmit = () => {
         const validationErrors = Validator.validate(
             formData
@@ -59,6 +73,7 @@ function Registration() {
         }
     };
 
+    // Function to handle input changes
     const handleChange = (e) => {
         return Validator.handleChange(
             e,

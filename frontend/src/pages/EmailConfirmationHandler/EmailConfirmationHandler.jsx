@@ -9,7 +9,6 @@ import { confirmUser } from '../../api';
  * Navigate to done if token is fine
  * Else navigate to error
  * @returns {JSX.Element}
- * @constructor
  */
 function EmailConfirmationHandler() {
     const [searchParams] = useSearchParams();

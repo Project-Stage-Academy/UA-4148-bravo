@@ -6,17 +6,30 @@ import Button from '../Button/button';
 import { registerUser } from '../../api';
 import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../Panel/panel';
 
+/**
+ * Component for reconfirming user registration by resending the activation email.
+ * It allows users to enter their email address to receive a new activation link.
+ * The component validates the input and handles errors from the server.
+ * If the email is already registered, it shows an error message.
+ * If the email is valid, it sends a request to register the user and navigates to
+ * the confirmation page upon success.
+ * @returns {JSX.Element}
+ */
 function RegisterReconfirmation() {
+    // Hook to navigate programmatically
     const navigate = useNavigate();
 
+    // State to hold form data
     const [formData, setFormData] = useState(
         {
             email: "",
             unexpected: ""
         });
 
+    // State to hold validation errors
     const [errors, setErrors] = useState({});
 
+    // Function to handle server-side errors
     const handleError = (error) => {
         if (error.response && error.response.status === 409) {
             setErrors(prev => ({
@@ -31,6 +44,7 @@ function RegisterReconfirmation() {
         }
     };
 
+    // Function to handle form submission
     const handleSubmit = () => {
         const validationErrors = Validator.validate(formData);
         setErrors(validationErrors);
@@ -44,10 +58,12 @@ function RegisterReconfirmation() {
         }
     }
 
+    // Function to handle cancellation
     const handleCancel = () => {
         navigate("/");
     }
 
+    // Function to handle input changes
     const handleChange = (e) => {
         Validator.handleChange(
             e,

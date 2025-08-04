@@ -32,11 +32,9 @@ import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/Email
  * - Feedback form
  * - Policy page
  * - Who we are page
- * - Log in page
- * - Registration page
- * - Password management (forgot and restore)
- * - User and company profile pages with editing capabilities
- * - A catch-all route for 404 Not Found
+ * - Authentication routes (login, registration, forgot password, restore password)
+ * - Profile editing
+ * - Not found page for unmatched routes.
  * @returns {JSX.Element} The main application component.
  */
 function App() {

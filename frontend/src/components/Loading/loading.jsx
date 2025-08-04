@@ -1,5 +1,6 @@
 import './loading.css';
 import { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * Loading component that displays a loading animation with dots.
@@ -35,5 +36,13 @@ function Loading({ quantity = 4 }) {
         </div>
     );
 }
+
+/**
+ * PropTypes for the Loading component.
+ * @type {{quantity: number}}
+ */
+Loading.propTypes = {
+    quantity: PropTypes.number,
+};
 
 export default Loading;

@@ -4,8 +4,10 @@ import Button from '../Button/button';
 import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../Panel/panel';
 
 function RegistrationDone() {
+    // This component handles user registration
     const navigate = useNavigate();
 
+    // Function to handle the submission of the registration form
     function handleSubmit() {
         navigate("/");
     }

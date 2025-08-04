@@ -53,6 +53,21 @@ export class Validator {
         lastName: "Прізвище не відповідає вимогам"
     }
 
+    /**
+     * Server-side error messages.
+     * These messages are used when the server returns an error during form submission.
+     * The keys should match the error codes returned by the server.
+     * This is useful for displaying specific error messages based on server responses.
+     * For example, if the server indicates that an email already exists,
+     * the corresponding message will be shown to the user.
+     * This helps in providing a better user experience by informing the user about specific issues.
+     * @example
+     * // Example usage:
+     * const errorCode = "emailAlreadyExist"; // This would be returned by the server
+     * const errorMessage = Validator.serverSideErrorMessages[errorCode];
+     * console.log(errorMessage); // Outputs: "Ця електронна пошта вже зареєстрована"
+     * @type {Object<string, string>}
+     */
     static serverSideErrorMessages = {
         emailAlreadyExist: "Ця електронна пошта вже зареєстрована",
         unexpected: "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз пізніше"
