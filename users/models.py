@@ -6,6 +6,7 @@ from django.db import IntegrityError, DataError
 from django.utils import timezone
 from django.forms.models import model_to_dict
 from validation.validate_email import validate_email_custom
+from validation.validate_string_fields import validate_max_length
 
 
 class ActiveUserManager(models.Manager):
@@ -39,8 +40,7 @@ class CustomUserManager(BaseUserManager):
         Returns:
             User: The created user instance.
         """
-        if len(email) > 50:
-            raise ValidationError("Email must be 50 characters or fewer")
+        validate_max_length(email, 50, "Email")
         
         if self.model.all_objects.filter(email=email).exists():
             raise ValidationError("Email already exists")
@@ -212,18 +212,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         if cls.objects.filter(email=email).exists():
             raise ValidationError("Email already exists")
 
-        if len(email) > 50:
-            raise ValidationError("Email must be 50 characters or fewer")
-        if len(first_name) > 50:
-            raise ValidationError("First name must be 50 characters or fewer")
-        if len(last_name) > 50:
-            raise ValidationError("Last name must be 50 characters or fewer")
-        if user_phone is not None and len(user_phone) > 20:
-            raise ValidationError("User phone must be 20 characters or fewer")
-        if title is not None and len(title) > 100:
-            raise ValidationError("Title must be 100 characters or fewer")
-        if role is not None and role not in dict(cls.Role.choices):
-            raise ValidationError("Invalid role value")
+        validate_max_length(email, 50, "Email")
+        validate_max_length(first_name, 50, "First name")
+        validate_max_length(last_name, 50, "Last name")
+        if user_phone:
+            validate_max_length(user_phone, 20, "User phone")
+        if title:
+            validate_max_length(title, 100, "Title")
+        if role and role not in dict(cls.Role.choices):
+             ValidationError("Invalid role value")
         if not password or not isinstance(password, str) or len(password) < 8:
             raise ValidationError("Password must be a string at least 8 characters long")
 
