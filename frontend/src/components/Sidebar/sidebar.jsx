@@ -2,6 +2,8 @@ import './sidebar.css';
 import Dimmer from '../Dimmer/dimmer';
 import Search from '../Search/search';
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * Sidebar component
@@ -13,12 +15,34 @@ import { Link } from 'react-router-dom';
  * @returns {JSX.Element}
  */
 function Sidebar({ show, hide, toggle, visible, children }) {
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && visible) {
+            }
+        }
+
+        if (visible) {
+            window.addEventListener("keydown", handleKeyDown);
+        }
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [visible, hide]);
+
     return (
         <div className={"sidebar-wrapper"}>
             <Dimmer isActive={visible} hideDimmer={hide}>
-                <div onClick={(e) => e.stopPropagation()}>
-                    <hr className={"sidebar--hr"}/>
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden={!visible}
+                    aria-labelledby="sidebar-title"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <hr className={"sidebar--hr"} />
                     <div className={"sidebar--menu"}>
+                        <h2 id="sidebar-title" className="visually-hidden">Меню сайдбара</h2>
                         <Search width={'100%'} />
                         <Link to={"/who-we-are"} className={"sidebar--link"}>
                             <p>Про нас</p>
@@ -33,5 +57,19 @@ function Sidebar({ show, hide, toggle, visible, children }) {
         </div>
     );
 }
+
+/**
+ * PropTypes for Header component
+ * @property {function} show - Function to show the header
+ * @property {function} hide - Function to hide the header
+ * @property {function} toggle - Function to toggle the header visibility
+ * @property {boolean} visible - Boolean indicating if the header is visible
+ */
+Sidebar.porpTypes = {
+    show: PropTypes.func.isRequired,
+    hide: PropTypes.func.isRequired,
+    toggle: PropTypes.func.isRequired,
+    visible: PropTypes.bool.isRequired
+};
 
 export default Sidebar;

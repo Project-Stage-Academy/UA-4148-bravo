@@ -2,7 +2,8 @@ import "./header.css";
 import { Link, useNavigate } from 'react-router-dom';
 import Search from "../Search/search";
 import {useAuth} from "../../context/AuthContext/authContext";
-import { useEffect } from 'react';
+import PropTypes from 'prop-types';
+import Button from '../Button/button';
 
 /**
  * Header component
@@ -14,11 +15,7 @@ import { useEffect } from 'react';
  */
 function Header({ show, hide, toggle, visible }) {
     const navigate = useNavigate();
-    const { auth, setAuth } = useAuth();
-
-    useEffect(() => {
-        setAuth(false);
-    }, [auth, setAuth]);
+    const { user } = useAuth();
 
     return (
         <header className={'header'}>
@@ -38,9 +35,9 @@ function Header({ show, hide, toggle, visible }) {
                     <Link to={'/companies'} className={'link__underline nav-panel--link'}>
                         <p>Підприємства та сектори</p>
                     </Link>
-                    <Search width={'225px'} />
+                    <Search className={'nav-panel--search'} />
                 </div>
-                {auth ? (
+                {user ? (
                     <div className={'nav-panel--set'}>
                         <Link
                             to={'/profile/user/edit'}
@@ -58,22 +55,15 @@ function Header({ show, hide, toggle, visible }) {
                         <Link to={'/login'} className={'link__underline nav-panel--link'}>
                             <p>Увійти</p>
                         </Link>
-                        <button
-                            className={
-                                'button button__padding button__primary-color'
-                            }
-                            onClick={() => navigate('/auth/register')}
-                        >
+                        <Button className={"button__padding"}
+                                onClick={() => navigate('/register')}>
                             Зареєструватися
-                        </button>
+                        </Button>
                     </div>
                 )}
-                <button
-                    className={
-                        'button button__transparent-color nav-panel--menu-btn'
-                    }
-                    onClick={toggle}
-                >
+                <Button variant="outline"
+                        className={"nav-panel--menu-btn"}
+                        onClick={toggle}>
                     {
                         !visible
                             ? (
@@ -87,10 +77,24 @@ function Header({ show, hide, toggle, visible }) {
                                 </svg>
                             )
                     }
-                </button>
+                </Button>
             </nav>
         </header>
     );
 }
+
+/**
+ * PropTypes for Header component
+ * @property {function} show - Function to show the header
+ * @property {function} hide - Function to hide the header
+ * @property {function} toggle - Function to toggle the header visibility
+ * @property {boolean} visible - Boolean indicating if the header is visible
+ */
+Header.porpTypes = {
+    show: PropTypes.func.isRequired,
+    hide: PropTypes.func.isRequired,
+    toggle: PropTypes.func.isRequired,
+    visible: PropTypes.bool.isRequired
+};
 
 export default Header;

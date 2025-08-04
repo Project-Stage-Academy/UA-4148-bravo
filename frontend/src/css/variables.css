@@ -12,7 +12,7 @@
     --primary-text-color: #000;
     --secondary-text-color: #959595;
     --alternative-text-color: #fff;
-    --error-text-color: #F15831;
+    --danger-text-color: #F15831;
     --gray-text-color: #25292C;
 
     /* button colors */
@@ -28,11 +28,11 @@
     --secondary-btn-text-color-active: #000;
     --secondary-btn-text-color-inactive: #A1A1A1;
 
-    --red-btn-bcg-color-active: #E14E29;
-    --red-btn-bcg-color-hover: #F15831;
-    --red-btn-bcg-color-inactive: #E5E5E5;
-    --red-btn-text-color-active: #fff;
-    --red-btn-text-color-inactive: #A1A1A1;
+    --danger-btn-bcg-color-active: #E14E29;
+    --danger-btn-bcg-color-hover: #F15831;
+    --danger-btn-bcg-color-inactive: #E5E5E5;
+    --danger-btn-text-color-active: #fff;
+    --danger-btn-text-color-inactive: #A1A1A1;
 
     --link-btn-text-color-active: #000;
     --link-btn-text-color-inactive: #A1A1A1;

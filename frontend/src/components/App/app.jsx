@@ -9,6 +9,7 @@ import CompanyList from '../../pages/CompanyList/companyList';
 import FeedbackForm from '../../pages/FeedbackForm/feedbackForm';
 import ForgotPassword from '../../pages/ForgotPassword/forgotPassword';
 import RestorePassword from '../../pages/RestorePassword/restorePassword';
+import ProfilePage from '../../pages/ProfilePage/profilePage';
 import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
@@ -41,60 +42,58 @@ import RegistrationDone from '../RegistrationDone/registrationDone';
 function App() {
     return (
         <AuthProvider>
-            <React.StrictMode>
-                <BrowserRouter>
-                    <Routes>
+            <BrowserRouter>
+                <Routes>
 
-                        {/* Main layout */}
-                        <Route path="/" element={<Layout />}>
+                    {/* Main layout */}
+                    <Route path="/" element={<Layout />}>
 
-                            {/* Home page */}
-                            <Route index element={<HomePage />} />
+                        {/* Home page */}
+                        <Route index element={<HomePage />} />
 
-                            {/* Company list */}
-                            <Route path="companies" element={<CompanyList />} />
+                        {/* Company list */}
+                        <Route path="companies" element={<CompanyList />} />
 
-                            {/* Feedback form */}
-                            <Route path="feedback" element={<FeedbackForm />} />
+                        {/* Feedback form */}
+                        <Route path="feedback" element={<FeedbackForm />} />
 
-                            {/* Policy */}
-                            <Route path="policy" element={<Policy />} />
+                        {/* Policy */}
+                        <Route path="policy" element={<Policy />} />
 
-                            {/* Who we are */}
-                            <Route path="who-we-are" element={<WhoWeAre />} />
+                        {/* Who we are */}
+                        <Route path="who-we-are" element={<WhoWeAre />} />
 
-                            <Route path={"auth"} element={<AuthorizationWrapper />}>
+                        <Route path={"auth"} element={<AuthorizationWrapper />}>
 
-                                {/* Log in */}
-                                <Route path="login" element={<LogInPage />} />
+                            {/* Log in */}
+                            <Route path="login" element={<LogInPage />} />
 
-                                {/* Registration */}
-                                <Route path="register" element={<Registration />} />
-                                <Route path="register/confirmation" element={<RegistrationConfirmation />} />
-                                <Route path="register/re-confirmation" element={<RegisterReconfirmation />} />
-                                <Route path="register/error" element={<RegistrationError />} />
-                                <Route path="register/done" element={<RegistrationDone />} />
+                            {/* Registration */}
+                            <Route path="register" element={<Registration />} />
+                            <Route path="register/confirmation" element={<RegistrationConfirmation />} />
+                            <Route path="register/re-confirmation" element={<RegisterReconfirmation />} />
+                            <Route path="register/error" element={<RegistrationError />} />
+                            <Route path="register/done" element={<RegistrationDone />} />
 
-                                {/* Forgot password */}
-                                <Route path="forgot" element={<ForgotPassword />} />
+                            {/* Forgot password */}
+                            <Route path="forgot" element={<ForgotPassword />} />
 
-                                {/* Restore password */}
-                                <Route path="restore" element={<RestorePassword />} />
-                            </Route>
-
-                            {/* Profile */}
-                            <Route path="profile">
-
-                                {/* Profile editing */}
-                                <Route path="edit" element={<ProfileEditing />} />
-                            </Route>
-
-                            {/* Page not found */}
-                            <Route path="*" element={<NotFound />} />
+                            {/* Restore password */}
+                            <Route path="restore" element={<RestorePassword />} />
                         </Route>
-                    </Routes>
-                </BrowserRouter>
-            </React.StrictMode>
+
+                        {/* Profile */}
+                        <Route path="profile">
+
+                            {/* Profile editing */}
+                            <Route path="edit" element={<ProfileEditing />} />
+                        </Route>
+
+                        {/* Page not found */}
+                        <Route path="*" element={<NotFound />} />
+                    </Route>
+                </Routes>
+            </BrowserRouter>
         </AuthProvider>
     );
 }

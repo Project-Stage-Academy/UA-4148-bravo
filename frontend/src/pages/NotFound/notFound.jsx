@@ -1,6 +1,14 @@
 import './notFound.css';
 import { useNavigate } from 'react-router-dom';
+import Button from '../../components/Button/button';
 
+/**
+ * NotFound component renders a 404 Not Found page.
+ * It provides a message indicating that the requested page could not be found
+ * and includes a button to navigate back to the home page.
+ * @returns {JSX.Element}
+ * @constructor
+ */
 function NotFound() {
     const navigate = useNavigate();
     const returnToHomePage = () => {
@@ -18,12 +26,10 @@ function NotFound() {
                         перейменована або тимчасово недоступна.
                     </p>
                     <div>
-                        <button
-                            className={'button button__padding button__primary-color'}
-                            onClick={returnToHomePage}
-                        >
-                            <span>Повернутися на головну</span>
-                        </button>
+                        <Button className={"button__padding"}
+                                onClick={returnToHomePage}>
+                            Повернутися на головну
+                        </Button>
                     </div>
                 </div>
             </section>

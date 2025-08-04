@@ -42,21 +42,21 @@
     color: var(--secondary-btn-text-color-inactive);
 }
 
-.button__red-color {
-    background-color: var(--red-btn-bcg-color-active);
-    color: var(--red-btn-text-color-active);
+.button__danger-color {
+    background-color: var(--danger-btn-bcg-color-active);
+    color: var(--danger-btn-text-color-active);
 }
 
-.button__red-color:hover {
-    background-color: var(--red-btn-bcg-color-hover);
-    color: var(--red-btn-text-color-active);
+.button__danger-color:hover {
+    background-color: var(--danger-btn-bcg-color-hover);
+    color: var(--danger-btn-text-color-active);
 }
 
-.button__red-color:disabled {
-    background-color: var(--red-btn-bcg-color-inactive);
-    color: var(--red-btn-text-color-inactive);
+.button__danger-color:disabled {
+    background-color: var(--danger-btn-bcg-color-inactive);
+    color: var(--danger-btn-text-color-inactive);
 }
 
-.button__transparent-color {
+.button__outline-color {
     background-color: transparent;
 }

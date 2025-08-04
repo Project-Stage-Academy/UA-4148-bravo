@@ -23,3 +23,7 @@
 .sidebar--link {
     padding: 6px 12px;
 }
+
+.sidebar--search {
+    width: 100%;
+}

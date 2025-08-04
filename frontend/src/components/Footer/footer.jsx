@@ -23,20 +23,18 @@ function Footer() {
                         <p>вул. Степана Бандери 12, Львів</p>
                     </div>
                     <div className={'contacts--links'}>
-                        <Link
-                            to={'mailto:qwerty@gmail.com'}
+                        <a href={'mailto:qwerty@gmail.com'}
                             className={'contacts--link'}
                         >
                             <img src="/pictures/svg/mail.svg" alt="Mail" />
                             <p>qwerty@gmail.com</p>
-                        </Link>
-                        <Link
-                            to={'tel:+380502342323'}
+                        </a>
+                        <a href={'tel:+380502342323'}
                             className={'contacts--link'}
                         >
                             <img src="/pictures/svg/phone.svg" alt="Phone" />
                             <p>+38 050 234 23 23</p>
-                        </Link>
+                        </a>
                     </div>
                 </div>
             </section>
@@ -45,10 +43,10 @@ function Footer() {
                     <div className={'branch-list--branch'}>
                         <h2 className={'branch-list--title'}>Підприємства</h2>
                         <div className={'branch-list--link-list'}>
-                            <Link to={'#TODO'} className={'branch-list--item'}>
+                            <Link to={'/companies'} className={'branch-list--item'}>
                                 <p>Компанії</p>
                             </Link>
-                            <Link to={'#TODO'} className={'branch-list--item'}>
+                            <Link to={'/startups'} className={'branch-list--item'}>
                                 <p>Стартапи</p>
                             </Link>
                         </div>
@@ -56,19 +54,19 @@ function Footer() {
                     <div className={'branch-list--branch'}>
                         <h2 className={'branch-list--title'}>Сектори</h2>
                         <div className={'branch-list--link-list'}>
-                            <Link to={'#TODO'} className={'branch-list--item'}>
+                            <Link to={'/manufacturers'} className={'branch-list--item'}>
                                 <p>Виробники</p>
                             </Link>
-                            <Link to={'#TODO'} className={'branch-list--item'}>
+                            <Link to={'/importers'} className={'branch-list--item'}>
                                 <p>Імпортери</p>
                             </Link>
-                            <Link to={'#TODO'} className={'branch-list--item'}>
+                            <Link to={'/retails'} className={'branch-list--item'}>
                                 <p>Роздрібні мережі</p>
                             </Link>
-                            <Link to={'#TODO'} className={'branch-list--item'}>
+                            <Link to={'/horeca'} className={'branch-list--item'}>
                                 <p>HORECA</p>
                             </Link>
-                            <Link to={'#TODO'} className={'branch-list--item'}>
+                            <Link to={'/other-services'} className={'branch-list--item'}>
                                 <p>Інші послуги</p>
                             </Link>
                         </div>
@@ -85,13 +83,13 @@ function Footer() {
                 </div>
                 <div className={'dev-contact--container'}>
                     <div className={'dev-contact--list'}>
-                        <Link to={'#TODO'}>
+                        <Link to={'/privacy-policy'}>
                             <p>Політика конфіденційності</p>
                         </Link>
-                        <Link to={'#TODO'}>
+                        <Link to={'/terms-of-use'}>
                             <p>Умови користування</p>
                         </Link>
-                        <Link to={'#TODO'}>
+                        <Link to={'/feedback'}>
                             <p>Зворотній звʼязок</p>
                         </Link>
                     </div>

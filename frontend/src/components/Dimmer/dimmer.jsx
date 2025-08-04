@@ -1,4 +1,5 @@
 import './dimmer.css';
+import PropTypes from 'prop-types';
 
 /**
  * Dimmer component to overlay content with a semi-transparent background.
@@ -17,6 +18,18 @@ function Dimmer({ isActive, hideDimmer, children }) {
             { children }
         </div>}
     </>;
+}
+
+/**
+ * PropTypes for Dimmer component
+ * @property {boolean} isActive - Indicates if the dimmer is active
+ * @property {function} hideDimmer - Function to call when the dimmer is clicked to hide it
+ * @property {node} children - React elements to be displayed on top of the dimmer
+ */
+Dimmer.propTypes = {
+    isActive: PropTypes.bool.isRequired,
+    hideDimmer: PropTypes.func.isRequired,
+    children: PropTypes.node
 }
 
 export default Dimmer;
