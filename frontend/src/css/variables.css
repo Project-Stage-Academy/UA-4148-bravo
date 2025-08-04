@@ -1,0 +1,51 @@
+/* Style variables */
+:root {
+    /* text font */
+    --text-font: 'Geologica';
+
+    /* animation speed */
+    --animation-fast: 0.15s;
+    --animation-normal: 0.3s;
+    --animation-slow: 0.6s;
+
+    /* text colors  */
+    --primary-text-color: #000;
+    --secondary-text-color: #959595;
+    --alternative-text-color: #fff;
+    --danger-text-color: #F15831;
+    --gray-text-color: #25292C;
+
+    /* button colors */
+    --primary-btn-bcg-color-active: #000;
+    --primary-btn-bcg-color-hover: #292929;
+    --primary-btn-bcg-color-inactive: #E5E5E5;
+    --primary-btn-text-color-active: #fff;
+    --primary-btn-text-color-inactive: #A1A1A1;
+
+    --secondary-btn-bcg-color-active: #fff;
+    --secondary-btn-bcg-color-hover: #F1E7D280;
+    --secondary-btn-bcg-color-inactive: #EEEFF1;
+    --secondary-btn-text-color-active: #000;
+    --secondary-btn-text-color-inactive: #A1A1A1;
+
+    --danger-btn-bcg-color-active: #E14E29;
+    --danger-btn-bcg-color-hover: #F15831;
+    --danger-btn-bcg-color-inactive: #E5E5E5;
+    --danger-btn-text-color-active: #fff;
+    --danger-btn-text-color-inactive: #A1A1A1;
+
+    --link-btn-text-color-active: #000;
+    --link-btn-text-color-inactive: #A1A1A1;
+
+    /* background colors */
+    --green-bcg-color: #B4D27A;
+
+    /* hr colors */
+    --light-gray-hr-color: #EDEDED;
+
+    /* header */
+    --header-bcg-color: #fff;
+
+    /* footer */
+    --footer-bcg-color: #232424;
+}
