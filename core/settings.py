@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+import sys
 
 from decouple import config
 from pathlib import Path
@@ -67,6 +68,9 @@ REST_FRAMEWORK = {
     },
 }
 
+if 'test' in sys.argv:
+    REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
@@ -87,7 +91,7 @@ DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
-    'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',  # link for front-end developer
+    'PASSWORD_RESET_CONFIRM_URL': 'users/reset_password_confirm/{uid}/{token}',  # link for front-end developer
     'SEND_ACTIVATION_EMAIL': False,
     'PASSWORD_RESET_TIMEOUT': 3600,
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
@@ -95,7 +99,6 @@ DJOSER = {
         'user_create': 'users.serializers.CustomUserCreateSerializer',
         'user': 'users.serializers.CustomUserSerializer',
         'current_user': 'users.serializers.CustomUserSerializer',
-        'password_reset_confirm': 'users.serializers.PasswordResetConfirmSerializer',
     },
 }
 
@@ -145,27 +148,27 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
-if DEBUG:
-    AUTH_PASSWORD_VALIDATORS = []
-else:
-    AUTH_PASSWORD_VALIDATORS = [
-        {
-            'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-        },
-        {
-            'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-            'OPTIONS': {'min_length': 8}
-        },
-        {
-            'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-        },
-        {
-            'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-        },
-        {
-            'NAME': 'users.validators.CustomPasswordValidator',
-        },
-    ]
+#if DEBUG:
+#    AUTH_PASSWORD_VALIDATORS = []
+#else:
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8}
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    {
+        'NAME': 'users.validators.CustomPasswordValidator',
+    },
+]
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
