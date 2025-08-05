@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     'corsheaders',  # Added for CORS support
 ]
 
+# Custom user model
+AUTH_USER_MODEL = 'users.User'
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -119,6 +122,16 @@ else:
         {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
         {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
     ]
+
+# Password hashing configuration.   
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher', 
+    'django.contrib.auth.hashers.Argon2PasswordHasher', 
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+
+# Internationalization
+# https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='UTC')
