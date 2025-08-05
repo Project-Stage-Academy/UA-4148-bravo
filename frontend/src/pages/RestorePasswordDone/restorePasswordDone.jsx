@@ -3,6 +3,12 @@ import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/
 import Button from '../../components/Button/button';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * RestorePasswordDone component displays a confirmation message
+ * after the user has successfully restored their password.
+ * It provides a button to navigate back to the login page.
+ * @returns {JSX.Element}
+ */
 function RestorePasswordDone() {
     const navigate = useNavigate();
 

@@ -1,11 +1,19 @@
 import { Link, useNavigate } from 'react-router-dom';
-import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
+import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import Button from '../../components/Button/button';
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import { restorePassword } from '../../api';
 import HiddenInput from '../../components/HiddenInput/hiddenInput';
 
+/**
+ * RestorePassword component handles the user password restoration process.
+ * It allows users to set a new password and confirm it.
+ * It validates the input and displays any errors that occur during the process.
+ * If the password is successfully restored, it navigates to a confirmation page.
+ * If there are validation errors or server-side errors, it displays appropriate messages.
+ * @returns {JSX.Element}
+ */
 function RestorePassword() {
     // This component handles user registration
     const navigate = useNavigate();
@@ -61,20 +69,9 @@ function RestorePassword() {
                 <PanelTitle>Відновлення паролю</PanelTitle>
                 <PanelBody>
                     <div>
-                        <div
-                            className={
-                                'content--text-container content--text-container__margin'
-                            }
-                        >
-                            <div className={'content--substring-container'}>
-                                <span className={'content--text'}>Пароль</span>
-                                <p className={'content--subtext'}>
-                                    Пароль повинен мати 8+ символів, містити
-                                    принаймні велику, малу літеру (A..Z, a..z)
-                                    та цифру (0..9).
-                                </p>
-                            </div>
-                        </div>
+                        <PanelBodyTitle title={'Пароль'} className={'content--text-container__margin'}>
+                            Пароль повинен мати 8+ символів, містити принаймні велику, малу літеру (A..Z, a..z) та цифру (0..9).
+                        </PanelBodyTitle>
                         <HiddenInput
                             name="password"
                             autoComplete="off"
@@ -82,16 +79,12 @@ function RestorePassword() {
                             spellCheck="false"
                             value={formData.password}
                             onChange={handleChange}
-                            className={errors['password'] ? 'input__error-border-color' : ''}
+                            className={errors['password'] && 'input__error-border-color'}
                         />
-                        { errors['password'] ? <p className={"panel--danger-text"}>{ errors['password'] }</p> : "" }
+                        { errors['password'] && <p className={"panel--danger-text"}>{ errors['password'] }</p> }
                     </div>
                     <div>
-                        <div className={'content--text-container content--text-container__margin'}>
-                            <span className={'content--text'}>
-                                        Повторіть пароль
-                                    </span>
-                        </div>
+                        <PanelBodyTitle title={'Повторіть пароль'} className={'content--text-container__margin'} />
                         <HiddenInput
                             name="confirmPassword"
                             autoComplete="off"
@@ -99,12 +92,11 @@ function RestorePassword() {
                             spellCheck="false"
                             value={formData.confirmPassword}
                             onChange={handleChange}
-                            className={(errors['confirmPassword'] || errors['confirmPassword-passwords-dont-match'])
-                                ? 'input__error-border-color' : ''}
+                            className={errors['confirmPassword'] && 'input__error-border-color'}
                         />
-                        { errors['confirmPassword'] ? <p className={"panel--danger-text"}>{ errors["confirmPassword"] }</p> : "" }
+                        { errors['confirmPassword'] && <p className={"panel--danger-text"}>{ errors["confirmPassword"] }</p> }
                     </div>
-                    { errors['unexpected'] ? <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> : ""}
+                    { errors['unexpected'] && <p className={"panel--danger-text"}>{ errors['unexpected'] }</p>}
                 </PanelBody>
                 <PanelNavigation>
                     <Button
