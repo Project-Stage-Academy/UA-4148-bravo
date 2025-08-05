@@ -20,6 +20,7 @@ import RegistrationError from '../../pages/RegistrationError/registrationError';
 import RegistrationDone from '../../pages/RegistrationDone/registrationDone';
 import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/EmailConfirmationHandler';
 import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
+import ForgotPasswordDone from '../../pages/ForgotPasswordDone/forgotPasswordDone';
 
 /**
  * Main application component that sets up routing and context providers.
@@ -76,7 +77,8 @@ function App() {
                             <Route path="register/done" element={<RegistrationDone />} />
 
                             {/* Forgot password */}
-                            <Route path="forgot" element={<ForgotPassword />} />
+                            <Route path="forgot-password" element={<ForgotPassword />} />
+                            <Route path="forgot-password/done" element={<ForgotPasswordDone />} />
 
                             {/* Restore password */}
                             <Route path="restore-password" element={<RestorePassword />} />

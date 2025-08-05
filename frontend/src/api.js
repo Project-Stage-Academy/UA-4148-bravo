@@ -50,3 +50,11 @@ export const loginUser = (data) => API.post('/login', data);
  * @returns {Promise<axios.AxiosResponse<any>>}
  */
 export const restorePassword = (data) => API.post('/restore-password', data);
+
+/**
+ * Sends a forgot password request.
+ * This is typically called when the user wants to reset their password.
+ * @param data - The email of the user requesting the password reset.
+ * @returns {Promise<axios.AxiosResponse<any>>}
+ */
+export const forgotPassword = (data) => API.post('/forgot-password', data);

@@ -70,6 +70,7 @@ export class Validator {
      */
     static serverSideErrorMessages = {
         emailAlreadyExist: "Ця електронна пошта вже зареєстрована",
+        emailNotExist: "Зазначена електронна адреса не зареєстрована",
         unexpected: "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз пізніше"
     }
 
