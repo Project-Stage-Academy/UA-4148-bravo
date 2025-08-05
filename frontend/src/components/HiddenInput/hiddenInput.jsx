@@ -1,5 +1,5 @@
 import './hiddenInput.css';
-import { useState } from 'react';
+import {useEffect, useRef, useState} from 'react';
 import PropTypes from 'prop-types';
 
 /**
@@ -26,7 +26,12 @@ function HiddenInput({
                          onChange = () => {},
                          className = ''
                      }) {
+    const fieldRef = useRef(null);
     const [show, setShow] = useState(false);
+
+    useEffect(() => {
+        fieldRef.current?.focus();
+    }, [show]);
 
     const togglePassword = () => {
         setShow(prev => !prev);
