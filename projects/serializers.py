@@ -76,3 +76,4 @@ class ProjectSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
         return data
+

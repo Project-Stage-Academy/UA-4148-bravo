@@ -1,8 +1,9 @@
-from urllib.parse import urlparse
 from rest_framework import serializers
+from urllib.parse import urlparse
 from profiles.models import Startup, Investor
 from projects.serializers import ProjectSerializer
-from common.company import Stage
+from common.enums import Stage  # Updated import to reflect actual location of Stage enum
+from common.validation import SocialLinksValidationMixin  # Shared mixin for social_links validation
 
 
 class StartupShortSerializer(serializers.ModelSerializer):
@@ -18,10 +19,11 @@ class StartupShortSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class StartupSerializer(serializers.ModelSerializer):
+class StartupSerializer(SocialLinksValidationMixin, serializers.ModelSerializer):
     """
     Full serializer for Startup.
-    Includes validation for company_name, social_links, and cross-field logic.
+    Uses shared mixin for social_links validation.
+    Includes nested project details.
     """
     projects = ProjectSerializer(many=True, read_only=True)
 
@@ -39,30 +41,18 @@ class StartupSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at', 'projects']
 
     def validate_company_name(self, value):
-        if not value.strip():
+        value = value.strip()
+        if not value:
             raise serializers.ValidationError("Company name must not be empty.")
         return value
 
-    def validate_social_links(self, value):
-        allowed_domains = Startup.ALLOWED_SOCIAL_PLATFORMS
-
-        errors = {}
-        for platform, url in value.items():
-            platform_lc = platform.lower()
-            if platform_lc not in allowed_domains:
-                errors[platform] = f"Platform '{platform}' is not supported."
-                continue
-
-            domain = urlparse(url).netloc.lower()
-            if not any(allowed in domain for allowed in allowed_domains[platform_lc]):
-                errors[platform] = f"Invalid URL for platform '{platform}': {url}"
-
-        if errors:
-            raise serializers.ValidationError({'social_links': errors})
-
-        return value
-
     def validate(self, data):
+        """
+        Cross-field validation logic:
+        - team_size must be at least 1
+        - either website or email must be provided
+        - industry, country, and user must be present
+        """
         errors = {}
 
         team_size = data.get('team_size')
@@ -75,16 +65,22 @@ class StartupSerializer(serializers.ModelSerializer):
         if not website and not email:
             errors['contact'] = "At least one contact method (website or email) must be provided."
 
+        required_fields = ['industry', 'country', 'user']
+        missing = [field for field in required_fields if not data.get(field)]
+        if missing:
+            errors['missing_fields'] = f"Missing required fields: {', '.join(missing)}"
+
         if errors:
             raise serializers.ValidationError(errors)
 
         return data
 
 
-class InvestorSerializer(serializers.ModelSerializer):
+class InvestorSerializer(SocialLinksValidationMixin, serializers.ModelSerializer):
     """
     Full serializer for Investor.
-    Includes validation and nested startup details.
+    Uses shared mixin for social_links validation.
+    Includes nested startup details.
     """
     startups = serializers.PrimaryKeyRelatedField(
         queryset=Startup.objects.all(),
@@ -109,27 +105,10 @@ class InvestorSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at', 'startup_details']
 
     def validate_company_name(self, value):
-        if not value.strip():
+        value = value.strip()
+        if not value:
             raise serializers.ValidationError("Company name must not be empty.")
         return value
 
-    def validate_social_links(self, value):
-        allowed_domains = Startup.ALLOWED_SOCIAL_PLATFORMS
-
-        errors = {}
-        for platform, url in value.items():
-            platform_lc = platform.lower()
-            if platform_lc not in allowed_domains:
-                errors[platform] = f"Platform '{platform}' is not supported."
-                continue
-
-            domain = urlparse(url).netloc.lower()
-            if not any(allowed in domain for allowed in allowed_domains[platform_lc]):
-                errors[platform] = f"Invalid URL for platform '{platform}': {url}"
-
-        if errors:
-            raise serializers.ValidationError({'social_links': errors})
-
-        return value
 
 
