@@ -1,7 +1,7 @@
 import "./registration.css";
 import { useNavigate } from 'react-router-dom';
-import Button from '../Button/button';
-import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../Panel/panel';
+import Button from '../../components/Button/button';
+import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 
 function RegistrationDone() {
     // This component handles user registration

@@ -2,9 +2,9 @@ import './registration.css';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
-import Button from '../Button/button';
+import Button from '../../components/Button/button';
 import { registerUser } from '../../api';
-import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../Panel/panel';
+import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 
 /**
  * Registration component handles user registration.

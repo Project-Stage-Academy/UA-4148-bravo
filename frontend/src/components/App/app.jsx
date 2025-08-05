@@ -12,12 +12,12 @@ import RestorePassword from '../../pages/RestorePassword/restorePassword';
 import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
-import Registration from '../Registration/registration';
+import Registration from '../../pages/Registration/registration';
 import AuthorizationWrapper from '../../pages/AuthorizationWrapper/authorizationWrapper';
-import RegistrationConfirmation from '../RegistrationConfirmation/registrationConfirmation';
-import RegisterReconfirmation from '../RegisterReconfirmation/registerReconfirmation';
-import RegistrationError from '../RegistrationError/registrationError';
-import RegistrationDone from '../RegistrationDone/registrationDone';
+import RegistrationConfirmation from '../../pages/RegistrationConfirmation/registrationConfirmation';
+import RegisterReconfirmation from '../../pages/RegisterReconfirmation/registerReconfirmation';
+import RegistrationError from '../../pages/RegistrationError/registrationError';
+import RegistrationDone from '../../pages/RegistrationDone/registrationDone';
 import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/EmailConfirmationHandler';
 
 /**
