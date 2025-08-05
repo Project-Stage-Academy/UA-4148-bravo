@@ -3,8 +3,6 @@ URL configuration for core project.
 
 Routes are organized by app and follow RESTful naming conventions.
 All API endpoints use plural nouns for consistency.
-For more information, see:
-https://docs.djangoproject.com/en/5.2/topics/http/urls/
 """
 
 from django.contrib import admin
@@ -12,17 +10,20 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-
+api_urlpatterns = [
     # User authentication endpoints
-    path('api/users/', include('users.urls')),        # User management
+    path('users/', include('users.urls')),
 
     # Project-related endpoints
-    path('api/projects/', include('projects.urls')),  # Project-related endpoints
+    path('projects/', include('projects.urls')),
 
     # Profile-related endpoints
-    path('api/profiles/', include('profiles.urls')),  # Profile management
+    path('profiles/', include('profiles.urls')),
+]
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/', include(api_urlpatterns)),
 ]
 
 # Serve static and media files in development
