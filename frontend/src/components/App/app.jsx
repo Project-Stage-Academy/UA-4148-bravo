@@ -19,6 +19,7 @@ import RegisterReconfirmation from '../../pages/RegisterReconfirmation/registerR
 import RegistrationError from '../../pages/RegistrationError/registrationError';
 import RegistrationDone from '../../pages/RegistrationDone/registrationDone';
 import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/EmailConfirmationHandler';
+import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
 
 /**
  * Main application component that sets up routing and context providers.
@@ -78,7 +79,8 @@ function App() {
                             <Route path="forgot" element={<ForgotPassword />} />
 
                             {/* Restore password */}
-                            <Route path="restore" element={<RestorePassword />} />
+                            <Route path="restore-password" element={<RestorePassword />} />
+                            <Route path="restore-password/done" element={<RestorePasswordDone />} />
                         </Route>
 
                         {/* Profile */}

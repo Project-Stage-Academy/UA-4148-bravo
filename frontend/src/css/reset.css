@@ -22,3 +22,21 @@ html,
 body {
     height: 100%;
 }
+
+/* Chrome, Edge, Safari display “eyeballing” by default */
+input::-ms-reveal,
+input::-ms-clear {
+    display: none;
+}
+
+input::-webkit-credentials-auto-fill-button {
+    visibility: hidden;
+    display: none !important;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+}
+
+input::-webkit-textfield-decoration-container {
+    display: none !important;
+}

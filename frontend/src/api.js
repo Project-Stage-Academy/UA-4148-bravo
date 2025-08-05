@@ -42,3 +42,11 @@ export const confirmUser = (data) => API.post('/confirm-email', { data });
  * @returns {Promise<axios.AxiosResponse<any>>}
  */
 export const loginUser = (data) => API.post('/login', data);
+
+/**
+ * Sends a password reset request.
+ * This is typically called when the user forgets their password.
+ * @param data - The email of the user requesting the password reset.
+ * @returns {Promise<axios.AxiosResponse<any>>}
+ */
+export const restorePassword = (data) => API.post('/restore-password', data);
