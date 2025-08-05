@@ -32,8 +32,11 @@ function HomePage() {
 
             </section>
 
-            <section className={'home-section home-section__green'}>
-
+            <section className={'home-section home-section__green involve-section'}>
+                <h2 className={'home-title-2 involve-title'}>Майданчик для тих, хто втілює свої ідеї в життя</h2>
+                <Button className={'button__padding'}>
+                    Долучитися
+                </Button>
             </section>
 
             <section className={'home-section home-section__yellow'}>

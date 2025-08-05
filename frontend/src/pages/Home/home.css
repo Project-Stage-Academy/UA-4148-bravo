@@ -4,7 +4,7 @@
 }
 
 .home-section {
-    padding: 32px 104px;
+    padding: 80px 104px;
     transition: all var(--animation-normal) ease;
 }
 
@@ -34,9 +34,13 @@
 
 .hero-section {
     display: flex;
+    padding-top: 32px;
+    padding-bottom: 32px;
     flex-direction: row;
     gap: 63px;
 }
+
+/* Hero section */
 
 .hero-title {
     flex: 1;
@@ -58,9 +62,25 @@
     text-align: center;
 }
 
+/* New members */
+
+/* Get involved */
+
+.involve-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.involve-title {
+    max-width: 694px;
+    margin-bottom: 24px;
+}
+
 @media (min-width: 2000px) {
     .home-section {
-        padding: 32px 400px;
+        padding: 32px 300px;
     }
 }
 
