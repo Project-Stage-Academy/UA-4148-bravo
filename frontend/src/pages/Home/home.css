@@ -49,11 +49,11 @@
     justify-content: center;
 }
 
-.hero-title__title-1 {
+.hero-title--title-1 {
     margin-bottom: 14px;
 }
 
-.hero-title__title-2 {
+.hero-title--title-2 {
     margin-bottom: 30px;
 }
 
@@ -76,6 +76,45 @@
 .involve-title {
     max-width: 694px;
     margin-bottom: 24px;
+}
+
+/* For whom */
+
+/* Why it's worth it */
+
+.worth-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.worth-title {
+    margin-bottom: 40px;
+}
+
+.worth-panels-container {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 32px;
+}
+
+.worth-panel {
+    flex: 1;
+    max-width: 33%;
+    min-width: 25%;
+    min-height: calc(164px - 32px * 2);
+    background-color: var(--worth-it-panel-color);
+    border-radius: 6px;
+    padding: 32px 24px;
+}
+
+.worth-panel--title {
+    font-size: 20px;
+    line-height: 120%;
+    font-weight: 700;
+    margin-bottom: 16px;
 }
 
 @media (min-width: 2000px) {
@@ -105,6 +144,12 @@
     .home-title-2 {
         font-size: 34px;
     }
+
+    .worth-panel {
+        max-width: 50%;
+        min-width: 34%;
+        padding: 32px 24px;
+    }
 }
 
 @media screen and (max-width: 646px) {
@@ -118,5 +163,11 @@
 
     .home-title-2 {
         font-size: 24px;
+    }
+
+    .worth-panel {
+        max-width: 100%;
+        min-width: 56%;
+        padding: 32px 24px;
     }
 }
