@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'projects',
     'communications',
     'dashboard',
+    'investments',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
@@ -300,3 +301,4 @@ MAX_DOCUMENT_SIZE_MB = 20
 MAX_IMAGE_DIMENSIONS = (5000, 5000)
 ALLOWED_IMAGE_MODES = ["RGB", "RGBA", "L"]
 
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'
