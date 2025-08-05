@@ -27,6 +27,9 @@ urlpatterns = [
 
     # Project-related endpoints
     path('api/projects/', include('projects.urls')),
+
+    # OAuth endpoints
+    path('api/accounts/', include('allauth.urls')),
 ]
 
 # Serve static and media files in development
