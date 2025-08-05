@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import Button from '../../components/Button/button';
 import { registerUser } from '../../api';
-import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
+import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
+import TextInput from '../../components/TextInput/textInput';
+import Checkbox from '../../components/Checkbox/checkbox';
 
 /**
  * Registration component handles user registration.
@@ -88,33 +90,10 @@ function Registration() {
             <Panel>
                 <PanelTitle>Реєстрація</PanelTitle>
                 <PanelBody>
-                    <div className={"content--text-container"}>
-                            <span
-                                className={
-                                    'content--text content--text__starred content--text__margin'
-                                }
-                            >
-                                *
-                            </span>
-                        <span className={'content--text'}>
-                                Обов’язкові поля позначені зірочкою
-                            </span>
-                    </div>
+                    <PanelBodyTitle title={'Обов’язкові поля позначені зірочкою'} />
                     <div>
-                        <div className={'content--text-container content--text-container__margin'}>
-                                <span
-                                    className={
-                                        'content--text content--text__starred content--text__margin'
-                                    }
-                                >
-                                    *
-                                </span>
-                            <span className={'content--text'}>
-                                    Назва компанії
-                                </span>
-                        </div>
-                        <input
-                            type="text"
+                        <PanelBodyTitle title={'Назва компанії'} className={'content--text-container__margin'} />
+                        <TextInput
                             name="companyName"
                             autoComplete="off"
                             autoCorrect="off"
@@ -122,25 +101,13 @@ function Registration() {
                             value={formData.companyName}
                             onChange={handleChange}
                             placeholder={'Введіть назву вашої компанії'}
-                            className={`input input-text input__width ${errors['companyName'] ? 'input__error-border-color' : ''}`}
+                            className={errors['companyName'] && 'input__error-border-color'}
                         />
                         { errors['companyName'] ? <p className={"panel--danger-text"}>{ errors['companyName'] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container content--text-container__margin'}>
-                                <span
-                                    className={
-                                        'content--text content--text__starred content--text__margin'
-                                    }
-                                >
-                                    *
-                                </span>
-                            <span className={'content--text'}>
-                                    Електронна пошта
-                                </span>
-                        </div>
-                        <input
-                            type="text"
+                        <PanelBodyTitle title={'Електронна пошта'} className={'content--text-container__margin'} />
+                        <TextInput
                             name="email"
                             autoComplete="off"
                             autoCorrect="off"
@@ -148,34 +115,15 @@ function Registration() {
                             value={formData.email}
                             onChange={handleChange}
                             placeholder={'Введіть свою електронну пошту'}
-                            className={`input input-text input__width ${(errors['email'] || errors['email-exist']) ? 'input__error-border-color' : ''}`}
+                            className={errors['email'] && 'input__error-border-color'}
                         />
                         { errors['email'] ? <p className={"panel--danger-text"}>{ errors['email'] }</p> : ""}
                     </div>
                     <div>
-                        <div
-                            className={
-                                'content--text-container content--text-container__margin'
-                            }
-                        >
-                                <span
-                                    className={
-                                        'content--text content--text__starred content--text__margin'
-                                    }
-                                >
-                                    *
-                                </span>
-                            <div className={'content--substring-container'}>
-                                <span className={'content--text'}>Пароль</span>
-                                <p className={'content--subtext'}>
-                                    Пароль повинен мати 8+ символів, містити
-                                    принаймні велику, малу літеру (A..Z, a..z)
-                                    та цифру (0..9).
-                                </p>
-                            </div>
-                        </div>
-                        <input
-                            type="password"
+                        <PanelBodyTitle title={'Пароль'} className={'content--text-container__margin'}>
+                            Пароль повинен мати 8+ символів, містити принаймні велику, малу літеру (A..Z, a..z) та цифру (0..9).
+                        </PanelBodyTitle>
+                        <TextInput
                             name="password"
                             autoComplete="off"
                             autoCorrect="off"
@@ -183,25 +131,13 @@ function Registration() {
                             value={formData.password}
                             onChange={handleChange}
                             placeholder={'Введіть пароль'}
-                            className={`input input-text input__width ${errors['password'] ? 'input__error-border-color' : ''}`}
+                            className={errors['password'] && 'input__error-border-color'}
                         />
                         { errors['password'] ? <p className={"panel--danger-text"}>{ errors['password'] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container content--text-container__margin'}>
-                                <span
-                                    className={
-                                        'content--text content--text__starred content--text__margin'
-                                    }
-                                >
-                                    *
-                                </span>
-                            <span className={'content--text'}>
-                                    Повторіть пароль
-                                </span>
-                        </div>
-                        <input
-                            type="password"
+                        <PanelBodyTitle title={'Повторіть пароль'} className={'content--text-container__margin'} />
+                        <TextInput
                             name="confirmPassword"
                             autoComplete="off"
                             autoCorrect="off"
@@ -209,23 +145,13 @@ function Registration() {
                             value={formData.confirmPassword}
                             onChange={handleChange}
                             placeholder={'Введіть пароль ще раз'}
-                            className={`input input-text input__width ${(errors['confirmPassword'] || errors['confirmPassword-passwords-dont-match']) ? 'input__error-border-color' : ''}`}
+                            className={errors['confirmPassword'] && 'input__error-border-color'}
                         />
                         { errors['confirmPassword'] ? <p className={"panel--danger-text"}>{ errors["confirmPassword"] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container content--text-container__margin'}>
-                                <span
-                                    className={
-                                        'content--text content--text__starred content--text__margin'
-                                    }
-                                >
-                                    *
-                                </span>
-                            <span className={'content--text'}>Прізвище</span>
-                        </div>
-                        <input
-                            type="text"
+                        <PanelBodyTitle title={'Прізвище'} className={'content--text-container__margin'} />
+                        <TextInput
                             name="lastName"
                             autoComplete="off"
                             autoCorrect="off"
@@ -233,23 +159,13 @@ function Registration() {
                             value={formData.lastName}
                             onChange={handleChange}
                             placeholder={'Введіть ваше прізвище'}
-                            className={`input input-text input__width ${errors['lastName'] ? 'input__error-border-color' : ''}`}
+                            className={errors['lastName'] && 'input__error-border-color'}
                         />
                         { errors['lastName'] ? <p className={"panel--danger-text"}>{ errors["lastName"] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container content--text-container__margin'}>
-                                <span
-                                    className={
-                                        'content--text content--text__starred content--text__margin'
-                                    }
-                                >
-                                    *
-                                </span>
-                            <span className={'content--text'}>Ім‘я</span>
-                        </div>
-                        <input
-                            type="text"
+                        <PanelBodyTitle title={'Ім‘я'} className={'content--text-container__margin'} />
+                        <TextInput
                             name="firstName"
                             autoComplete="off"
                             autoCorrect="off"
@@ -257,82 +173,36 @@ function Registration() {
                             value={formData.firstName}
                             onChange={handleChange}
                             placeholder={'Введіть ваше ім’я'}
-                            className={`input input-text input__width ${errors['firstName'] ? 'input__error-border-color' : ''}`}
+                            className={errors['firstName'] && 'input__error-border-color'}
                         />
                         { errors['firstName'] ? <p className={"panel--danger-text"}>{ errors["firstName"] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container content--text-container__margin'}>
-                                <span
-                                    className={
-                                        'content--text content--text__starred content--text__margin'
-                                    }
-                                >
-                                    *
-                                </span>
-                            <span className={'content--text'}>
-                                    Кого ви представляєте?
-                                </span>
-                        </div>
-                        <div className={"checkbox--container"}>
-                            <div className={"checkbox--item"}>
-                                <input
-                                    type="checkbox"
-                                    name="representation.company"
-                                    checked={formData.representation.company}
-                                    onChange={handleChange}
-                                    className={`checkbox ${errors['representation'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
-                                />
-                                <label htmlFor="html" className={"panel--font-size"}>Зареєстрована компанія</label>
-                            </div>
-                            <div className={"checkbox--item"}>
-                                <input
-                                    type="checkbox"
-                                    name="representation.startup"
-                                    checked={formData.representation.startup}
-                                    onChange={handleChange}
-                                    className={`checkbox ${errors['representation'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
-                                />
-                                <label htmlFor="html" className={"panel--font-size"}>Стартап проєкт, який шукає інвестиції</label>
-                            </div>
-                        </div>
+                        <PanelBodyTitle title={'Кого ви представляєте?'} className={'content--text-container__margin'} />
+                        <Checkbox
+                            groupKey={"representation"}
+                            values={formData.representation}
+                            labels={{
+                                company: "Зареєстрована компанія",
+                                startup: "Стартап проєкт, який шукає інвестиції"
+                            }}
+                            errors={errors}
+                            handleChange={handleChange}
+                        />
                         { errors['representation'] ? <p className={"panel--danger-text"}>{ errors["representation"] }</p> : "" }
                     </div>
                     <div>
-                        <div className={'content--text-container__margin'}>
-                                <span
-                                    className={
-                                        'content--text content--text__starred content--text__margin'
-                                    }
-                                >
-                                    *
-                                </span>
-                            <span className={'content--text'}>
-                                    Який суб’єкт господарювання ви представляєте?
-                                </span>
-                        </div>
-                        <div className={"checkbox--container"}>
-                            <div className={"checkbox--item"}>
-                                <input
-                                    type="checkbox"
-                                    name="businessType.individual"
-                                    checked={formData.businessType.individual}
-                                    onChange={handleChange}
-                                    className={`checkbox ${errors['businessType'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
-                                />
-                                <label htmlFor="html" className={"panel--font-size"}>Фізична особа-підприємець</label>
-                            </div>
-                            <div className={"checkbox--item"}>
-                                <input
-                                    type="checkbox"
-                                    name="businessType.legal"
-                                    checked={formData.businessType.legal}
-                                    onChange={handleChange}
-                                    className={`checkbox ${errors['businessType'] ? 'checkbox__error-color' : 'checkbox__active-color'}`}
-                                />
-                                <label htmlFor="html" className={"panel--font-size"}>Юридична особа</label>
-                            </div>
-                        </div>
+                        <PanelBodyTitle title={'Який суб’єкт господарювання ви представляєте?'} className={'content--text-container__margin'} />
+                        <Checkbox
+                            groupKey={"businessType"}
+                            values={formData.businessType}
+                            labels={{
+                                individual: "Фізична особа-підприємець",
+                                legal: "Юридична особа"
+                            }}
+                            errors={errors}
+                            handleChange={handleChange}
+                        />
                         { errors['businessType'] ? <p className={"panel--danger-text"}>{ errors["businessType"] }</p> : "" }
                     </div>
                     { errors['unexpected'] ? <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> : ""}

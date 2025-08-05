@@ -2,6 +2,20 @@ import './hiddenInput.css';
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 
+/**
+ * HiddenInput component
+ * This component renders a password input field that can toggle between showing and hiding the password.
+ * It also includes a toggle button to switch between text and password visibility.
+ * @param name - the name of the input field
+ * @param autoComplete - the autocomplete attribute for the input field
+ * @param autoCorrect - the autocorrect attribute for the input field
+ * @param spellCheck - the spellcheck attribute for the input field
+ * @param placeholder - the placeholder text for the input field
+ * @param value - the value of the input field
+ * @param onChange - the function to call when the input value changes
+ * @param className - additional CSS classes to apply to the input field
+ * @returns {JSX.Element}
+ */
 function HiddenInput({
                          name='',
                          autoComplete="off",
@@ -53,6 +67,19 @@ function HiddenInput({
     );
 }
 
+/**
+ * HiddenInput component
+ * This component renders a password input field that can toggle between showing and hiding the password.
+ * It also includes a toggle button to switch between text and password visibility.
+ * @param name - the name of the input field
+ * @param autoComplete - the autocomplete attribute for the input field
+ * @param autoCorrect - the autocorrect attribute for the input field
+ * @param spellCheck - the spellcheck attribute for the input field
+ * @param placeholder - the placeholder text for the input field
+ * @param value - the value of the input field
+ * @param onChange - the function to call when the input value changes
+ * @param className - additional CSS classes to apply to the input field
+ */
 HiddenInput.propTypes = {
     name: PropTypes.string,
     autoComplete: PropTypes.string,

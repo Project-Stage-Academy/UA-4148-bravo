@@ -4,7 +4,7 @@ import Button from '../../components/Button/button';
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import { restorePassword } from '../../api';
-import HiddenInput from '../../components/PasswordInput/hiddenInput';
+import HiddenInput from '../../components/HiddenInput/hiddenInput';
 
 function RestorePassword() {
     // This component handles user registration
@@ -22,7 +22,7 @@ function RestorePassword() {
     const [errors, setErrors] = useState({});
 
     // Function to handle server-side errors
-    const handleError = (error) => {
+    const handleError = () => {
         setErrors(prev => ({
             ...prev,
             unexpected: Validator.serverSideErrorMessages.unexpected

@@ -17,7 +17,7 @@
     background-repeat: no-repeat;
     background-position: center;
     background-size: auto;
-    background-image: url("../../public/pictures/svg/check.svg");
+    background-image: url("../../../public/pictures/svg/check.svg");
     border-color: var(--checkbox-border-color-matched);
 }
 
