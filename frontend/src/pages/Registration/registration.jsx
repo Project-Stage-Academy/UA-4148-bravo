@@ -7,6 +7,7 @@ import { registerUser } from '../../api';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import TextInput from '../../components/TextInput/textInput';
 import Checkbox from '../../components/Checkbox/checkbox';
+import HiddenInput from '../../components/HiddenInput/hiddenInput';
 
 /**
  * Registration component handles user registration.
@@ -123,7 +124,7 @@ function Registration() {
                         <PanelBodyTitle title={'Пароль'} className={'content--text-container__margin'}>
                             Пароль повинен мати 8+ символів, містити принаймні велику, малу літеру (A..Z, a..z) та цифру (0..9).
                         </PanelBodyTitle>
-                        <TextInput
+                        <HiddenInput
                             name="password"
                             autoComplete="off"
                             autoCorrect="off"
@@ -137,7 +138,7 @@ function Registration() {
                     </div>
                     <div>
                         <PanelBodyTitle title={'Повторіть пароль'} className={'content--text-container__margin'} />
-                        <TextInput
+                        <HiddenInput
                             name="confirmPassword"
                             autoComplete="off"
                             autoCorrect="off"
