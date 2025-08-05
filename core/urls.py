@@ -14,15 +14,20 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/users/', include('users.urls')),      # User management
+
+    # User authentication endpoints
+    path('api/users/', include('users.urls')),        # User management
+
+    # Project-related endpoints
     path('api/projects/', include('projects.urls')),  # Project-related endpoints
+
+    # Profile-related endpoints
     path('api/profiles/', include('profiles.urls')),  # Profile management
 ]
 
+# Serve static and media files in development
 if settings.DEBUG:
-    urlpatterns += (
-        static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) +
-        static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    )
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 

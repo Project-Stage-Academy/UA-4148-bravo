@@ -10,27 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
-
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
-
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost',
-                       cast=lambda v: [s.strip() for s in v.split(',')])
-
-# Application definition
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost', cast=lambda v: [s.strip() for s in v.split(',')])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -48,8 +36,12 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'djoser',
-    'django_filters',
+    'django_filters',  # Added for filtering support
+    'corsheaders',     # Added for CORS support
 ]
+
+# Custom user model
+AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -81,6 +73,7 @@ DJOSER = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # Added for CORS support
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -109,9 +102,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -123,53 +113,40 @@ DATABASES = {
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 if DEBUG:
     AUTH_PASSWORD_VALIDATORS = []
 else:
     AUTH_PASSWORD_VALIDATORS = [
-        {
-            'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-        },
-        {
-            'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        },
-        {
-            'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-        },
-        {
-            'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-        },
+        {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+        {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+        {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+        {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
     ]
 
+# Password hashing configuration
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
-
 TIME_ZONE = config('TIME_ZONE', default='UTC')
-
 USE_I18N = True
-
 USE_TZ = True
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# CORS configuration
+CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins; restrict if needed
 
 LOG_DIR = BASE_DIR / 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -177,7 +154,6 @@ os.makedirs(LOG_DIR, exist_ok=True)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-
     'formatters': {
         'json': {
             '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
@@ -192,7 +168,6 @@ LOGGING = {
             'style': '{',
         },
     },
-
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
@@ -245,30 +220,22 @@ LOGGING = {
             'encoding': 'utf8',
         },
     },
-
     'loggers': {
-        # Django core logging (middleware, queries, security, etc.)
         'django': {
             'handlers': ['console', 'file_django', 'file_errors'],
             'level': 'INFO',
             'propagate': False,
         },
-
-        # Logging database queries
         'django.db.backends': {
             'handlers': ['console', 'db_file'],
             'level': 'INFO',
             'propagate': False,
         },
-
-        # Django security logging
         'django.security': {
             'handlers': ['console', 'file_django'],
             'level': 'WARNING',
             'propagate': False,
         },
-
-        # Logging user applications
         'users': {
             'handlers': ['console', 'file_apps'],
             'level': 'DEBUG',
@@ -295,15 +262,11 @@ LOGGING = {
             'propagate': False,
         },
     },
-
-    # Root logger - logs that do not fall under any of the above
     'root': {
         'handlers': ['console', 'file_errors', 'file_json'],
         'level': 'INFO',
     },
 }
-
-AUTH_USER_MODEL = 'users.User'
 
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
 ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png"]
@@ -316,19 +279,4 @@ ALLOWED_DOCUMENT_EXTENSIONS = [
 ALLOWED_DOCUMENT_MIME_TYPES = [
     "application/pdf",
     "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "text/plain",
-    "application/vnd.oasis.opendocument.text",
-    "application/rtf",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/zip",
-    "application/x-rar-compressed",
 ]
-
-MAX_IMAGE_SIZE_MB = 10
-MAX_DOCUMENT_SIZE_MB = 20
-MAX_IMAGE_DIMENSIONS = (5000, 5000)
-ALLOWED_IMAGE_MODES = ["RGB", "RGBA", "L"]
