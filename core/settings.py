@@ -77,7 +77,7 @@ DJOSER = {
 
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'http://localhost:9200'
+        'hosts': os.environ.get('ELASTICSEARCH_DSL_HOST', 'http://localhost:9200')
     },
 }
 

@@ -147,7 +147,7 @@ This project integrates **Django** and **FastAPI** into a single ASGI applicatio
 ```bash
 uvicorn core.asgi:application --reload
 
-###Elasticsearch Integration
+### Elasticsearch Integration
 
 This project integrates Django with Elasticsearch using:
 - `django-elasticsearch-dsl`
