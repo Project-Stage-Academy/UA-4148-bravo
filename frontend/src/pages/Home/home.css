@@ -188,10 +188,32 @@
         font-size: 34px;
     }
 
+    .for-whom-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
     .worth-panel {
         max-width: 50%;
         min-width: 34%;
         padding: 32px 24px;
+    }
+}
+
+@media screen and (max-width: 995px) {
+    .for-whom-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media screen and (max-width: 665px) {
+    .for-whom-grid-item {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .for-whom-grid-item--title {
+        text-align: center;
+        font-size: 14px;
     }
 }
 
