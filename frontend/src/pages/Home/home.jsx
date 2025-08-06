@@ -40,7 +40,43 @@ function HomePage() {
             </section>
 
             <section className={'home-section home-section__yellow'}>
-
+                <div className={'for-whom-section'}>
+                    <h2 className={'home-title-2 for-whom-title'}>Для кого</h2>
+                    <div className={'for-whom-grid'}>
+                        <div className={'for-whom-grid-item'}>
+                            <img src={'/pictures/svg/bread.svg'} alt={'Bread'} className={'for-whom-grid-item--picture'}/>
+                            <h3 className={'for-whom-grid-item--title'}>Виробники крафтової продукції</h3>
+                        </div>
+                        <div className={'for-whom-grid-item'}>
+                            <img src={'/pictures/svg/vine.svg'} alt={'Vine'} className={'for-whom-grid-item--picture'}/>
+                            <h3 className={'for-whom-grid-item--title'}>Сомельє та ресторатори</h3>
+                        </div>
+                        <div className={'for-whom-grid-item'}>
+                            <img src={'/pictures/svg/building.svg'} alt={'Building'} className={'for-whom-grid-item--picture'}/>
+                            <h3 className={'for-whom-grid-item--title'}>Представники готельно-ресторанного бізнесу</h3>
+                        </div>
+                        <div className={'for-whom-grid-item'}>
+                            <img src={'/pictures/svg/cart.svg'} alt={'Cart'} className={'for-whom-grid-item--picture'}/>
+                            <h3 className={'for-whom-grid-item--title'}>Представники роздрібних та гуртових торгових мереж</h3>
+                        </div>
+                        <div className={'for-whom-grid-item'}>
+                            <img src={'/pictures/svg/box.svg'} alt={'Box'} className={'for-whom-grid-item--picture'}/>
+                            <h3 className={'for-whom-grid-item--title'}>Представники пакувальної індустрії</h3>
+                        </div>
+                        <div className={'for-whom-grid-item'}>
+                            <img src={'/pictures/svg/truck.svg'} alt={'Truck'} className={'for-whom-grid-item--picture'}/>
+                            <h3 className={'for-whom-grid-item--title'}>Представники логістичних компаній та служб доставки</h3>
+                        </div>
+                        <div className={'for-whom-grid-item'}>
+                            <img src={'/pictures/svg/rocket.svg'} alt={'Rocket'} className={'for-whom-grid-item--picture'}/>
+                            <h3 className={'for-whom-grid-item--title'}>Стартапери</h3>
+                        </div>
+                        <div className={'for-whom-grid-item'}>
+                            <img src={'/pictures/svg/people.svg'} alt={'People'} className={'for-whom-grid-item--picture'}/>
+                            <h3 className={'for-whom-grid-item--title'}>Інші фахівці галузі</h3>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <section className={'home-section home-section__white worth-section'}>

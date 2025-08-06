@@ -39,6 +39,8 @@
 
     /* background colors */
     --green-bcg-color: #B4D27A;
+    --yellow-bcg-color: #F9F5EC;
+    --white-bcg-color: #FFF;
 
     /* hr colors */
     --light-gray-hr-color: #EDEDED;
@@ -51,4 +53,5 @@
 
     /* home page */
     --worth-it-panel-color: #F9F5EC;
+    --for-whom-panel-color: #FFF;
 }

@@ -13,11 +13,11 @@
 }
 
 .home-section__white {
-
+    background: var(--white-bcg-color);
 }
 
 .home-section__yellow {
-
+    background: var(--yellow-bcg-color);
 }
 
 .home-title-1 {
@@ -80,6 +80,44 @@
 
 /* For whom */
 
+.for-whom-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.for-whom-title {
+    margin-bottom: 40px;
+}
+
+.for-whom-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    grid-auto-rows: 1fr;
+    width: 100%;
+}
+
+.for-whom-grid-item {
+    display: flex;
+    gap: 18px;
+    padding: 18px;
+    background-color: var(--for-whom-panel-color);
+    border-radius: 6px;
+    align-items: center;
+}
+
+.for-whom-grid-item--picture {
+    width: 36px;
+    height: 36px;
+}
+
+.for-whom-grid-item--title {
+    line-height: 140%;
+    font-size: 16px;
+    font-weight: 600;
+}
+
 /* Why it's worth it */
 
 .worth-section {
@@ -119,7 +157,12 @@
 
 @media (min-width: 2000px) {
     .home-section {
-        padding: 32px 300px;
+        padding: 80px 300px;
+    }
+
+    .hero-section {
+        padding-top: 32px;
+        padding-bottom: 32px;
     }
 }
 
