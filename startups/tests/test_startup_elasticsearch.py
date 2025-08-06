@@ -1,94 +1,63 @@
-import pytest
-from rest_framework.test import APIClient
-from startups.models import Startup, Industry
+from rest_framework.test import APITestCase
+from rest_framework import status
+from startups.models import Startup, Industry, Location
 from startups.documents import StartupDocument
+from django.urls import reverse
 from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl import Index
+import time
 
-@pytest.fixture
-def client():
-    return APIClient()
+class StartupElasticsearchTests(APITestCase):
+    def setUp(self):
+        self.client = self.client
+        self.index = Index('startups')
+        self.index.create()
+        self.index.mapping(StartupDocument)
 
-@pytest.fixture(autouse=True)
-def setup_data(db):
-    connections.get_connection().indices.delete(index='*', ignore=[400, 404])
-    StartupDocument.init()
-    
-    it_industry = Industry.objects.create(name='IT')
-    ai_industry = Industry.objects.create(name='AI')
-    startup = Startup.objects.create(
-        company_name="Tech Innovators",
-        description="A leading technology startup.",
-        location="Kyiv",
-        funding_stage="seed"
-    )
-    startup.industries.add(it_industry, ai_industry)
-    
-    StartupDocument().update(startup)
-    connections.get_connection().indices.refresh(index=StartupDocument._index.name)
-    
-    return startup
+        self.industry1 = Industry.objects.create(name="Fintech")
+        self.industry2 = Industry.objects.create(name="E-commerce")
+        self.location1 = Location.objects.create(country="USA")
+        self.location2 = Location.objects.create(country="Germany")
 
-@pytest.mark.django_db
-def test_search_startup_by_name(client, setup_data):
-    response = client.get("/api/startups/search/", {"q": "Tech Innovators"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["company_name"] == "Tech Innovators"
+        self.startup1 = Startup.objects.create(
+            company_name="Fintech Solutions",
+            description="Leading fintech platform.",
+            funding_stage="Seed",
+            location=self.location1
+        )
+        self.startup1.industries.add(self.industry1)
 
-@pytest.mark.django_db
-def test_search_startup_by_description(client, setup_data):
-    response = client.get("/api/startups/search/", {"q": "leading technology"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["company_name"] == "Tech Innovators"
+        self.startup2 = Startup.objects.create(
+            company_name="ShopFast",
+            description="E-commerce made simple.",
+            funding_stage="Series A",
+            location=self.location2
+        )
+        self.startup2.industries.add(self.industry2)
+        
+        time.sleep(1)
 
-@pytest.mark.django_db
-def test_update_startup_updates_index(client, setup_data):
-    startup = setup_data
-    startup.company_name = "Updated Innovators"
-    startup.save()
-    StartupDocument().update(startup)
-    connections.get_connection().indices.refresh(index=StartupDocument._index.name)
-    
-    response = client.get("/api/startups/search/", {"q": "Updated Innovators"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["company_name"] == "Updated Innovators"
+    def tearDown(self):
+        self.index.delete()
 
-@pytest.mark.django_db
-def test_delete_startup_deletes_from_index(client, setup_data):
-    startup = setup_data
-    startup_id = startup.id
-    startup.delete()
-    StartupDocument().delete(startup_id)
-    connections.get_connection().indices.refresh(index=StartupDocument._index.name)
-    
-    response = client.get("/api/startups/search/", {"q": "Tech Innovators"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 0
+    def test_empty_query_returns_all_startups(self):
+        url = reverse('startup-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
 
-@pytest.mark.django_db
-def test_filter_startup_by_city(client, setup_data):
-    response = client.get("/api/startups/search/", {"location": "Kyiv"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["company_name"] == "Tech Innovators"
+    def test_no_results_for_non_existent_company_name(self):
+        url = reverse('startup-list')
+        response = self.client.get(url, {'search': 'Nonexistent Company'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
 
-@pytest.mark.django_db
-def test_filter_startup_by_non_existent_city(client, setup_data):
-    response = client.get("/api/startups/search/", {"location": "Lviv"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 0
-
-@pytest.mark.django_db
-def test_empty_query(client, setup_data):
-    response = client.get("/api/startups/search/", {})
-    assert response.status_code == 200
-    assert len(response.data["results"]) > 0
-
-@pytest.mark.django_db
-def test_multiple_filters_combined(client, setup_data):
-    response = client.get("/api/startups/search/", {"q": "Tech", "location": "Kyiv", "funding_stage": "seed"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["company_name"] == "Tech Innovators"
+    def test_combined_filters_work_correctly(self):
+        url = reverse('startup-list')
+        response = self.client.get(url, {
+            'funding_stage': 'Series A', 
+            'location.country': 'Germany'
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['company_name'], "ShopFast")

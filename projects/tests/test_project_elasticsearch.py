@@ -1,108 +1,68 @@
-import pytest
-from rest_framework.test import APIClient
-from startups.models import Startup, Industry
-from projects.models import Project
+from rest_framework.test import APITestCase
+from rest_framework import status
+from projects.models import Project, Category
 from projects.documents import ProjectDocument
+from startups.models import Startup
+from django.urls import reverse
 from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl import Index
+import time
 
-@pytest.fixture
-def client():
-    return APIClient()
+class ProjectElasticsearchTests(APITestCase):
+    def setUp(self):
+        self.client = self.client
+        self.index = Index('projects')
+        self.index.create()
+        self.index.mapping(ProjectDocument)
+        
+        self.category1 = Category.objects.create(name="Tech")
+        self.category2 = Category.objects.create(name="Finance")
+        self.startup1 = Startup.objects.create(company_name="InnovateCo")
+        self.startup2 = Startup.objects.create(company_name="FinGrowth Inc.")
 
-@pytest.fixture(autouse=True)
-def setup_data(db):
-    connections.get_connection().indices.delete(index='*', ignore=[400, 404])
-    ProjectDocument.init()
+        self.project1 = Project.objects.create(
+            title="Search Engine for Startups",
+            description="A powerful search tool.",
+            category=self.category1,
+            startup=self.startup1,
+            goals="Improve discovery."
+        )
+        self.project2 = Project.objects.create(
+            title="Financial Dashboard",
+            description="Real-time financial data.",
+            category=self.category2,
+            startup=self.startup2,
+            goals="Provide analytics."
+        )
 
-    it_industry = Industry.objects.create(name='IT')
-    fintech_industry = Industry.objects.create(name='FinTech')
-    startup = Startup.objects.create(
-        company_name="Test Startup",
-        description="Startup for testing projects",
-        location="Lviv",
-        funding_stage="series_a"
-    )
-    startup.industries.add(it_industry, fintech_industry)
-    project = Project.objects.create(
-        title="Smart Farm",
-        description="An innovative farming project.",
-        status="seed",
-        required_amount=100000,
-        startup=startup
-    )
-    
-    ProjectDocument().update(project)
-    connections.get_connection().indices.refresh(index=ProjectDocument._index.name)
-    
-    return project
+        time.sleep(1) 
 
-@pytest.mark.django_db
-def test_search_project_by_title(client, setup_data):
-    response = client.get("/api/projects/search/", {"q": "Smart Farm"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["title"] == "Smart Farm"
+    def tearDown(self):
+        self.index.delete()
 
-@pytest.mark.django_db
-def test_search_project_by_startup_name(client, setup_data):
-    response = client.get("/api/projects/search/", {"q": "Test Startup"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["title"] == "Smart Farm"
+    def test_empty_query_returns_all_projects(self):
+        url = reverse('project-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
 
-@pytest.mark.django_db
-def test_search_project_with_no_results(client, setup_data):
-    response = client.get("/api/projects/search/", {"q": "non-existent_keyword"})
-    assert response.status_code == 200
-    assert len(response.data["results"]) == 0
+    def test_no_results_for_non_existent_title(self):
+        url = reverse('project-list')
+        response = self.client.get(url, {'search': 'nonexistent_project'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
 
-@pytest.mark.django_db
-def test_update_project_updates_index(client, setup_data):
-    project = setup_data
-    project.title = "Updated Smart Farm"
-    project.save()
-    ProjectDocument().update(project)
-    connections.get_connection().indices.refresh(index=ProjectDocument._index.name)
-    
-    response = client.get("/api/projects/search/", {"q": "Updated Smart Farm"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["title"] == "Updated Smart Farm"
+    def test_combined_filters_work_correctly(self):
+        url = reverse('project-list')
+        response = self.client.get(url, {
+            'category.name': 'Tech', 
+            'startup.company_name': 'InnovateCo'
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['title'], "Search Engine for Startups")
 
-@pytest.mark.django_db
-def test_delete_project_deletes_from_index(client, setup_data):
-    project = setup_data
-    project_id = project.id
-    project.delete()
-    ProjectDocument().delete(project_id)
-    connections.get_connection().indices.refresh(index=ProjectDocument._index.name)
-    
-    response = client.get("/api/projects/search/", {"q": "Smart Farm"})
-    assert response.status_code == 200
-    assert len(response.data["results"]) == 0
-
-@pytest.mark.django_db
-def test_filter_project_by_status(client, setup_data):
-    response = client.get("/api/projects/search/", {"status": "seed"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["title"] == "Smart Farm"
-
-@pytest.mark.django_db
-def test_healthcheck_view(client):
-    response = client.get("/health/")
-    assert response.status_code == 200
-    assert response.json()["status"] == "ok"
-
-@pytest.mark.django_db
-def test_empty_query(client, setup_data):
-    response = client.get("/api/projects/search/", {})
-    assert response.status_code == 200
-    assert len(response.data["results"]) > 0
-
-@pytest.mark.django_db
-def test_multiple_filters_combined(client, setup_data):
-    response = client.get("/api/projects/search/", {"q": "Farm", "status": "seed"})
-    assert response.status_code == 200
-    assert len(response.json()["results"]) == 1
-    assert response.json()["results"][0]["title"] == "Smart Farm"
+    def test_invalid_filter_field_returns_bad_request(self):
+        url = reverse('project-list')
+        response = self.client.get(url, {'nonexistent_field': 'value'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

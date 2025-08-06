@@ -44,9 +44,8 @@ class Project(models.Model):
         ('cancelled', 'Cancelled')
     ]
 
-    # Якщо модель Startup в apps.startups.models
     startup = models.ForeignKey(
-        'startups.Startup',  # або 'profiles.Startup' якщо модель там
+        'startups.Startup', 
         on_delete=models.CASCADE,
         related_name='projects'
     )

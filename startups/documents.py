@@ -1,15 +1,19 @@
-from django_elasticsearch_dsl import Document, Index, fields
+from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 from startups.models import Startup
 
 @registry.register_document
 class StartupDocument(Document):
-    location = fields.TextField(attr='location')
-    industries = fields.TextField(
-        attr='industries_names',
-        multi=True
-    )
-    
+    industries = fields.ObjectField(properties={
+        'id': fields.IntegerField(),
+        'name': fields.KeywordField(),
+    })
+    location = fields.ObjectField(properties={
+        'id': fields.IntegerField(),
+        'country': fields.KeywordField(),
+    })
+    funding_stage = fields.KeywordField()
+
     class Index:
         name = 'startups'
         settings = {
@@ -20,16 +24,10 @@ class StartupDocument(Document):
     class Django:
         model = Startup
         fields = [
+            'id',
             'company_name',
             'description',
-            'funding_stage',
+            'created_at',
+            'updated_at',
         ]
-        
-    def get_queryset(self):
-        return super().get_queryset().prefetch_related('industries')
-
-    def get_indexing_queryset(self):
-        return self.get_queryset().iterator(chunk_size=5000)
-
-    def industries_names(self, obj):
-        return [industry.name for industry in obj.industries.all()]
+        related_models = ['industries', 'location']

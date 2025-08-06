@@ -1,62 +1,49 @@
-from rest_framework.permissions import AllowAny
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status
+from elasticsearch.exceptions import ConnectionError, TransportError
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 from django_elasticsearch_dsl_drf.filter_backends import (
     FilteringFilterBackend,
-    CompoundSearchFilterBackend,
-    SuggesterFilterBackend,
     OrderingFilterBackend,
+    SearchFilterBackend,
 )
-from projects.documents import ProjectDocument
-from projects.serializers import ProjectDocumentSerializer
-from rest_framework import generics
-from projects.models import Project
+from .documents import ProjectDocument
+from .serializers import ProjectDocumentSerializer
 
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
 
-class ProjectSearchViewSet(DocumentViewSet):
+class ProjectDocumentView(DocumentViewSet):
     document = ProjectDocument
     serializer_class = ProjectDocumentSerializer
-    permission_classes = [AllowAny]
-    lookup_field = 'id'
-    pagination_class = StandardResultsSetPagination
+
     filter_backends = [
         FilteringFilterBackend,
-        CompoundSearchFilterBackend,
-        SuggesterFilterBackend,
         OrderingFilterBackend,
+        SearchFilterBackend,
     ]
-    search_fields = ('title', 'description', 'startup_name')
+
     filter_fields = {
-        'status': 'status.raw',
-        'required_amount': 'required_amount',
-        'startup_name': 'startup_name.raw',
-    }
-    suggester_fields = {
-        'title': {
-            'field': 'title.suggest',
-            'suggester_type': 'completion',
-            'default_analyzer': 'simple',
-        },
-    }
-    ordering_fields = {
         'title': 'title.raw',
-        'status': 'status.raw',
-        'required_amount': 'required_amount',
-        'startup_name': 'startup_name.raw',
+        'category.name': 'category.name',
+        'startup.company_name': 'startup.company_name',
     }
 
-class ProjectView(generics.RetrieveAPIView):
-    permission_classes = [AllowAny]
-    queryset = Project.objects.all()
-    serializer_class = ProjectDocumentSerializer
+    ordering_fields = {
+        'id': 'id',
+        'title': 'title.raw',
+    }
 
-class PopularProjectsView(generics.ListAPIView):
-    permission_classes = [AllowAny]
-    serializer_class = ProjectDocumentSerializer
+    search_fields = (
+        'title',
+        'description',
+        'goals',
+    )
 
-    def get_queryset(self):
-        return Project.objects.order_by('-required_amount')[:10]
+    def list(self, request, *args, **kwargs):
+        try:
+            return super().list(request, *args, **kwargs)
+        except (ConnectionError, TransportError) as e:
+            return Response(
+                {"detail": "Search service is temporarily unavailable. Please try again later."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
