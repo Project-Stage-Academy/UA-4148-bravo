@@ -26,9 +26,6 @@ class ProjectDocument(Document):
             'id',
             'title',
             'description',
-            'goals',
             'status',
-            'created_at',
-            'updated_at',
         ]
         related_models = ['startup', 'category']

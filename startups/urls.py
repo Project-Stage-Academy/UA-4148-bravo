@@ -1,8 +1,8 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from startups.views import StartupSearchViewSet
+from startups.views import StartupDocumentView
 
 router = DefaultRouter()
-router.register(r'search', StartupSearchViewSet, basename='startups-search')
+router.register(r'search', StartupDocumentView, basename='startups-search')
 
 urlpatterns = router.urls

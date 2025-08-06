@@ -27,7 +27,5 @@ class StartupDocument(Document):
             'id',
             'company_name',
             'description',
-            'created_at',
-            'updated_at',
         ]
         related_models = ['industries', 'location']
