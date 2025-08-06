@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from urllib.parse import urlparse
+
 from profiles.models import Startup, Investor
 from projects.serializers import ProjectSerializer
-from common.enums import Stage  # Updated import to reflect actual location of Stage enum
-from common.validation import SocialLinksValidationMixin  # Shared mixin for social_links validation
+from common.enums import Stage  # Correct enum import
+from validation.validate_social_links import SocialLinksValidationMixin  #  Updated import
 
 
 class StartupShortSerializer(serializers.ModelSerializer):

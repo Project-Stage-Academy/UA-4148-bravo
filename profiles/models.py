@@ -1,5 +1,6 @@
 from urllib.parse import urlparse
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -20,6 +21,16 @@ class Location(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
+        """
+        Validates the Location instance.
+
+        - Ensures postal code is at least 3 characters and contains only Latin characters.
+        - Validates city, region, and address_line for non-empty and Latin-only content.
+        - Enforces logical dependencies between address_line, city, and region.
+
+        Raises:
+            ValidationError: A dictionary of field-specific error messages.
+        """
         errors = {}
 
         if self.postal_code:
@@ -82,6 +93,12 @@ class Industry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
+        """
+        Validates the Industry name against forbidden terms.
+
+        Raises:
+            ValidationError: If the name contains forbidden content.
+        """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")
 
@@ -108,18 +125,37 @@ class Startup(Company):
     )
     social_links = models.JSONField(blank=True, default=dict)
 
-    ALLOWED_SOCIAL_PLATFORMS = {
-        'facebook': ['facebook.com'],
-        'twitter': ['twitter.com'],
-        'linkedin': ['linkedin.com'],
-        'instagram': ['instagram.com'],
-        'youtube': ['youtube.com', 'youtu.be'],
-        'tiktok': ['tiktok.com'],
-        'telegram': ['t.me', 'telegram.me'],
-    }
-
     def clean(self):
+        """
+        Validates the Startup instance.
+
+        - Ensures social_links contain only supported platforms.
+        - Validates that each URL has a domain matching the expected domains for the platform.
+
+        Raises:
+            ValidationError: A dictionary of field-specific error messages.
+        """
         super().clean()
+
+        if not self.stage:
+            self.stage = Stage.IDEA
+
+        errors = {}
+
+        for platform, url in self.social_links.items():
+            platform_lc = platform.lower()
+            if platform_lc not in settings.ALLOWED_SOCIAL_PLATFORMS:
+                errors[platform] = f"{platform} is not a supported platform."
+                continue
+
+            parsed = urlparse(url)
+            domain = parsed.netloc.lower()
+            allowed_domains = settings.ALLOWED_SOCIAL_PLATFORMS[platform_lc]
+            if not any(domain.endswith(allowed) for allowed in allowed_domains):
+                errors[platform] = f"URL domain '{domain}' is not valid for {platform}."
+
+        if errors:
+            raise ValidationError({'social_links': errors})
 
     def __str__(self):
         return f"{self.company_name} (Startup, User ID: {self.user_id})"
@@ -151,7 +187,13 @@ class Investor(Company):
     )
 
     def clean(self):
+        """
+        Placeholder for future Investor-specific validation logic.
+        """
         super().clean()
+
+        if not self.stage:
+            self.stage = Stage.MVP
 
     def __str__(self):
         return f"{self.company_name} (Investor, User ID: {self.user_id})"
@@ -161,3 +203,6 @@ class Investor(Company):
         ordering = ["company_name"]
         verbose_name = "Investor"
         verbose_name_plural = "Investors"
+
+
+

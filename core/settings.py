@@ -283,12 +283,15 @@ ALLOWED_DOCUMENT_MIME_TYPES = [
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/plain",
-    "application/vnd.oasis.opendocument.text",
-    "application/rtf",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/zip",
-    "application/x-rar-compressed",
+    "application/vnd.oasis.opendocument.text"
 ]
+# Social platform validation settings
+ALLOWED_SOCIAL_PLATFORMS = {
+    'facebook': ['facebook.com'],
+    'twitter': ['twitter.com'],
+    'linkedin': ['linkedin.com'],
+    'instagram': ['instagram.com'],
+    'youtube': ['youtube.com', 'youtu.be'],
+    'tiktok': ['tiktok.com'],
+    'telegram': ['t.me', 'telegram.me'],
+}

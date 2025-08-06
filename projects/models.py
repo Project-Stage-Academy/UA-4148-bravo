@@ -100,6 +100,16 @@ class Project(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
+        """
+        Validates the Project instance.
+
+        - Current funding must not exceed the funding goal.
+        - Business plan is required if the project is in progress or completed.
+        - Funding goal is required if the project is marked as a participant.
+
+        Raises:
+            ValidationError: A dictionary of field-specific error messages.
+        """
         errors = {}
 
         if self.funding_goal is not None and self.current_funding > self.funding_goal:
@@ -130,3 +140,4 @@ class Project(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['title', 'startup'], name='unique_startup_project_title')
         ]
+
