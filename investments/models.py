@@ -22,13 +22,21 @@ class Subscription(models.Model):
         - Each investor can have only one subscription per project (unique constraint).
     """
 
-    investor = models.ForeignKey('profiles.Investor', on_delete=models.CASCADE)
-    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE)
+    investor = models.ForeignKey(
+        'profiles.Investor',
+        on_delete=models.CASCADE,
+        related_name='subscriptions'
+    )
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.CASCADE,
+        related_name='subscriptions'
+    )
     amount = models.DecimalField(
         max_digits=18,
         decimal_places=2,
-        validators=[MinValueValidator(0)],
-        default=0
+        validators=[MinValueValidator(Decimal("0.01"))],
+        default=Decimal("0.01")
     )
     investment_share = models.DecimalField(
         editable=False,
@@ -46,7 +54,15 @@ class Subscription(models.Model):
         Raises:
             ValidationError: If the investor is the owner of the project's startup.
         """
-        if self.investor and self.project and self.project.startup.user_id == self.investor.user_id:
+        if (
+                self.investor
+                and self.project
+                and hasattr(self.project, 'startup')
+                and self.project.startup
+                and self.project.startup.user_id
+                and self.investor.user_id
+                and self.project.startup.user_id == self.investor.user_id
+        ):
             raise ValidationError("Investors cannot invest in their own startup's project.")
 
     def __str__(self):

@@ -1,19 +1,29 @@
 from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-from investments.models import Subscription
-from investments.services.investment_share_service import recalculate_investment_shares
+from investments.tasks import recalc_investment_shares_task
 
 
-@receiver([post_save, post_delete], sender=Subscription)
-def update_investment_share(sender, instance, **kwargs):
+def connect_signals(apps):
     """
-    Signal handler that triggers recalculation of investment shares
-    for all subscriptions related to the project whenever a Subscription
-    instance is saved or deleted.
-
-    Args:
-        sender (Model): The model class sending the signal.
-        instance (Subscription): The Subscription instance that was saved or deleted.
-        **kwargs: Additional keyword arguments.
+    Connects all signal handlers for the investments app.
+    Uses Celery task to avoid recalculating shares in the request thread.
     """
-    recalculate_investment_shares(instance.project)
+    Subscription = apps.get_model('investments', 'Subscription')
+
+    def update_investment_share(sender, instance, **kwargs):
+        """
+        Signal handler that triggers asynchronous recalculation of investment shares
+        for all subscriptions related to the project whenever a Subscription
+        instance is saved or deleted.
+        """
+        recalc_investment_shares_task.delay(instance.project.id)
+
+    post_save.connect(
+        update_investment_share,
+        sender=Subscription,
+        dispatch_uid='update_investment_share_post_save'
+    )
+    post_delete.connect(
+        update_investment_share,
+        sender=Subscription,
+        dispatch_uid='update_investment_share_post_delete'
+    )

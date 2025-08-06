@@ -12,3 +12,6 @@ class SubscriptionAdmin(admin.ModelAdmin):
     """
     readonly_fields = ('investment_share',)
     list_display = ('investor', 'project', 'amount', 'investment_share', 'created_at')
+    search_fields = ('investor__company_name', 'project__title')
+    list_filter = ('created_at', 'project', 'investor')
+    ordering = ('-created_at',)
