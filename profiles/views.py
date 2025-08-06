@@ -29,21 +29,20 @@ class StartupViewSet(viewsets.ModelViewSet):
         instance = serializer.save(user=self.request.user)
         try:
             instance.clean()
-            instance.save()
-            logger.info(f"Startup created: {instance}")
         except DjangoValidationError as e:
             logger.warning(f"Validation error during creation: {e}")
             raise DRFValidationError(e.message_dict)
+        logger.info(f"Startup created: {instance}")
 
     def perform_update(self, serializer):
-        instance = serializer.save()
+        instance = serializer.instance
         try:
             instance.clean()
-            instance.save()
-            logger.info(f"Startup updated: {instance}")
         except DjangoValidationError as e:
             logger.warning(f"Validation error during update: {e}")
             raise DRFValidationError(e.message_dict)
+        serializer.save()
+        logger.info(f"Startup updated: {instance}")
 
 
 class InvestorViewSet(viewsets.ModelViewSet):
@@ -52,8 +51,9 @@ class InvestorViewSet(viewsets.ModelViewSet):
     Optimized to avoid N+1 queries when accessing startup_details.
     """
     queryset = Investor.objects.select_related('user', 'industry', 'location')\
-        .prefetch_related('startups__industry', 'startups__country')
+        .prefetch_related('startups__industry')
     serializer_class = InvestorSerializer
     permission_classes = [IsAuthenticated]
+
 
 

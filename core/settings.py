@@ -36,11 +36,10 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'djoser',
-    'django_filters',  # Added for filtering support
-    'corsheaders',     # Added for CORS support
+    'django_filters',
+    'corsheaders',
 ]
 
-# Custom user model
 AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
@@ -57,7 +56,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': (
         'rest_framework_simplejwt.tokens.AccessToken',
-        'rest_framework_simplejwt.tokens.RefreshToken',
+        'rest_framework.simplejwt.tokens.RefreshToken',
     ),
 }
 
@@ -73,7 +72,7 @@ DJOSER = {
 }
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Added for CORS support
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -123,14 +122,12 @@ else:
         {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
     ]
 
-# Password hashing configuration
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
     'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
-# Internationalization
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='UTC')
 USE_I18N = True
@@ -145,8 +142,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS configuration
-CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins; restrict if needed
+CORS_ALLOW_ALL_ORIGINS = True
 
 LOG_DIR = BASE_DIR / 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -268,15 +264,31 @@ LOGGING = {
     },
 }
 
+# File validation settings
+
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
 ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png"]
+ALLOWED_IMAGE_MODES = ["RGB", "RGBA", "L"]
+MAX_IMAGE_SIZE_MB = 10
+MAX_DOCUMENT_SIZE_MB = 20
+MAX_IMAGE_DIMENSIONS = (5000, 5000)
 
 ALLOWED_DOCUMENT_EXTENSIONS = [
     "pdf", "doc", "docx", "txt", "odt", "rtf",
-    "xls", "xlsx", "ppt", "pptx", "zip", "rar"
+    "xls", "xlsx", "ppt",
 ]
 
 ALLOWED_DOCUMENT_MIME_TYPES = [
     "application/pdf",
     "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+    "application/vnd.oasis.opendocument.text",
+    "application/rtf",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+    "application/x-rar-compressed",
 ]

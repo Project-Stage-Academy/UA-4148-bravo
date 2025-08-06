@@ -1,6 +1,9 @@
+from decimal import Decimal
 from rest_framework import serializers
+
 from projects.models import Project, Category
 from profiles.models import Startup
+from common.enums import ProjectStatus
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -33,13 +36,27 @@ class ProjectSerializer(serializers.ModelSerializer):
         write_only=True
     )
 
+    funding_goal = serializers.DecimalField(
+        required=True,
+        max_digits=20,
+        decimal_places=2
+    )
+    current_funding = serializers.DecimalField(
+        required=False,
+        max_digits=20,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+
+    status_display = serializers.SerializerMethodField()
+
     class Meta:
         model = Project
         fields = [
             'id', 'startup', 'startup_id',
             'title', 'description',
             'business_plan', 'media_files',
-            'status', 'duration',
+            'status', 'status_display', 'duration',
             'funding_goal', 'current_funding',
             'category', 'category_id',
             'website', 'email',
@@ -48,6 +65,9 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def get_status_display(self, obj):
+        return ProjectStatus(obj.status).label if obj.status else None
+
     def validate(self, data):
         """
         Cross-field validation logic based on business rules:
@@ -55,18 +75,26 @@ class ProjectSerializer(serializers.ModelSerializer):
         - business_plan required for in_progress or completed
         - funding_goal required if is_participant is True
         """
+        funding_goal = data.get('funding_goal')
+        current_funding = data.get('current_funding', Decimal('0.00'))
+        status = data.get('status')
+        business_plan = data.get('business_plan')
+        is_participant = data.get('is_participant')
+
+        # fallback to instance values for partial updates
+        if self.instance:
+            funding_goal = funding_goal if funding_goal is not None else self.instance.funding_goal
+            current_funding = current_funding if current_funding is not None else self.instance.current_funding
+            status = status if status is not None else self.instance.status
+            business_plan = business_plan if business_plan is not None else self.instance.business_plan
+            is_participant = is_participant if is_participant is not None else self.instance.is_participant
+
         errors = {}
 
-        funding_goal = data.get('funding_goal') or getattr(self.instance, 'funding_goal', None)
-        current_funding = data.get('current_funding') or getattr(self.instance, 'current_funding', None)
-        status = data.get('status') or getattr(self.instance, 'status', None)
-        business_plan = data.get('business_plan') or getattr(self.instance, 'business_plan', None)
-        is_participant = data.get('is_participant') or getattr(self.instance, 'is_participant', None)
-
-        if funding_goal is not None and current_funding and current_funding > funding_goal:
+        if funding_goal is not None and current_funding > funding_goal:
             errors['current_funding'] = 'Current funding cannot exceed funding goal.'
 
-        if status in ['in_progress', 'completed'] and not business_plan:
+        if status in [ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED] and not business_plan:
             errors['business_plan'] = 'Business plan is required for projects in progress or completed.'
 
         if is_participant and not funding_goal:

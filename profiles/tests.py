@@ -96,6 +96,10 @@ class StartupSerializerTests(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('social_links', serializer.errors)
 
+        errors = serializer.errors['social_links']
+        self.assertIn("Invalid domain for platform 'linkedin'", errors.get('linkedin', ''))
+        self.assertIn("Platform 'unknown' is not supported.", errors.get('unknown', ''))
+
 
 class InvestorSerializerTests(TestCase):
     def setUp(self):
@@ -137,6 +141,10 @@ class InvestorSerializerTests(TestCase):
         serializer = InvestorSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('social_links', serializer.errors)
+
+        errors = serializer.errors['social_links']
+        self.assertIn("Invalid domain for platform 'facebook'", errors.get('facebook', ''))
+        self.assertIn("Platform 'unknown' is not supported.", errors.get('unknown', ''))
 
 
 # ─────────────────────────────────────────────────────────────
@@ -234,3 +242,16 @@ class InvestorAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
+    def test_update_investor(self):
+        investor = Investor.objects.create(user=self.user, company_name='OldName')
+        url = reverse('investor-detail', args=[investor.id])
+        data = {'company_name': 'UpdatedName'}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['company_name'], 'UpdatedName')
+
+    def test_delete_investor(self):
+        investor = Investor.objects.create(user=self.user, company_name='ToDelete')
+        url = reverse('investor-detail', args=[investor.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code)

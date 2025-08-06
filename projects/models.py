@@ -3,37 +3,21 @@ from decimal import Decimal
 
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 
 from validation.validate_document import validate_document_file
 from validation.validate_email import validate_email_custom
-from django.core.exceptions import ValidationError
-
 from validation.validate_names import validate_forbidden_names
+
+from common.enums import ProjectStatus
 
 
 class Category(models.Model):
-    """
-    Represents a category for projects or other entities.
-
-    Validation:
-    - Name must contain only Latin characters.
-    - Name cannot be a generic or reserved term like 'other', 'none', 'misc', or 'default'.
-
-    Fields:
-    - name: Unique name of the category.
-    - description: Optional detailed description.
-    - created_at: Timestamp of creation.
-    """
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        """
-        Validates the Category instance before saving.
-        Ensures the name is in Latin characters only, not reserved,
-        and not too generic. Strips spaces.
-        """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")
 
@@ -48,40 +32,6 @@ class Category(models.Model):
 
 
 class Project(models.Model):
-    """
-    Represents a startup project with details about funding, status, and documentation.
-
-    Validation:
-    - Current funding must not exceed the funding goal.
-    - Business plan is required if the project is in progress or completed.
-    - Funding goal is required if the project is marked as a participant.
-
-    Fields:
-    - startup: ForeignKey to the Startup that owns the project.
-    - title: Title of the project.
-    - description: Optional project description.
-    - business_plan: Optional uploaded business plan document.
-    - media_files: Optional uploaded media files related to the project.
-    - status: Project status with choices (draft, in progress, completed, cancelled).
-    - duration: Duration of the project in days.
-    - funding_goal: Target funding amount (optional).
-    - current_funding: Current amount of funding received.
-    - category: Category of the project.
-    - website: Project website URL (optional).
-    - email: Contact email for the project, must be unique.
-    - has_patents: Whether the project has patents.
-    - is_participant: Whether the project is a participant (e.g. in a program).
-    - is_active: Whether the project is active.
-    - created_at: Timestamp of creation.
-    - updated_at: Timestamp of last update.
-    """
-    STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('in_progress', 'In Progress'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled')
-    ]
-
     startup = models.ForeignKey(
         'profiles.Startup',
         on_delete=models.CASCADE,
@@ -107,9 +57,10 @@ class Project(models.Model):
 
     status = models.CharField(
         max_length=50,
-        choices=STATUS_CHOICES,
-        default='draft'
+        choices=ProjectStatus.choices,
+        default=ProjectStatus.DRAFT
     )
+
     duration = models.PositiveIntegerField(
         help_text="Duration in days",
         blank=True,
@@ -123,17 +74,14 @@ class Project(models.Model):
     funding_goal = models.DecimalField(
         max_digits=20,
         decimal_places=2,
-        validators=[
-            MinValueValidator(Decimal('0.01'))
-        ]
+        validators=[MinValueValidator(Decimal('0.01'))]
     )
+
     current_funding = models.DecimalField(
         max_digits=20,
         decimal_places=2,
         default=Decimal('0.00'),
-        validators=[
-            MinValueValidator(Decimal('0.00'))
-        ]
+        validators=[MinValueValidator(Decimal('0.00'))]
     )
 
     category = models.ForeignKey('Category', on_delete=models.PROTECT)
@@ -152,20 +100,12 @@ class Project(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
-        """
-        Perform custom validation for the Project model.
-
-        Validates the following:
-        - Current funding must not exceed the funding goal.
-        - Business plan is required if the project is in progress or completed.
-        - Funding goal is required if the project is marked as a participant.
-        """
         errors = {}
 
         if self.funding_goal is not None and self.current_funding > self.funding_goal:
             errors['current_funding'] = 'Current funding cannot exceed funding goal.'
 
-        if self.status in ['in_progress', 'completed'] and not self.business_plan:
+        if self.status in [ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED] and not self.business_plan:
             errors['business_plan'] = 'Business plan is required for projects in progress or completed.'
 
         if self.is_participant and not self.funding_goal:

@@ -26,6 +26,7 @@ class StartupSerializer(SocialLinksValidationMixin, serializers.ModelSerializer)
     Includes nested project details.
     """
     projects = ProjectSerializer(many=True, read_only=True)
+    social_links = serializers.DictField(required=False)
 
     class Meta:
         model = Startup
@@ -82,6 +83,8 @@ class InvestorSerializer(SocialLinksValidationMixin, serializers.ModelSerializer
     Uses shared mixin for social_links validation.
     Includes nested startup details.
     """
+    social_links = serializers.DictField(required=False)
+
     startups = serializers.PrimaryKeyRelatedField(
         queryset=Startup.objects.all(),
         many=True,
@@ -109,6 +112,4 @@ class InvestorSerializer(SocialLinksValidationMixin, serializers.ModelSerializer
         if not value:
             raise serializers.ValidationError("Company name must not be empty.")
         return value
-
-
 

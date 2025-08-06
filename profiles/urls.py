@@ -8,6 +8,7 @@ router.register(r'startups', StartupViewSet, basename='startup')
 router.register(r'investors', InvestorViewSet, basename='investor')
 
 # Include router-generated URLs
-urlpatterns = [
-    path('', include(router.urls)),
-]
+#urlpatterns = [
+#    path('', include(router.urls)),
+#]
+urlpatterns = router.urls
