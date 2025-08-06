@@ -173,53 +173,72 @@ Content-Type: application/json
 
 ### Elasticsearch Integration
 
-This project integrates Django with Elasticsearch using:
-- `django-elasticsearch-dsl`
-- `django-elasticsearch-dsl-drf`
+This project integrates Django with Elasticsearch to provide powerful search and filtering capabilities.
 
-Features
-- Full-text search on startups and projects
-- Filter by name, location, and funding_stage
-- Real-time indexing with Django signals
+🚀 Technologies:
+Django: The core web framework.
+Elasticsearch: The search and analytics engine.
+django-elasticsearch-dsl & django-elasticsearch-dsl-drf: Libraries for seamless Elasticsearch integration with Django.
+drf-spectacular: Tool for automatic API documentation (Swagger/OpenAPI).
 
-How to Run Elasticsearch Locally
+💻 Getting Started:
+This guide will get your local development environment up and running.
 
-Using Docker:
-
-```bash
+Prerequisites:
+Ensure you have Docker installed to run Elasticsearch locally.
+1. Run Elasticsearch: Start the Elasticsearch container using Docker Compose.
+```
 docker-compose up -d elasticsearch
+```
+2. Install Dependencies: Install the required Python packages from your requirements.txt file.
+```
+pip install -r requirements.txt
+```
+3. Index Data: Build your Elasticsearch indexes and sync them with your database. This is a crucial step to ensure all your data is searchable.
+```
+python manage.py search_index --rebuild
+```
+4. Run the Django Server: Start the development server to access the API.
+```
+python manage.py runserver
+```
 
-Setup:
-Install dependencies: pip install django-elasticsearch-dsl django-elasticsearch-dsl-drf
-Build indexes: python manage.py runserver
-Synchronise with Elasticsearch: python manage.py search_index --rebuild
+🔍 API Endpoints:
+All API endpoints now support advanced search and filtering via Elasticsearch.
 
-Endpoints:
-- `/api/startups/search/` — full-text search by `company_name`, `description`, etc.
-- `/api/projects/search/` — full-text search by `title`, `description`, etc.
+API Documentation:
+Swagger UI and ReDoc documentation are automatically generated for all endpoints.
+- Swagger UI: /api/schema/swagger-ui/
+- ReDoc: /api/schema/redoc/
 
-Startup Search Endpoint
-Endpoint: /api/startups/search/
-Method: GET
-Description: Perform full-text search and filtering on startup data indexed in Elasticsearch.
+Startups Endpoint:
+- URL: /api/startups/
+- Method: GET
+Description: Perform full-text search, filtering, and ordering on startup data.
 
 Query Parameters:
+- search or q: Full-text keyword to match in company_name and description.
+- industries.name: Filters by industry name (e.g., Fintech).
+- location.country: Filters by the country (e.g., USA).
+- funding_stage: Filters by funding stage (e.g., Seed, Series A).
+- ordering: Sorts results. Use a minus sign for descending order (e.g., -funding_stage).
 
-q: Full-text keyword to match in company_name, description.
-location: Filters startups by city or location.
-funding_stage: Filters by funding stage (e.g., seed, pre-seed).
+Example:
+```
+curl "http://localhost:8000/api/startups/?search=ai&funding_stage=seed&ordering=-funding_stage"
+```
 
-Example: curl "http://localhost:8000/api/startups/search/?q=AI&location=Kyiv&funding_stage=seed"
-
-Project Search Endpoint
-Endpoint: /api/projects/search/
-Method: GET
-Description: Search and filter projects using Elasticsearch.
+Projects Endpoint:
+- URL: /api/projects/
+- Method: GET
+Description: Search and filter project data.
 
 Query Parameters:
+- search or q: Full-text keyword to match in title and description.
+- category.name: Filters by the project's category name.
+- startup.company_name: Filters by the name of the associated startup.
 
-q: Full-text keyword to match in title, description.
-status:	Filters projects by status (e.g., active, closed).
-required_amount: Filters by requested funding amount.
-
-Example: curl "http://localhost:8000/api/projects/search/?q=solar&status=active&required_amount=100000"
+Example:
+```
+curl "http://localhost:8000/api/projects/?search=solar&category.name=Tech"
+```
