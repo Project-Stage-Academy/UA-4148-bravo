@@ -48,7 +48,7 @@ class CustomUserManager(BaseUserManager):
         
         validate_max_length(email, 50, "Email")
         
-        if self.model.all_objects.filter(email=email).exists():
+        if self.model.objects.filter(email=email).exists():
             raise ValidationError("Email already exists")
         
         validate_email_custom(email)

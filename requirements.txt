@@ -5,6 +5,8 @@ argon2-cffi==21.3.0
 asgiref==3.9.1
 attrs==25.3.0
 blinker==1.9.0
+celery==5.5.3
+celery-types==0.23.0
 certifi==2025.7.14
 cffi==1.17.1
 charset-normalizer==3.4.2
@@ -73,7 +75,7 @@ trio==0.30.0
 trio-websocket==0.12.2
 typing-inspection==0.4.1
 typing_extensions>=4.13.2,<4.14.0
-tzdata==2022.2
+tzdata>=2025.2
 urllib3>=2.4.0,<2.6
 uvicorn==0.35.0
 websocket-client==1.8.0

@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
-
+import sys
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
@@ -19,7 +19,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost',
+                       cast=lambda v: [s.strip() for s in v.split(',')])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -33,6 +34,7 @@ INSTALLED_APPS = [
     'projects',
     'communications',
     'dashboard',
+    'investments',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
@@ -125,8 +127,8 @@ else:
 
 # Password hashing configuration.   
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.PBKDF2PasswordHasher', 
-    'django.contrib.auth.hashers.Argon2PasswordHasher', 
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
@@ -300,3 +302,13 @@ MAX_DOCUMENT_SIZE_MB = 20
 MAX_IMAGE_DIMENSIONS = (5000, 5000)
 ALLOWED_IMAGE_MODES = ["RGB", "RGBA", "L"]
 
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+
+# Celery config
+CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+CELERY_RESULT_BACKEND = 'rpc://'
+
+# Use eager mode in tests
+if 'test' in sys.argv:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True

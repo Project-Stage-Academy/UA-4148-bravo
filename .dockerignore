@@ -21,7 +21,7 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Ignore test output, coverage, etc.
+# Ignore tests output, coverage, etc.
 *.log
 *.sqlite3
 .coverage
