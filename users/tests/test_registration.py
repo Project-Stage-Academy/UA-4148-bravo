@@ -21,7 +21,7 @@ class UserRegistrationTests(APITestCase):
             'first_name': 'Test',
             'last_name': 'User',
             'password': 'TestPass123',
-            're_password': 'TestPass123',
+            'password2': 'TestPass123',
         }
 
         try:
@@ -76,7 +76,7 @@ class UserRegistrationTests(APITestCase):
         invalid_payload = {
             'email': 'test@example.com',
             'password': 'TestPass123',
-            're_password': 'TestPass123',
+            'password2': 'TestPass123',
         }
         
         response = self.client.post(
@@ -92,7 +92,7 @@ class UserRegistrationTests(APITestCase):
     def test_registration_with_password_mismatch(self):
         """Test registration with non-matching passwords."""
         invalid_payload = self.valid_payload.copy()
-        invalid_payload['re_password'] = 'DifferentPass123'
+        invalid_payload['password2'] = 'DifferentPass123'
         
         response = self.client.post(
             self.register_url,
@@ -106,7 +106,7 @@ class UserRegistrationTests(APITestCase):
     
     @patch('users.views.send_mail')
     def test_verification_email_sent(self, mock_send_mail):
-        """Test that verification email is sent after registration."""        # Clear any existing rate limits
+        """Test that verification email is sent after registration."""  
         from django.core.cache import cache
         cache.clear()
         
@@ -142,14 +142,31 @@ class UserRegistrationTests(APITestCase):
         self.assertIn('verify', kwargs['subject'].lower())
         
         html_content = kwargs['html_message']
-        self.assertIn('verify-email', html_content)
+        from bs4 import BeautifulSoup
+        from urllib.parse import urlparse, parse_qs
         
-        import re
-        url_match = re.search(r'verify-email/[^/]+/([^/]+)/', html_content)
-        self.assertIsNotNone(url_match, "Verification URL not found in email")
-        token = url_match.group(1)
+        soup = BeautifulSoup(html_content, 'html.parser')
         
-        verification_url = reverse('verify-email', kwargs={'user_id': user.user_id, 'token': token})
+        verification_link = None
+        for a_tag in soup.find_all('a', href=True):
+            if 'verify-email' in a_tag['href']:
+                verification_link = a_tag['href']
+                break
+                
+        self.assertIsNotNone(verification_link, "Verification link not found in email")
+        
+        parsed_url = urlparse(verification_link)
+        path_parts = [part for part in parsed_url.path.strip('/').split('/') if part]
+        
+        self.assertGreaterEqual(len(path_parts), 4, f"Unexpected URL format: {verification_link}")
+        self.assertEqual(path_parts[-3], 'verify-email')
+        
+        user_id = path_parts[-2]
+        token = path_parts[-1]
+        
+        self.assertEqual(str(user.user_id), user_id, "User ID in verification link doesn't match")
+        
+        verification_url = reverse('verify-email', kwargs={'user_id': user_id, 'token': token})
         response = self.client.get(verification_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 

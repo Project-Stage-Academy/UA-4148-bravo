@@ -85,7 +85,7 @@ class UserRegistrationView(APIView):
             )
 
         try:
-            user = serializer.save(is_active=False)
+            user = serializer.save()
             verification_token = self._generate_verification_token()
             user.email_verification_token = verification_token
             user.email_verification_sent_at = timezone.now()

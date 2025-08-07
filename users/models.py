@@ -54,6 +54,7 @@ class CustomUserManager(BaseUserManager):
         validate_email_custom(email)
         
         email = self.normalize_email(email)
+        other_fields.setdefault('is_active', False)
         user = self.model(email=email, **other_fields)
         user.set_password(password)
         user.save(using=self._db)

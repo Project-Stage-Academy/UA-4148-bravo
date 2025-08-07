@@ -68,15 +68,16 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
             )
         ]
     )
-    re_password = serializers.CharField(
+    password2 = serializers.CharField(
         write_only=True,
         required=True,
-        style={'input_type': 'password'}
+        style={'input_type': 'password'},
+        label='Confirm Password'
     )
 
     class Meta:
         model = User
-        fields = ('email', 'first_name', 'last_name', 'password', 're_password')
+        fields = ('email', 'first_name', 'last_name', 'password', 'password2')
         extra_kwargs = {
             'email': {'required': True},
             'first_name': {'required': True, 'allow_blank': False},
@@ -91,7 +92,7 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Validate the entire user data."""
-        if data['password'] != data.pop('re_password'):
+        if data['password'] != data.pop('password2'):
             raise serializers.ValidationError({"password": "Password fields didn't match."})
             
         try:
@@ -103,7 +104,7 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Create and return a new user with the USER role by default."""
-        validated_data.pop('re_password', None)
+        validated_data.pop('password2', None)
     
         user_role, created = UserRole.objects.get_or_create(role=UserRole.Role.USER)
     
@@ -112,8 +113,7 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             password=validated_data['password'],
-            role=user_role,
-            is_active=False 
+            role=user_role
         )
     
         return user

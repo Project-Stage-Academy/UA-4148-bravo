@@ -13,20 +13,20 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
 from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView
 
-# API endpoints grouped by app
-api_urlpatterns = [
-    # User authentication endpoints
-    path('users/', include('users.urls')),
-    path('register/', UserRegistrationView.as_view(), name='user_register'),
-    path('login/', CustomTokenObtainPairView.as_view(), name='custom_login'),
+urlpatterns = [
+    path('admin/', admin.site.urls),
+
+    # API endpoints
+    path('api/register/', UserRegistrationView.as_view(), name='user_register'),
+    path('api/login/', CustomTokenObtainPairView.as_view(), name='custom_login'),
 
     # Djoser authentication endpoints
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt')),
+    path('api/auth/', include('djoser.urls')),
+    path('api/auth/', include('djoser.urls.jwt')),
 
     # Custom JWT endpoints
-    path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
-    path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
+    path('api/auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
+    path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
 
     # Email verification
     path('api/auth/verify-email/<int:user_id>/<str:token>/', 
