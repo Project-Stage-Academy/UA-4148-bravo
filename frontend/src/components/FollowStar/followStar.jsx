@@ -1,5 +1,21 @@
 import './followStar.css';
+import PropTypes from 'prop-types';
 
+/**
+ * A component of the “Favorites” button that toggles its state
+ * between on and off when clicked.
+ *
+ * @component
+ * @param {Object} props - Properties of the component.
+ * @param {boolean} props.value - Current state of the button:
+ * `true` - enabled (active icon), `false` - disabled (empty icon).
+ * @param {function(boolean): void} props.setter - Function to change the state,
+ * usually derived from React useState.
+ *
+ * @example
+ * const [isFavorite, setIsFavorite] = useState(false);
+ * return <FollowStar value={isFavorite} setter={setIsFavorite} />;
+ */
 function FollowStar({ value, setter }) {
     const handleToggle = () => {
         setter(!value);
@@ -21,6 +37,22 @@ function FollowStar({ value, setter }) {
             }
         </button>
     );
+}
+
+/**
+ * A component of the “Favorites” button that toggles its state
+ * between on and off when clicked.
+ *
+ * @component
+ * @property {Object} props - Properties of the component.
+ * @property {boolean} props.value - Current state of the button:
+ * `true` - enabled (active icon), `false` - disabled (empty icon).
+ * @property {function(boolean): void} props.setter - Function to change the state,
+ * usually derived from React useState.
+ */
+FollowStar.propTypes = {
+    value: PropTypes.bool,
+    setter: PropTypes.func,
 }
 
 export default FollowStar;

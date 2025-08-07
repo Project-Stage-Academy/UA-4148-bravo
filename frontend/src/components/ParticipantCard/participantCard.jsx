@@ -5,7 +5,38 @@ import Button from '../Button/button';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext/authContext';
 import FollowStar from '../FollowStar/followStar';
+import PropTypes from 'prop-types';
 
+/**
+ * ParticipantCard component
+ *
+ * Displays a participant/company card with a background image, profile picture,
+ * title, location, and optional follow button. Can also show a "recently updated"
+ * badge if applicable. Clicking on the background, profile picture, or title
+ * navigates to the participant's company profile page.
+ *
+ * @component
+ * @param {Object} props - Component props.
+ * @param {string} props.bcgImgSrc - URL of the background image.
+ * @param {string} props.ppImgSrc - URL of the profile picture.
+ * @param {string} props.alt - Alt text for images.
+ * @param {string} props.title - Name/title of the participant.
+ * @param {string} props.location - Location of the participant.
+ * @param {string|number} props.uid - Unique ID for building the company profile link.
+ * @param {string} [props.className] - Additional CSS classes for the card container.
+ * @param {boolean} [props.recentlyUpdated] - Whether the participant was recently updated.
+ *
+ * @example
+ * <ParticipantCard
+ *   bcgImgSrc="/images/bg.jpg"
+ *   ppImgSrc="/images/profile.jpg"
+ *   alt="Company name"
+ *   title="My Company"
+ *   location="New York"
+ *   uid="12345"
+ *   recentlyUpdated={true}
+ * />
+ */
 function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, className, recentlyUpdated}) {
     const { user } = useAuth();
     const [isFollowed, setFollow] = useState(false);
@@ -14,7 +45,7 @@ function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, classN
     const [companyLink] = useState(`/profile/company/${uid}`);
 
     return (
-        <div className={`participant-card ${className}`}>
+        <div className={`participant-card ${className || ''}`}>
             <Link to={companyLink} className={'participant-card--background'}>
                 <Image
                     src={bcgImgSrc}
@@ -61,5 +92,16 @@ function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, classN
         </div>
     );
 }
+
+ParticipantCard.propTypes = {
+    bcgImgSrc: PropTypes.string.isRequired,
+    ppImgSrc: PropTypes.string.isRequired,
+    alt: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    location: PropTypes.string.isRequired,
+    uid: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    className: PropTypes.string,
+    recentlyUpdated: PropTypes.bool
+};
 
 export default ParticipantCard;

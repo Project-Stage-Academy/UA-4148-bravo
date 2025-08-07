@@ -1,9 +1,42 @@
 import './home.css';
 import Button from '../../components/Button/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ParticipantCard from '../../components/ParticipantCard/participantCard';
 import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
+
+/**
+ * A reusable section component for the home page.
+ * Renders its children inside a colored section with a container.
+ *
+ * @component
+ * @param {Object} props - Component props.
+ * @param {'white' | 'green' | 'yellow'} props.color - The color theme for the section.
+ * Applied as part of the section's CSS class name.
+ * @param {string} [props.className] - Optional additional CSS classes for the container.
+ * @param {React.ReactNode} props.children - The content to be rendered inside the section.
+ *
+ * @example
+ * <HomeSection color="blue" className="custom-class">
+ *   <h2>Welcome</h2>
+ *   <p>This is the home page.</p>
+ * </HomeSection>
+ */
+function HomeSection({ color, className, children }) {
+    return (
+        <section className={`home--section__${color}`}>
+            <div className={`container home--container ${className}`}>
+                { children }
+            </div>
+        </section>
+    );
+}
+
+HomeSection.propTypes = {
+    color: PropTypes.string.isRequired,
+    className: PropTypes.string,
+    children: PropTypes.node.isRequired,
+};
 
 /**
  * NewParticipantGrid component
@@ -23,13 +56,6 @@ function NewParticipantGrid({ data }) {
     );
 }
 
-/**
- * NewParticipantGrid component prop types
- * Renders a grid of new participants
- * Each participant includes a background image, profile picture, title, and location
- * The component maps over the provided data and renders a ParticipantCard for each item
- * @property {Array.<Object>} data - Array of objects containing participant data
- */
 NewParticipantGrid.propTypes = {
     data: PropTypes.arrayOf(PropTypes.object).isRequired
 }
@@ -54,12 +80,6 @@ function TargetAudienceGrid({data}) {
     );
 }
 
-/**
- * TargetAudienceGrid component
- * Renders a grid of target audience items
- * Each item includes an image and a title
- * @property {Array.<Object>} data - Array of objects containing participant data
- */
 TargetAudienceGrid.propTypes = {
     data: PropTypes.arrayOf(PropTypes.object).isRequired
 }
@@ -84,12 +104,6 @@ function BenefitsGrid({data}) {
     );
 }
 
-/**
- * BenefitsGrid component
- * Renders a grid of benefits panels
- * Each panel includes a title and a description
- * @property {Array.<Object>} data - Array of objects containing title and description for each benefit
- */
 BenefitsGrid.propTypes = {
     data: PropTypes.arrayOf(PropTypes.object).isRequired
 }
@@ -135,13 +149,15 @@ function HomePage() {
         {title: 'Підтримка та знання', description: 'Отримуйте консультації, експертну допомогу та доступ до освітніх ресурсів'}
     ];
 
+    const navigate = useNavigate();
+
     // State for changing the link text in the “New participants section”
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 665);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 769);
 
     // Set's boolean to isMobile
     useEffect(() => {
         const handleResize = () => {
-            setIsMobile(window.innerWidth <= 665);
+            setIsMobile(window.innerWidth <= 769);
         };
 
         window.addEventListener('resize', handleResize);
@@ -152,27 +168,27 @@ function HomePage() {
         <div className={'home'}>
 
             {/* Hero section */}
-            <section className={'home--section home--section__padding-low-vertical home--section__direction-row home--section__green hero--section'}>
+            <HomeSection color={'green'} className={'home--container__padding-narrow home--container__direction-row hero--section'}>
                 <div className={'hero--title-container'}>
                     <h2 className={'hero--logo-title'}>CRAFTMERGE</h2>
                     <h2 className={'hero--text-title'}>Обʼєднуємо крафтових виробників та інноваторів</h2>
                     <div>
-                        <Button className={'button__padding'}>
+                        <Button className={'button__padding'} onClick={() => navigate('/who-we-are')}>
                             Детальніше про нас
                         </Button>
                     </div>
                 </div>
                 <div className={'hero--pictures'}>
                     <picture>
-                        <source media="(max-width: 646px)" srcSet="/pictures/png/hero-small.png" />
-                        <source media="(max-width: 1481px)" srcSet="/pictures/png/hero-middle.png" />
+                        <source media="(max-width: 769px)" srcSet="/pictures/png/hero-small.png" />
+                        <source media="(max-width: 1513px)" srcSet="/pictures/png/hero-middle.png" />
                         <img src={'/pictures/png/hero-big.png'} alt={'Hero'}/>
                     </picture>
                 </div>
-            </section>
+            </HomeSection>
 
             {/* New participants section */}
-            <section className={'home--section home--section__white'}>
+            <HomeSection color={'white'} className={'home--container__padding-wide'}>
                 <div className={'participants--title-container'}>
                     <h2 className={'home--title participants--title__flex'}>
                         Нові учасники
@@ -182,27 +198,27 @@ function HomePage() {
                     </Link>
                 </div>
                 <NewParticipantGrid data={newParticipantsData} />
-            </section>
+            </HomeSection>
 
             {/* Value proposition section */}
-            <section className={'home--section home--section__text-align-center home--section__green'}>
+            <HomeSection color={'green'} className={'home--container__text-align-center home--container__padding-wide'}>
                 <h2 className={'home--title involve--title__max-width involve--title__margin'}>Майданчик для тих, хто втілює свої ідеї в життя</h2>
-                <Button className={'involve--button__padding'}>
+                <Button className={'involve--button__padding'} onClick={() => navigate('/auth/register')}>
                     Долучитися
                 </Button>
-            </section>
+            </HomeSection>
 
             {/* Target audience section */}
-            <section className={'home--section home--section__yellow'}>
+            <HomeSection color={'yellow'} className={'home--container__padding-wide'}>
                 <h2 className={'home--title target--title__margin'}>Для кого</h2>
                 <TargetAudienceGrid data={targetAudienceData} />
-            </section>
+            </HomeSection>
 
             {/* Benefits section */}
-            <section className={'home--section home--section__white'}>
+            <HomeSection color={'white'} className={'home--container__padding-wide'}>
                 <h2 className={'home--title benefits--grid-item-title__margin'}>Чому варто</h2>
                 <BenefitsGrid data={benefitsData} />
-            </section>
+            </HomeSection>
         </div>
     );
 }

@@ -41,15 +41,11 @@
     --green-bcg-color: #B4D27A;
     --yellow-bcg-color: #F9F5EC;
     --white-bcg-color: #FFF;
+    --header-bcg-color: #fff;
+    --footer-bcg-color: #232424;
 
     /* hr colors */
     --light-gray-hr-color: #EDEDED;
-
-    /* header */
-    --header-bcg-color: #fff;
-
-    /* footer */
-    --footer-bcg-color: #232424;
 
     /* home page */
     --benefits-panel-color: #F9F5EC;
