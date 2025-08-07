@@ -168,12 +168,21 @@ function HomePage() {
         <div className={'home'}>
 
             {/* Hero section */}
-            <HomeSection color={'green'} className={'home--container__padding-narrow home--container__direction-row hero--section'}>
+            <HomeSection
+                color={'green'}
+                className={'home--container__padding-narrow home--container__direction-row hero--section'}
+                role="banner"
+                aria-label="Головна секція Craftmerge"
+            >
                 <div className={'hero--title-container'}>
                     <h2 className={'hero--logo-title'}>CRAFTMERGE</h2>
                     <h2 className={'hero--text-title'}>Обʼєднуємо крафтових виробників та інноваторів</h2>
                     <div>
-                        <Button className={'button__padding'} onClick={() => navigate('/who-we-are')}>
+                        <Button
+                            className={'button__padding'}
+                            onClick={() => navigate('/who-we-are')}
+                            aria-label="Дізнатися детальніше про компанію Craftmerge"
+                        >
                             Детальніше про нас
                         </Button>
                     </div>
@@ -188,34 +197,56 @@ function HomePage() {
             </HomeSection>
 
             {/* New participants section */}
-            <HomeSection color={'white'} className={'home--container__padding-wide'}>
+            <HomeSection
+                color={'white'}
+                className={'home--container__padding-wide'}
+                role="banner"
+            >
                 <div className={'participants--title-container'}>
                     <h2 className={'home--title participants--title__flex'}>
                         Нові учасники
                     </h2>
                     <Link to={'/companies'} className={'link-right-arrow'}>
-                        <p className={'participants--link link__underline'}>{isMobile ? 'Всі' : 'Всі підприємства'}</p>
+                        <p className={'participants--link link__underline'} aria-label="Переглянути всі підприємства">
+                            {isMobile ? 'Всі' : 'Всі підприємства'}
+                        </p>
                     </Link>
                 </div>
                 <NewParticipantGrid data={newParticipantsData} />
             </HomeSection>
 
             {/* Value proposition section */}
-            <HomeSection color={'green'} className={'home--container__text-align-center home--container__padding-wide'}>
+            <HomeSection
+                color={'green'}
+                className={'home--container__text-align-center home--container__padding-wide'}
+                role="banner"
+            >
                 <h2 className={'home--title involve--title__max-width involve--title__margin'}>Майданчик для тих, хто втілює свої ідеї в життя</h2>
-                <Button className={'involve--button__padding'} onClick={() => navigate('/auth/register')}>
+                <Button
+                    className={'involve--button__padding'}
+                    onClick={() => navigate('/auth/register')}
+                    aria-label="Долучитися до Craftmerge"
+                >
                     Долучитися
                 </Button>
             </HomeSection>
 
             {/* Target audience section */}
-            <HomeSection color={'yellow'} className={'home--container__padding-wide'}>
+            <HomeSection
+                color={'yellow'}
+                className={'home--container__padding-wide'}
+                role="banner"
+            >
                 <h2 className={'home--title target--title__margin'}>Для кого</h2>
                 <TargetAudienceGrid data={targetAudienceData} />
             </HomeSection>
 
             {/* Benefits section */}
-            <HomeSection color={'white'} className={'home--container__padding-wide'}>
+            <HomeSection
+                color={'white'}
+                className={'home--container__padding-wide'}
+                role="banner"
+            >
                 <h2 className={'home--title benefits--grid-item-title__margin'}>Чому варто</h2>
                 <BenefitsGrid data={benefitsData} />
             </HomeSection>

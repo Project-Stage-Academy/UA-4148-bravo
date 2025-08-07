@@ -46,7 +46,7 @@ function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, classN
 
     return (
         <div className={`participant-card ${className || ''}`}>
-            <Link to={companyLink} className={'participant-card--background'}>
+            <Link to={companyLink} className={'participant-card--background'} tabIndex={-1}>
                 <Image
                     src={bcgImgSrc}
                     alt={alt}
@@ -54,7 +54,7 @@ function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, classN
                 />
                 {isRecentlyUpdated && <p className={'participant-card--updated'}>Оновлено</p>}
             </Link>
-            <Link to={companyLink} className={'participant-card--picture'}>
+            <Link to={companyLink} className={'participant-card--picture'} tabIndex={-1}>
                 <Image
                     src={ppImgSrc}
                     alt={alt}
