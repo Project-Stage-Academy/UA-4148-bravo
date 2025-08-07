@@ -1,0 +1,23 @@
+.search {
+    display: flex;
+    flex-flow: row nowrap;
+}
+
+.search--input {
+    width: 100%;
+    border: 1px solid #AAAAAA;
+    border-radius: 4px 0 0 4px;
+    padding: calc(10px - 1px) 12px;
+    font-weight: 300;
+    font-size: 16px;
+    font-family: var(--text-font), sans-serif;
+    line-height: 20px;
+}
+
+.search--button {
+    border: 1px solid #AAAAAA !important;
+    border-left: 0 !important;
+    border-radius: 0 4px 4px 0 !important;
+    padding: 11px 11px 11px 12px;
+    line-height: 0;
+}

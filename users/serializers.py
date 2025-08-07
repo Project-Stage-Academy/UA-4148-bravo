@@ -1,6 +1,7 @@
 from djoser.serializers import UserSerializer
 from django.contrib.auth import get_user_model
-from djoser.serializers import PasswordResetConfirmSerializer as BasePasswordResetConfirmSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+rom djoser.serializers import PasswordResetConfirmSerializer as BasePasswordResetConfirmSerializer
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_str
@@ -8,7 +9,6 @@ from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 from .validators import CustomPasswordValidator
 from django.core.exceptions import ValidationError as DjangoValidationError
-
 
 User = get_user_model()
 custom_password_validator = CustomPasswordValidator()
@@ -18,6 +18,46 @@ class CustomUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         model = User
         fields = ('id', 'username', 'email') 
+
+# Custom serializer for obtaining JWT with additional fields
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Custom serializer for obtaining JWT tokens.
+    Adds custom claims to the token and includes additional user data in the response.
+    Also prevents token issuance for inactive users.
+    """
+
+    @classmethod
+    def get_token(cls, user):
+        """
+        Generates JWT token with custom claims:
+        - username: user's username
+        - email: user's email address
+
+        These claims are included in the token payload and can be used by the frontend
+        for display purposes or authorization logic.
+        """
+        token = super().get_token(user)
+        token['username'] = user.username
+        token['email'] = user.email
+        return token
+
+    def validate(self, attrs):
+        """
+        Validates user credentials and adds additional user-related fields
+        to the response payload after successful authentication.
+
+        Also checks if the user is active. If not, raises a validation error.
+        """
+        data = super().validate(attrs)
+
+        if not self.user.is_active:
+            raise serializers.ValidationError('User account is disabled.')
+
+        data['user_id'] = self.user.id
+        data['username'] = self.user.username
+        data['email'] = self.user.email
+        return data
 
 class PasswordResetSerializer(serializers.Serializer):
     """

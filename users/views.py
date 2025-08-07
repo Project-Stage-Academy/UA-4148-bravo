@@ -1,4 +1,3 @@
-from django.shortcuts import render
 import logging
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -12,15 +11,24 @@ from djoser.email import PasswordResetEmail
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from .serializers import PasswordResetSerializer, PasswordResetConfirmSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import CustomTokenObtainPairSerializer
+
+logger = logging.getLogger(__name__)  # Added this
+
+# Custom view to use the custom JWT serializer
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+# Optional logging setup (can be removed if not needed)
+if __name__ == "__main__":
+    logger.debug("This is a debug message.")
+    logger.info("Informational message.")
+    logger.warning("Warning occurred!")
+    logger.error("An error happened.")
+    logger.critical("Critical issue!")
 
 
-logger = logging.getLogger(__name__)
-
-logger.debug("This is a debug message.")
-logger.info("Informational message.")
-logger.warning("Warning occurred!")
-logger.error("An error happened.")
-logger.critical("Critical issue!")
 
 # Create your views here.
 
@@ -130,3 +138,4 @@ class CustomPasswordResetConfirmView(APIView):
         user.save()
 
         return Response({"detail": "Password has been successfully changed."}, status=status.HTTP_200_OK)
+
