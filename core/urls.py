@@ -1,19 +1,11 @@
 """
 URL configuration for core project.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+Routes are organized by app and follow RESTful naming conventions.
+All API endpoints use plural nouns for consistency.
+Versioning is applied via 'api/v1/' to support future evolution.
 """
+
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -21,11 +13,24 @@ from django.conf.urls.static import static
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
+
+api_urlpatterns = [
+    # User authentication endpoints
+    path('users/', include('users.urls')),
+
+    # Project-related endpoints
+    path('projects/', include('projects.urls')),
+    
+    # Startup-related endpoints
+    path('startups/', include('startups.urls')),
+
+    # Profile-related endpoints
+    path('profiles/', include('profiles.urls')),
+]
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/users/', include('users.urls')),
-    path('api/projects/', include('projects.urls')),
-    path("api/startups/", include("startups.urls")),
+    path('api/v1/', include(api_urlpatterns)), 
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
@@ -35,4 +40,3 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-

@@ -9,6 +9,8 @@ from validation.validate_document import validate_document_file
 from validation.validate_email import validate_email_custom
 from validation.validate_names import validate_forbidden_names
 
+from common.enums import ProjectStatus
+
 
 class Category(models.Model):
     """
@@ -20,6 +22,7 @@ class Category(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
+        super().clean() 
         validate_forbidden_names(self.name, field_name="name")
 
     def __str__(self):
@@ -69,8 +72,8 @@ class Project(models.Model):
 
     status = models.CharField(
         max_length=50,
-        choices=STATUS_CHOICES,
-        default='draft'
+        choices=ProjectStatus.choices,
+        default=ProjectStatus.DRAFT
     )
 
     duration = models.PositiveIntegerField(
@@ -109,12 +112,22 @@ class Project(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
+        """
+        Validates the Project instance.
+
+        - Current funding must not exceed the funding goal.
+        - Business plan is required if the project is in progress or completed.
+        - Funding goal is required if the project is marked as a participant.
+
+        Raises:
+            ValidationError: A dictionary of field-specific error messages.
+        """
         errors = {}
 
         if self.funding_goal is not None and self.current_funding > self.funding_goal:
             errors['current_funding'] = 'Current funding cannot exceed funding goal.'
 
-        if self.status in ['in_progress', 'completed'] and not self.business_plan:
+        if self.status in [ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED] and not self.business_plan:
             errors['business_plan'] = 'Business plan is required for projects in progress or completed.'
 
         if self.is_participant and not self.funding_goal:

@@ -1,7 +1,11 @@
+from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
+
+from projects.models import Project
+from projects.serializers import ProjectSerializer
+
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 from django_elasticsearch_dsl_drf.filter_backends import (
     FilteringFilterBackend,
@@ -10,6 +14,20 @@ from django_elasticsearch_dsl_drf.filter_backends import (
 )
 from .documents import ProjectDocument
 from .serializers import ProjectDocumentSerializer
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    queryset = Project.objects.select_related('startup', 'category').all()
+    serializer_class = ProjectSerializer
+
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['status', 'category', 'startup']
+    search_fields = ['title', 'description', 'email']
+    ordering_fields = ['created_at', 'funding_goal', 'current_funding']
+    ordering = ['-created_at']
 
 
 class ProjectDocumentView(DocumentViewSet):
@@ -25,7 +43,8 @@ class ProjectDocumentView(DocumentViewSet):
     filter_fields = {
         'title': 'title.raw',
         'category.name': 'category.name',
-        'startup.company_name': 'startup.company_name',
+        'startup_name': 'startup_name',
+        'status': 'status',
     }
 
     ordering_fields = {
@@ -36,7 +55,6 @@ class ProjectDocumentView(DocumentViewSet):
     search_fields = (
         'title',
         'description',
-        'goals',
     )
 
     def list(self, request, *args, **kwargs):

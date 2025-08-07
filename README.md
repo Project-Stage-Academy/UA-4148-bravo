@@ -9,6 +9,13 @@ Forum Project Stage CC Template Repo
 
 In the dynamic world of entrepreneurship, the path from a transformative idea to a successful venture is often complex and challenging. Our WebAPI application, developed using the Django Rest Framework, is designed to be a cornerstone in simplifying this journey. We aim to create a robust and secure digital platform that caters to two pivotal groups in the business ecosystem: innovative startups with compelling ideas and forward-thinking investors seeking valuable opportunities.
 
+All technical documentation is located in the `docs/` folder at the root of the repository:
+
+- [`API.md`](docs/API.md): Detailed description of available endpoints and request/response formats.
+- [`CONTRIBUTING_DOCS.md`](docs/CONTRIBUTING_DOCS.md): Guidelines and instructions for contributors and developers.
+
+
+
 **Goals:**
 
 1. **Fostering Collaborative Opportunities:** Our platform bridges startups and investors, enabling startups to showcase their groundbreaking proposals and investors to discover and engage with high-potential ventures.
