@@ -3,94 +3,95 @@
     flex-direction: column;
 }
 
-.home-section {
+/* Section */
+
+.home--section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 80px 104px;
     transition: all var(--animation-normal) ease;
 }
 
-.home-section__green {
+.home--section__direction-row {
+    flex-direction: row;
+}
+
+.home--section__text-align-center {
+    text-align: center;
+}
+
+.home--section__padding-low-vertical {
+    padding-top: 32px;
+    padding-bottom: 32px;
+}
+
+.home--section__green {
     background: var(--green-bcg-color);
 }
 
-.home-section__white {
+.home--section__white {
     background: var(--white-bcg-color);
 }
 
-.home-section__yellow {
+.home--section__yellow {
     background: var(--yellow-bcg-color);
 }
 
-.home-title-1 {
-    font-size: 48px;
-    line-height: 120%;
-    font-weight: 700;
-}
+/* Title */
 
-.home-title-2 {
+.home--title {
     font-size: 40px;
     line-height: 120%;
     font-weight: 700;
 }
 
-.hero-section {
-    display: flex;
-    padding-top: 32px;
-    padding-bottom: 32px;
-    flex-direction: row;
-    gap: 63px;
-}
-
 /* Hero section */
 
-.hero-title {
+.hero--title-container {
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    margin-right: 63px;
 }
 
-.hero-title--title-1 {
+.hero--logo-title {
+    font-size: 48px;
     margin-bottom: 14px;
 }
 
-.hero-title--title-2 {
+.hero--text-title {
+    font-size: 40px;
     margin-bottom: 30px;
 }
 
-.hero-pictures {
+.hero--pictures {
     flex: 0 0 auto;
     text-align: center;
 }
 
-/* New members */
+/* New participants */
 
-/* Get involved */
-
-.involve-section {
+.participants--title-container {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-
-.involve-title {
-    max-width: 694px;
     margin-bottom: 24px;
-}
-
-/* For whom */
-
-.for-whom-section {
-    display: flex;
-    flex-direction: column;
+    width: 100%;
     align-items: center;
 }
 
-.for-whom-title {
-    margin-bottom: 40px;
+.participants--title__flex {
+    flex: 1;
 }
 
-.for-whom-grid {
+.participants--link {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 120%;
+    padding: 2px 0;
+}
+
+.participants--grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 32px;
@@ -98,7 +99,40 @@
     width: 100%;
 }
 
-.for-whom-grid-item {
+.participants--grid-item {
+    place-self: center;
+    height: 100%;
+}
+
+/* Get involved */
+
+.involve--title__max-width {
+    max-width: 694px;
+}
+
+.involve--title__margin {
+    margin-bottom: 24px;
+}
+
+.involve--button__padding {
+    padding: 13px 37px;
+}
+
+/* Target section */
+
+.target--title__margin {
+    margin-bottom: 40px;
+}
+
+.target--grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    grid-auto-rows: 1fr;
+    width: 100%;
+}
+
+.target--grid-item {
     display: flex;
     gap: 18px;
     padding: 18px;
@@ -107,132 +141,135 @@
     align-items: center;
 }
 
-.for-whom-grid-item--picture {
+.target--grid-item-picture {
     width: 36px;
     height: 36px;
 }
 
-.for-whom-grid-item--title {
+.target--grid-item-title {
     line-height: 140%;
     font-size: 16px;
     font-weight: 600;
 }
 
-/* Why it's worth it */
+/* Benefits section */
 
-.worth-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.worth-title {
-    margin-bottom: 40px;
-}
-
-.worth-panels-container {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+.benefits--grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 32px;
+    grid-auto-rows: 1fr;
+    width: 100%;
 }
 
-.worth-panel {
-    flex: 1;
-    max-width: 33%;
-    min-width: 25%;
+.benefits--grid-item {
     min-height: calc(164px - 32px * 2);
-    background-color: var(--worth-it-panel-color);
+    background-color: var(--benefits-panel-color);
     border-radius: 6px;
     padding: 32px 24px;
 }
 
-.worth-panel--title {
+.benefits--grid-item-title {
     font-size: 20px;
     line-height: 120%;
     font-weight: 700;
     margin-bottom: 16px;
 }
 
+.benefits--grid-item-title__margin {
+    margin-bottom: 40px;
+}
+
 @media (min-width: 2000px) {
-    .home-section {
+    .home--section {
         padding: 80px 300px;
     }
 
-    .hero-section {
-        padding-top: 32px;
-        padding-bottom: 32px;
+    .participants--grid {
+        width: auto;
     }
 }
 
 @media screen and (max-width: 1481px) {
-    .home-section {
-        padding: 32px 24px;
+    .home--section {
+        padding: 48px 24px;
     }
 
-    .hero-section {
+    .hero--section {
         flex-direction: column-reverse;
     }
 
-    .hero-title {
+    .hero--title-container {
+        margin-top: 40px;
+        margin-right: 0;
         text-align: center;
         align-items: center;
     }
 
-    .home-title-1 {
-        font-size: 40px;
+    .hero--logo-title {
+        font-size: 48px;
     }
 
-    .home-title-2 {
+    .hero--text-title {
         font-size: 34px;
     }
 
-    .for-whom-grid {
+    .participants--grid {
+        grid-template-columns: repeat(2, 1fr);
+        width: auto;
+    }
+
+    .target--grid {
         grid-template-columns: repeat(3, 1fr);
     }
 
-    .worth-panel {
-        max-width: 50%;
-        min-width: 34%;
-        padding: 32px 24px;
+    .benefits--grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media screen and (max-width: 995px) {
-    .for-whom-grid {
+    .target--grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media screen and (max-width: 665px) {
-    .for-whom-grid-item {
+    .hero--logo-title {
+        font-size: 34px;
+    }
+
+    .hero--text-title {
+        font-size: 24px;
+    }
+
+    .participants--grid {
+        grid-template-columns: repeat(1, 1fr);
+    }
+
+    .participants--title__flex {
+        font-size: 24px;
+    }
+
+    .target--grid-item {
         flex-direction: column;
         gap: 8px;
     }
 
-    .for-whom-grid-item--title {
+    .target--grid-item-title {
         text-align: center;
         font-size: 14px;
     }
-}
 
-@media screen and (max-width: 646px) {
-    .home-section {
+    .home--section {
         padding: 32px 16px;
     }
 
-    .home-title-1 {
-        font-size: 34px;
-    }
-
-    .home-title-2 {
+    .home--title {
         font-size: 24px;
     }
 
-    .worth-panel {
-        max-width: 100%;
-        min-width: 56%;
-        padding: 32px 24px;
+    .benefits--grid {
+        grid-template-columns: repeat(1, 1fr);
     }
 }

@@ -52,6 +52,18 @@
     --footer-bcg-color: #232424;
 
     /* home page */
-    --worth-it-panel-color: #F9F5EC;
+    --benefits-panel-color: #F9F5EC;
     --for-whom-panel-color: #FFF;
+
+    /* Participant card */
+
+    --participant-card-color: #F9F5EC;
+    --participant-card-color-hover: #EDE0C5;
+    --other-services-color: #707070;
+
+    --profile-picture-bg-color: #FFF;
+    --profile-picture-border-color: #AAAAAA;
+
+    --participant-updated-color: #B4D27A;
+
 }
