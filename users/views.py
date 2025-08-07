@@ -11,6 +11,8 @@ from rest_framework.views import APIView
 from djoser.email import PasswordResetEmail
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
+from .serializers import PasswordResetSerializer, PasswordResetConfirmSerializer
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,23 +26,60 @@ logger.critical("Critical issue!")
 
 User = get_user_model()
 
+def error_response(message, status_code):
+    """
+    Helper to return error responses in consistent format.
+
+    Args:
+        message (str or dict): Error message or dict of errors.
+        status_code (int): HTTP status code.
+
+    Returns:
+        Response: DRF Response with given message and status.
+    """
+    if isinstance(message, str):
+        data = {"detail": message}
+    else:
+        data = message
+    return Response(data, status=status_code)
 
 class CustomPasswordResetView(APIView):
     """
-    Request for password reset.
-    Sends an email if the user exists and returns clear feedback.
+    Handle password reset requests by sending reset instructions via email.
+
+    Methods:
+        post: Accepts an email and sends password reset instructions if the user exists.
+
+    Args in post:
+        request (Request): The HTTP request object containing POST data.
+
+    Returns:
+        Response: DRF Response with success message or error details.
     """
     def post(self, request, *args, **kwargs):
-        email = request.data.get("email")
-        if not email:
-            return Response({"email": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
+        """
+        Process password reset request.
+
+        Args:
+            request (Request): HTTP request with 'email' in data.
+
+        Returns:
+            Response: 
+                - 200 OK with success detail if email sent.
+                - 400 Bad Request if email is missing.
+                - 404 Not Found if user with email doesn't exist.
+        """
+        serializer = PasswordResetSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data['email']
 
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({"email": "User with this email was not found."}, status=status.HTTP_404_NOT_FOUND)
+            return error_response({"email": "User with this email was not found."}, status.HTTP_404_NOT_FOUND)
 
-        # Sending email (via standard Djoser email class)
         context = {"user": user}
         to = [getattr(user, User.EMAIL_FIELD)]
         PasswordResetEmail(request, context).send(to)
@@ -50,39 +89,44 @@ class CustomPasswordResetView(APIView):
 
 class CustomPasswordResetConfirmView(APIView):
     """
-    Confirm password reset.
-    Checks the token, expiration time, and validates the new password.
+    Handle confirmation of password reset using UID and token.
+
+    Methods:
+        post: Validates token and new password, updates the user password.
+
+    Args in post:
+        request (Request): The HTTP request object containing 'uid', 'token', and 'new_password'.
+
+    Returns:
+        Response:
+            - 200 OK if password changed successfully.
+            - 400 Bad Request for missing fields, invalid token, invalid UID, or invalid password.
     """
     def post(self, request, *args, **kwargs):
-        uid = request.data.get("uid")
-        token = request.data.get("token")
-        new_password = request.data.get("new_password")
+        """
+        Process password reset confirmation.
 
-        # Check required fields
-        if not uid or not token or not new_password:
-            return Response({"detail": "Not all required fields are filled."}, status=status.HTTP_400_BAD_REQUEST)
+        Args:
+            request (Request): HTTP request with 'uid', 'token', 'new_password' in data.
 
-        # Decode UID and find user
-        try:
-            uid = force_str(urlsafe_base64_decode(uid))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return Response({"uid": "Invalid or corrupted UID."}, status=status.HTTP_400_BAD_REQUEST)
+        Returns:
+            Response:
+                - 200 OK with success detail if password updated.
+                - 400 Bad Request if any validation fails.
+        """
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if not serializer.is_valid():
+            return error_response(serializer.errors, status.HTTP_400_BAD_REQUEST)
 
-        # Check token
-        if not default_token_generator.check_token(user, token):
-            return Response({"token": "Invalid token or token has expired."}, status=status.HTTP_400_BAD_REQUEST)
+        user = serializer.context['user']
+        new_password = serializer.validated_data['new_password']
 
-        # Validate password (runs both standard and custom validators)
         try:
             validate_password(new_password, user)
         except DjangoValidationError as e:
-            return Response({"new_password": list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response({"new_password": list(e.messages)}, status.HTTP_400_BAD_REQUEST)
 
-        # Save new password
         user.set_password(new_password)
         user.save()
 
         return Response({"detail": "Password has been successfully changed."}, status=status.HTTP_200_OK)
-
-
