@@ -7,7 +7,7 @@ from django_countries.fields import CountryField
 from common.company import Company
 from common.enums import Stage
 from validation.validate_names import validate_forbidden_names, validate_latin
-from validation.validate_social_links import SocialLinksValidationMixin  
+from validation.validate_social_links import SocialLinksValidationMixin
 
 
 class Location(models.Model):
@@ -20,16 +20,6 @@ class Location(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
-        """
-        Validates the Location instance.
-
-        - Ensures postal code is at least 3 characters and contains only Latin characters.
-        - Validates city, region, and address_line for non-empty and Latin-only content.
-        - Enforces logical dependencies between address_line, city, and region.
-
-        Raises:
-            ValidationError: A dictionary of field-specific error messages.
-        """
         errors = {}
 
         if self.postal_code:
@@ -92,12 +82,6 @@ class Industry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        """
-        Validates the Industry name against forbidden terms.
-
-        Raises:
-            ValidationError: If the name contains forbidden content.
-        """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")
 
@@ -125,21 +109,13 @@ class Startup(SocialLinksValidationMixin, Company):
     social_links = models.JSONField(blank=True, default=dict)
 
     def clean(self):
-        """
-        Validates the Startup instance.
-
-        - Ensures stage is set.
-        - Delegates social_links validation to SocialLinkValidationMixin.
-
-        Raises:
-            ValidationError: If validation fails.
-        """
         super().clean()
 
         if not self.stage:
             self.stage = Stage.IDEA
 
-        self.validate_social_links()
+        if self.social_links:
+            self.validate_social_links(self.social_links)
 
     def __str__(self):
         return f"{self.company_name} (Startup, User ID: {self.user_id})"
@@ -171,9 +147,6 @@ class Investor(Company):
     )
 
     def clean(self):
-        """
-        Placeholder for future Investor-specific validation logic.
-        """
         super().clean()
 
         if not self.stage:
