@@ -20,12 +20,12 @@ api_urlpatterns = [
 
     # Project-related endpoints
     path('projects/', include('projects.urls')),
-    
+
     # Startup-related endpoints
     path('startups/', include('startups.urls')),
 
-    # Profile-related endpoints
-    path('profiles/', include('profiles.urls')),
+    # Investor-related endpoints
+    path('investors/', include('investors.urls')),
 ]
 
 urlpatterns = [

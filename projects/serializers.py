@@ -2,7 +2,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from projects.models import Project, Category
-from profiles.models import Startup
+from startups.models import Startup
 from common.enums import ProjectStatus
 
 from django_elasticsearch_dsl_drf.serializers import DocumentSerializer

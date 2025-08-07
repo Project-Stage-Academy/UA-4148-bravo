@@ -19,7 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'users',
-    'profiles',
+    'investors',
     'projects',
     'startups',
     'communications',
@@ -147,7 +147,7 @@ MAX_IMAGE_DIMENSIONS = (5000, 5000)
 
 ALLOWED_DOCUMENT_EXTENSIONS = [
     "pdf", "doc", "docx", "txt", "odt", "rtf",
-    "xls", "xlsx", "ppt",
+    "xls", "xlsx", "ppt", "pptx", "zip", "rar"
 ]
 
 ALLOWED_DOCUMENT_MIME_TYPES = [
@@ -155,7 +155,14 @@ ALLOWED_DOCUMENT_MIME_TYPES = [
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/plain",
-    "application/vnd.oasis.opendocument.text"
+    "application/vnd.oasis.opendocument.text",
+    "application/rtf",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+    "application/x-rar-compressed",
 ]
 
 # Social platform validation settings
@@ -263,7 +270,12 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
-        'profiles': {
+        'startups': {
+            'handlers': ['console', 'file_apps'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'investors': {
             'handlers': ['console', 'file_apps'],
             'level': 'DEBUG',
             'propagate': False,

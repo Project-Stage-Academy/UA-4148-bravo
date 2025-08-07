@@ -23,7 +23,7 @@ class Subscription(models.Model):
     """
 
     investor = models.ForeignKey(
-        'profiles.Investor',
+        'investors.Investor',
         on_delete=models.CASCADE,
         related_name='subscriptions'
     )

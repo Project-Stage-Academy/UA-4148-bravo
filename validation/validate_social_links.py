@@ -1,59 +1,54 @@
 from urllib.parse import urlparse
 from django.core.validators import URLValidator
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.conf import settings
-from rest_framework import serializers
+from publicsuffix2 import get_sld
 
-
-class SocialLinksValidationMixin:
+def validate_social_links_dict(social_links, allowed_platforms, raise_serializer=False):
     """
-    Provides validation logic for the `social_links` field.
-
-    This method ensures that:
-    - Each platform key is supported (based on settings.ALLOWED_SOCIAL_PLATFORMS).
-    - Each URL is syntactically valid.
-    - The domain of each URL matches one of the expected domains for the given platform.
+    Validates a dictionary of social links.
 
     Args:
-        value (dict): A dictionary of platform names mapped to URLs.
-
-    Returns:
-        dict: The validated `social_links` dictionary.
+        social_links (dict): The dict to validate.
+        allowed_platforms (dict): Platform -> list of allowed base domains (e.g., 'linkedin.com').
+        raise_serializer (bool): Whether to raise DRF ValidationError (True) or Django's (False).
 
     Raises:
-        serializers.ValidationError: If any platform is unsupported, any URL is malformed,
-                                     or any domain does not match the expected values.
+        ValidationError: Either DRF or Django, depending on raise_serializer.
     """
-    def validate_social_links(self, value):
-        allowed_domains = settings.ALLOWED_SOCIAL_PLATFORMS
-        url_validator = URLValidator()
-        errors = {}
+    from rest_framework.exceptions import ValidationError as DRFValidationError
+    from django.core.exceptions import ValidationError as DjangoValidationError
 
-        for platform, url in value.items():
-            platform_lc = platform.lower()
+    url_validator = URLValidator()
+    errors = {}
 
-            if platform_lc not in allowed_domains:
-                errors[platform] = f"Platform '{platform}' is not supported."
-                continue
+    for platform, url in social_links.items():
+        platform_lc = platform.lower()
 
-            try:
-                url_validator(url)
-            except DjangoValidationError:
-                errors[platform] = f"Malformed URL for platform '{platform}': {url}"
-                continue
+        if platform_lc not in allowed_platforms:
+            errors[platform] = f"Platform '{platform}' is not supported."
+            continue
 
-            domain = urlparse(url).netloc.lower()
-            domain_list = allowed_domains.get(platform_lc, [])
+        try:
+            url_validator(url)
+        except DjangoValidationError:
+            errors[platform] = f"Malformed URL for platform '{platform}': {url}"
+            continue
 
-            if isinstance(domain_list, str):
-                domain_list = [domain_list]
-            elif not isinstance(domain_list, (list, tuple, set)):
-                domain_list = []
+        parsed_url = urlparse(url)
+        netloc = parsed_url.netloc.lower()
 
-            if not any(allowed in domain for allowed in domain_list):
-                errors[platform] = f"Invalid domain for platform '{platform}': {url}"
+        try:
+            sld = get_sld(netloc)
+        except Exception:
+            sld = ""
 
-        if errors:
-            raise serializers.ValidationError({'social_links': errors})
+        allowed_domains = allowed_platforms.get(platform_lc, [])
+        if isinstance(allowed_domains, str):
+            allowed_domains = [allowed_domains]
+        elif not isinstance(allowed_domains, (list, tuple, set)):
+            allowed_domains = []
 
-        return value
+        if sld not in allowed_domains:
+            errors[platform] = f"Invalid domain for platform '{platform}': {netloc}"
+
+    if errors:
+        raise (DRFValidationError if raise_serializer else DjangoValidationError)({'social_links': errors})
