@@ -8,6 +8,56 @@ from common.enums import ProjectStatus
 from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
 from projects.documents import ProjectDocument
 
+from rest_framework import serializers
+from .models import Subscription, Project
+
+class ProjectSerializer(serializers.ModelSerializer):
+    startup_name = serializers.CharField(source='startup.company_name', read_only=True)
+    startup_logo = serializers.ImageField(source='startup.logo', read_only=True)
+
+    class Meta:
+        model = Project
+        fields = [
+            'id', 'title', 'description', 'startup_name', 'startup_logo',
+            'funding_goal', 'current_funding', 'status', 'created_at'
+        ]
+
+class SubscriptionCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subscription
+        fields = ['project', 'investment_amount']
+        read_only_fields = ['investor']
+
+    def validate(self, data):
+        project = data.get('project')
+        investment_amount = data.get('investment_amount')
+
+        if not project:
+            raise serializers.ValidationError({"project": "This field is required."})
+
+        if project.current_funding >= project.funding_goal:
+            raise serializers.ValidationError("This project is already fully funded.")
+
+        remaining_funding = project.funding_goal - project.current_funding
+        if investment_amount > remaining_funding:
+            raise serializers.ValidationError(
+                f"The investment amount exceeds the remaining funding. Only {remaining_funding} is available."
+            )
+            
+        return data
+
+    def create(self, validated_data):
+        project = validated_data['project']
+        investment_amount = validated_data['investment_amount']
+        
+        project.current_funding += investment_amount
+        project.save()
+
+        return Subscription.objects.create(
+            investor=self.context['request'].user,
+            **validated_data
+        )
+
 
 class CategorySerializer(serializers.ModelSerializer):
     """
@@ -94,7 +144,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         business_plan = data.get('business_plan')
         is_participant = data.get('is_participant')
 
-        # fallback to instance values for partial updates
         if self.instance:
             funding_goal = funding_goal if funding_goal is not None else self.instance.funding_goal
             current_funding = current_funding if current_funding is not None else self.instance.current_funding

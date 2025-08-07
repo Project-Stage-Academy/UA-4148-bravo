@@ -1,9 +1,27 @@
 import logging
 from functools import wraps
+from rest_framework import permissions
 from django.core.exceptions import PermissionDenied
 
 logger = logging.getLogger(__name__)
 
+class IsInvestor(permissions.BasePermission):
+    """
+    Custom permission to only allow investors to create subscriptions.
+    """
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'investor'
+
+
+class IsStartupUser(permissions.BasePermission):
+    """
+    Custom permission to only allow startup users to edit their own profile.
+    """
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and hasattr(request.user, 'startup')
+
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
 
 def required_permissions(perms):
     """
