@@ -2,7 +2,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from projects.models import Project, Category
-from profiles.models import Startup 
+from profiles.models import Startup
 from common.enums import ProjectStatus
 
 from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
@@ -76,6 +76,9 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_status_display(self, obj):
+        """
+        Returns the human-readable label for the project's status.
+        """
         return ProjectStatus(obj.status).label if obj.status else None
 
     def validate(self, data):
@@ -91,6 +94,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         business_plan = data.get('business_plan')
         is_participant = data.get('is_participant')
 
+        # fallback to instance values for partial updates
         if self.instance:
             funding_goal = funding_goal if funding_goal is not None else self.instance.funding_goal
             current_funding = current_funding if current_funding is not None else self.instance.current_funding

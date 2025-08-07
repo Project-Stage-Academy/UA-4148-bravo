@@ -13,7 +13,7 @@ from django.conf.urls.static import static
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
-
+# API endpoints grouped by app
 api_urlpatterns = [
     # User authentication endpoints
     path('users/', include('users.urls')),
@@ -30,7 +30,7 @@ api_urlpatterns = [
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/', include(api_urlpatterns)), 
+    path('api/v1/', include(api_urlpatterns)),  # Versioned API path
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),

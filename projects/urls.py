@@ -9,3 +9,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('search/', ProjectDocumentView.as_view({'get': 'list'}), name='project-search'),
 ]
+
+# To activate these routes, include this file in your main urls.py (e.g., config/urls.py):
+# path('api/', include('projects.urls'))

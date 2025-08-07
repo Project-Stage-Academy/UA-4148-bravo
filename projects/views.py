@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for viewing and editing projects.
+    Optimized to avoid N+1 queries by using select_related.
+    Includes filtering, searching, and ordering.
+    """
     queryset = Project.objects.select_related('startup', 'category').all()
     serializer_class = ProjectSerializer
 
@@ -61,7 +66,13 @@ class ProjectDocumentView(DocumentViewSet):
         try:
             return super().list(request, *args, **kwargs)
         except (ConnectionError, TransportError) as e:
+            logger.error("Elasticsearch connection error: %s", e)
             return Response(
                 {"detail": "Search service is temporarily unavailable. Please try again later."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['status', 'category', 'startup']
+    search_fields = ['title', 'description', 'email']
+    ordering_fields = ['created_at', 'funding_goal', 'current_funding']
+    ordering = ['-created_at']
