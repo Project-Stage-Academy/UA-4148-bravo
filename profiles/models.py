@@ -7,7 +7,7 @@ from django_countries.fields import CountryField
 from common.company import Company
 from common.enums import Stage
 from validation.validate_names import validate_forbidden_names, validate_latin
-from validation.mixins import SocialLinkValidationMixin  # Предполагаемое имя миксина
+from validation.validate_social_links import SocialLinksValidationMixin  
 
 
 class Location(models.Model):
@@ -111,7 +111,7 @@ class Industry(models.Model):
         verbose_name_plural = "Industries"
 
 
-class Startup(SocialLinkValidationMixin, Company):
+class Startup(SocialLinksValidationMixin, Company):
     user = models.OneToOneField(
         'users.User',
         on_delete=models.CASCADE,

@@ -5,7 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
 
-from .models import Project, Subscription
+from .models import Project
+from investments.models import Subscription
 from .serializers import ProjectSerializer, SubscriptionCreateSerializer
 from users.permissions import IsInvestor
 

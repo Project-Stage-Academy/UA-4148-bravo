@@ -9,7 +9,8 @@ from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
 from projects.documents import ProjectDocument
 
 from rest_framework import serializers
-from .models import Subscription, Project
+from .models import Project
+from investments.models import Subscription
 
 class ProjectSerializer(serializers.ModelSerializer):
     startup_name = serializers.CharField(source='startup.company_name', read_only=True)
