@@ -33,6 +33,7 @@
 
 .participant-card--info {
     flex: 1;
+    border-radius: 0 0 12px 12px;
     display: flex;
     flex-direction: column;
     background-color: var(--participant-card-color);
