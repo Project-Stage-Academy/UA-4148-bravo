@@ -1,5 +1,3 @@
-from urllib.parse import urlparse
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -9,6 +7,7 @@ from django_countries.fields import CountryField
 from common.company import Company
 from common.enums import Stage
 from validation.validate_names import validate_forbidden_names, validate_latin
+from validation.mixins import SocialLinkValidationMixin  # Предполагаемое имя миксина
 
 
 class Location(models.Model):
@@ -112,7 +111,7 @@ class Industry(models.Model):
         verbose_name_plural = "Industries"
 
 
-class Startup(Company):
+class Startup(SocialLinkValidationMixin, Company):
     user = models.OneToOneField(
         'users.User',
         on_delete=models.CASCADE,
@@ -129,33 +128,18 @@ class Startup(Company):
         """
         Validates the Startup instance.
 
-        - Ensures social_links contain only supported platforms.
-        - Validates that each URL has a domain matching the expected domains for the platform.
+        - Ensures stage is set.
+        - Delegates social_links validation to SocialLinkValidationMixin.
 
         Raises:
-            ValidationError: A dictionary of field-specific error messages.
+            ValidationError: If validation fails.
         """
         super().clean()
 
         if not self.stage:
             self.stage = Stage.IDEA
 
-        errors = {}
-
-        for platform, url in self.social_links.items():
-            platform_lc = platform.lower()
-            if platform_lc not in settings.ALLOWED_SOCIAL_PLATFORMS:
-                errors[platform] = f"{platform} is not a supported platform."
-                continue
-
-            parsed = urlparse(url)
-            domain = parsed.netloc.lower()
-            allowed_domains = settings.ALLOWED_SOCIAL_PLATFORMS[platform_lc]
-            if not any(domain.endswith(allowed) for allowed in allowed_domains):
-                errors[platform] = f"URL domain '{domain}' is not valid for {platform}."
-
-        if errors:
-            raise ValidationError({'social_links': errors})
+        self.validate_social_links()
 
     def __str__(self):
         return f"{self.company_name} (Startup, User ID: {self.user_id})"
@@ -203,6 +187,7 @@ class Investor(Company):
         ordering = ["company_name"]
         verbose_name = "Investor"
         verbose_name_plural = "Investors"
+
 
 
 

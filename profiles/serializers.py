@@ -1,10 +1,9 @@
 from rest_framework import serializers
-from urllib.parse import urlparse
 
 from profiles.models import Startup, Investor
 from projects.serializers import ProjectSerializer
-from common.enums import Stage  # Correct enum import
-from validation.validate_social_links import SocialLinksValidationMixin  #  Updated import
+from common.enums import Stage
+from validation.validate_social_links import SocialLinksValidationMixin
 
 
 class StartupShortSerializer(serializers.ModelSerializer):
@@ -47,6 +46,12 @@ class StartupSerializer(SocialLinksValidationMixin, serializers.ModelSerializer)
         if not value:
             raise serializers.ValidationError("Company name must not be empty.")
         return value
+
+    def validate_social_links(self, value):
+        """
+        Delegates validation to the shared mixin.
+        """
+        return super().validate_social_links(value)
 
     def validate(self, data):
         """
@@ -113,4 +118,10 @@ class InvestorSerializer(SocialLinksValidationMixin, serializers.ModelSerializer
         if not value:
             raise serializers.ValidationError("Company name must not be empty.")
         return value
+
+    def validate_social_links(self, value):
+        """
+        Delegates validation to the shared mixin.
+        """
+        return super().validate_social_links(value)
 

@@ -7,21 +7,28 @@ from common.enums import ProjectStatus
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    """Read-only serializer for displaying category details."""
+    """
+    Read-only serializer for displaying category details.
+    """
     class Meta:
         model = Category
         fields = ['id', 'name', 'description']
 
 
 class StartupSerializer(serializers.ModelSerializer):
-    """Read-only serializer for displaying startup details."""
+    """
+    Read-only serializer for displaying startup details.
+    """
     class Meta:
         model = Startup
         fields = ['id', 'company_name', 'stage', 'website']
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    """Main serializer for Project with validation logic and nested read-only fields."""
+    """
+    Main serializer for Project.
+    Includes nested read-only fields and cross-field validation logic.
+    """
     category = CategorySerializer(read_only=True)
     startup = StartupSerializer(read_only=True)
 
@@ -66,6 +73,9 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_status_display(self, obj):
+        """
+        Returns the human-readable label for the project's status.
+        """
         return ProjectStatus(obj.status).label if obj.status else None
 
     def validate(self, data):
@@ -104,4 +114,3 @@ class ProjectSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
         return data
-
