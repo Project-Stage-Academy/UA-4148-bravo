@@ -242,4 +242,3 @@ class ProjectAPITests(APITestCase):
         url = reverse('project-detail', args=[project.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-

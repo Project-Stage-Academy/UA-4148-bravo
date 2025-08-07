@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'users',
     'profiles',
     'projects',
+    'startups',
     'communications',
     'dashboard',
     'investments',

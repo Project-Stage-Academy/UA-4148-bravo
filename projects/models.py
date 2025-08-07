@@ -13,6 +13,10 @@ from common.enums import ProjectStatus
 
 
 class Category(models.Model):
+    """
+    Represents a category for projects or other entities.
+    """
+
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -32,8 +36,12 @@ class Category(models.Model):
 
 
 class Project(models.Model):
+    """
+    Represents a startup project with details about funding, status, and documentation.
+    """
+
     startup = models.ForeignKey(
-        'profiles.Startup',
+        'startups.Startup',
         on_delete=models.CASCADE,
         related_name='projects'
     )
@@ -65,10 +73,7 @@ class Project(models.Model):
         help_text="Duration in days",
         blank=True,
         default=1,
-        validators=[
-            MinValueValidator(1),
-            MaxValueValidator(3650)
-        ]
+        validators=[MinValueValidator(1), MaxValueValidator(3650)]
     )
 
     funding_goal = models.DecimalField(
@@ -140,4 +145,3 @@ class Project(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['title', 'startup'], name='unique_startup_project_title')
         ]
-

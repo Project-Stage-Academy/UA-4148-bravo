@@ -5,6 +5,9 @@ from projects.models import Project, Category
 from profiles.models import Startup
 from common.enums import ProjectStatus
 
+from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
+from projects.documents import ProjectDocument
+
 
 class CategorySerializer(serializers.ModelSerializer):
     """
@@ -114,3 +117,9 @@ class ProjectSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
         return data
+
+
+class ProjectDocumentSerializer(DocumentSerializer):
+    class Meta:
+        document = ProjectDocument
+        fields = ('id', 'title', 'description', 'status', 'startup', 'category')
