@@ -22,7 +22,7 @@ class Category(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        super().clean() 
+        super().clean()
         validate_forbidden_names(self.name, field_name="name")
 
     def __str__(self):
@@ -40,15 +40,8 @@ class Project(models.Model):
     Represents a startup project with details about funding, status, and documentation.
     """
 
-    STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('in_progress', 'In Progress'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled')
-    ]
-
     startup = models.ForeignKey(
-        'startups.Startup', 
+        'startups.Startup',
         on_delete=models.CASCADE,
         related_name='projects'
     )
