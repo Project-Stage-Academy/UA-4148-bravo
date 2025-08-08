@@ -1,33 +1,42 @@
-from rest_framework.test import APITestCase
-from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework import status
+from rest_framework.test import APITestCase
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+from rest_framework_simplejwt.tokens import RefreshToken
 
-User = get_user_model()
+from users.models import UserRole, User
+
 
 class JWTLogoutTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='test_user', password='test_password123')
-        self.login_url = '/api/users/auth/jwt/create/'
-        self.logout_url = '/api/users/auth/jwt/logout/'
-        self.refresh_url = '/api/users/auth/jwt/refresh/'
+        role = UserRole.objects.get(role=UserRole.Role.USER)
+        self.user = User.objects.create_user(
+            email='test_user@example.com',
+            password='test_password123',
+            first_name='Api',
+            last_name='Startup',
+            role=role,
+        )
+        self.login_url = '/api/v1/users/login/'
+        self.logout_url = '/api/v1/users/auth/jwt/logout/'
+        self.refresh_url = '/api/v1/users/auth/jwt/refresh/'
 
         # Get tokens
         response = self.client.post(self.login_url, {
-            'username': 'test_user',
+            'email': 'test_user@example.com',
             'password': 'test_password123'
         })
+        print(response.status_code, response.content)
         self.refresh_token = response.data['refresh']
         self.access_token = response.data['access']
 
     def test_logout_blacklists_refresh_token(self):
-        response = self.client.post(self.logout_url, {
-            'refresh': self.refresh_token
-        }, format='json')
+        refresh = RefreshToken(self.refresh_token)
+        jti = refresh['jti']
+        token = OutstandingToken.objects.get(jti=jti)
 
+        response = self.client.post(self.logout_url, {'refresh': self.refresh_token}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        token = OutstandingToken.objects.get(token=self.refresh_token)
         self.assertTrue(BlacklistedToken.objects.filter(token=token).exists())
 
     def test_blacklisted_token_cannot_be_used(self):

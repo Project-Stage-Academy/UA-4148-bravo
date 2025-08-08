@@ -11,7 +11,7 @@ def api_client():
 
 @pytest.fixture
 def test_user(db):
-    role, _ = UserRole.objects.get_or_create(role="user")  # или нужная роль
+    role, _ = UserRole.objects.get_or_create(role="user")
     return User.objects.create_user(
         email="testuser@example.com",
         password="testpass",
@@ -22,7 +22,7 @@ def test_user(db):
 
 @pytest.mark.django_db
 def test_successful_login(api_client, test_user):
-    response = api_client.post("/api/users/login/", {
+    response = api_client.post("/api/v1/users/login/", {
         "email": "testuser@example.com",
         "password": "testpass"
     })
@@ -30,12 +30,12 @@ def test_successful_login(api_client, test_user):
     data = response.json()
     assert "access" in data
     assert "refresh" in data
-    assert data["user_id"] == test_user.id
+    assert data["user_id"] == test_user.user_id
     assert data["email"] == test_user.email
 
 @pytest.mark.django_db
 def test_login_wrong_password(api_client, test_user):
-    response = api_client.post("/api/users/login/", {
+    response = api_client.post("/api/v1/users/login/", {
         "email": "testuser@example.com",
         "password": "wrongpass"
     })
@@ -43,7 +43,7 @@ def test_login_wrong_password(api_client, test_user):
 
 @pytest.mark.django_db
 def test_login_nonexistent_user(api_client):
-    response = api_client.post("/api/users/login/", {
+    response = api_client.post("/api/v1/users/login/", {
         "email": "ghost@example.com",
         "password": "nopass"
     })
@@ -51,7 +51,7 @@ def test_login_nonexistent_user(api_client):
 
 @pytest.mark.django_db
 def test_login_missing_fields(api_client):
-    response = api_client.post("/api/users/login/", {
+    response = api_client.post("/api/v1/users/login/", {
         "email": "testuser@example.com"
     })
     assert response.status_code == 400

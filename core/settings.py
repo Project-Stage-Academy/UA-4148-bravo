@@ -96,8 +96,10 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': (
         'rest_framework_simplejwt.tokens.AccessToken',
-        'rest_framework.simplejwt.tokens.RefreshToken',
+        'rest_framework_simplejwt.tokens.RefreshToken',
     ),
+    'USER_ID_FIELD': 'user_id',
+    'USER_ID_CLAIM': 'user_id',
 }
 
 DJOSER = {
