@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   web:
     build: .
@@ -10,12 +12,16 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     networks:
       - forum
-    
+
   fastapi:
     build: .
+    container_name: fastapi
     command: uvicorn core.asgi:application --host 0.0.0.0 --port 8001 --reload
     ports:
       - "8001:8001"
@@ -24,30 +30,35 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - forum
 
   elasticsearch:
-    image: elasticsearch:8.13.4 
+    image: elasticsearch:8.13.4
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false 
+      - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
     ports:
-      - "9200:9200" 
+      - "9200:9200"
       - "9300:9300"
     volumes:
-      - esdata:/usr/share/elasticsearch/data 
+      - esdata:/usr/share/elasticsearch/data
     ulimits:
       memlock:
         soft: -1
         hard: -1
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s"]
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - forum
 
   db:
     image: postgres:14
@@ -81,7 +92,8 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin/data
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - forum
 
@@ -90,5 +102,6 @@ volumes:
   pgadmin_data:
   esdata:
     driver: local
+
 networks:
   forum:

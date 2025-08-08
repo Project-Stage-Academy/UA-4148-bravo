@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 from users.models import User
-from startups.models import Startup, Industry, Location
+from startups.models import Startup
 
 
 class StartupElasticsearchTests(TestCase):
@@ -13,64 +13,58 @@ class StartupElasticsearchTests(TestCase):
         """Prepare test data for all test cases."""
         self.client = APIClient()
 
-        # Create and authenticate user
+        # Create and save the user directly
         self.user = User.objects.create_user(
             email="test@example.com",
             password="testpass123"
         )
+
+        # Authenticate the API client as this user
         self.client.force_authenticate(user=self.user)
 
-        # Create industries
-        tech = Industry.objects.create(name="Technology")
-        energy = Industry.objects.create(name="Energy")
-        healthcare = Industry.objects.create(name="Healthcare")
-
-        # Create locations
-        usa = Location.objects.create(country="USA")
-        germany = Location.objects.create(country="Germany")
-        canada = Location.objects.create(country="Canada")
-
-        # Create startups
+        # Create several startup objects for testing
         self.startup1 = Startup.objects.create(
+            owner=self.user,
             company_name="TechVision",
             description="Innovative AI solutions",
-            location=usa,
-            funding_stage="Seed",
+            industry="Technology",
             investment_needs="500000",
             company_size="Small",
+            location_country="USA",
             is_active=True
         )
-        self.startup1.industries.add(tech)
 
         self.startup2 = Startup.objects.create(
+            owner=self.user,
             company_name="GreenFuture",
             description="Eco-friendly energy startup",
-            location=germany,
-            funding_stage="Series A",
+            industry="Energy",
             investment_needs="750000",
             company_size="Medium",
+            location_country="Germany",
             is_active=True
         )
-        self.startup2.industries.add(energy)
 
         self.startup3 = Startup.objects.create(
+            owner=self.user,
             company_name="MediCare Plus",
             description="Healthcare services for seniors",
-            location=canada,
-            funding_stage="Series B",
+            industry="Healthcare",
             investment_needs="1000000",
             company_size="Large",
+            location_country="Canada",
             is_active=False
         )
-        self.startup3.industries.add(healthcare)
 
     def test_empty_query_returns_all_startups(self):
+        """Empty search should return all startups."""
         url = reverse('startup-search')
         response = self.client.get(url, {})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 3)
 
     def test_search_by_description(self):
+        """Search by keyword in description."""
         url = reverse('startup-search')
         response = self.client.get(url, {'q': 'AI'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -78,6 +72,7 @@ class StartupElasticsearchTests(TestCase):
         self.assertEqual(response.data[0]['company_name'], "TechVision")
 
     def test_filter_by_company_size(self):
+        """Filter startups by company size."""
         url = reverse('startup-search')
         response = self.client.get(url, {'company_size': 'Medium'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -85,6 +80,7 @@ class StartupElasticsearchTests(TestCase):
         self.assertEqual(response.data[0]['company_name'], "GreenFuture")
 
     def test_filter_by_industry_and_active_status(self):
+        """Filter startups by industry and active status."""
         url = reverse('startup-search')
         response = self.client.get(url, {
             'industry': 'Healthcare',
@@ -95,6 +91,7 @@ class StartupElasticsearchTests(TestCase):
         self.assertEqual(response.data[0]['company_name'], "MediCare Plus")
 
     def test_filter_by_location_country(self):
+        """Filter startups by country."""
         url = reverse('startup-search')
         response = self.client.get(url, {'location_country': 'Germany'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -102,12 +99,14 @@ class StartupElasticsearchTests(TestCase):
         self.assertEqual(response.data[0]['company_name'], "GreenFuture")
 
     def test_no_results_for_non_existent_company_name(self):
+        """Searching for a company that does not exist should return empty list."""
         url = reverse('startup-search')
         response = self.client.get(url, {'q': 'NonExistent'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
     def test_ordering_by_company_name(self):
+        """Order startups by company name alphabetically."""
         url = reverse('startup-search')
         response = self.client.get(url, {'ordering': 'company_name'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -115,6 +114,7 @@ class StartupElasticsearchTests(TestCase):
         self.assertEqual(names, sorted(names))
 
     def test_search_by_investment_needs(self):
+        """Search startups by investment needs."""
         url = reverse('startup-search')
         response = self.client.get(url, {'investment_needs': '500000'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -122,6 +122,7 @@ class StartupElasticsearchTests(TestCase):
         self.assertEqual(response.data[0]['company_name'], "TechVision")
 
     def test_combined_filters_work_correctly(self):
+        """Combine filters to narrow down search results."""
         url = reverse('startup-search')
         response = self.client.get(url, {
             'industry': 'Technology',
@@ -133,10 +134,12 @@ class StartupElasticsearchTests(TestCase):
         self.assertEqual(response.data[0]['company_name'], "TechVision")
 
     def test_short_view_returns_minimal_data(self):
+        """Short view should return only minimal fields."""
         url = reverse('startup-search')
         response = self.client.get(url, {'short': 'true'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        # Ensure only minimal fields are returned
         if response.data:
             keys = list(response.data[0].keys())
             self.assertTrue(set(keys).issubset({'id', 'company_name'}))

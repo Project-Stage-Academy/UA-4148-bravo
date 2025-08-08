@@ -311,11 +311,3 @@ ELASTICSEARCH_DSL = {
         'hosts': 'http://elasticsearch:9200'
     }
 }
-
-if os.environ.get("USE_SQLITE_FOR_TESTS") == "1":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": ":memory:",
-        }
-    }
