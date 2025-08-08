@@ -1,5 +1,6 @@
 import "./button.css";
 import PropTypes from 'prop-types';
+import clsx from 'clsx';
 
 /**
  * @param {Object} props
@@ -9,7 +10,7 @@ import PropTypes from 'prop-types';
  */
 function Button({  variant = 'primary', className = '', children, ...rest }) {
     return (
-        <button className={`button button__${variant}-color ${className}`} {...rest}>
+        <button className={clsx("button", `button__${variant}-color`, className)} {...rest}>
             {children}
         </button>
     );

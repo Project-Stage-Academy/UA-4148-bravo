@@ -1,0 +1,20 @@
+.image-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.main-image,
+.pattern-fallback {
+    width: 100%;
+    height: 100%;
+    object-fit: none;
+    display: block;
+}
+
+.pattern-fallback {
+    background-repeat: repeat;
+    background-size: 50px 50px;
+    background-image: url(../../../public/pictures/svg/img-fallback.svg);
+}

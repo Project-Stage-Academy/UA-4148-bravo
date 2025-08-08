@@ -77,15 +77,8 @@ function App() {
                         {/* Profile */}
                         <Route path="profile">
 
-                            {/* User profile */}
-                            <Route path="user" element={<ProfilePage />}>
-
-                                {/* Profile editing */}
-                                <Route path="edit" element={<ProfileEditing />} />
-                            </Route>
-
                             {/* Company profile */}
-                            <Route path="company" element={<ProfilePage />}>
+                            <Route path="company/:uid" element={<ProfilePage />}>
 
                                 {/* Profile editing */}
                                 <Route path="edit" element={<ProfileEditing />} />
