@@ -1,6 +1,9 @@
 import pytest
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
+from users.models import UserRole
+
+User = get_user_model()
 
 @pytest.fixture
 def api_client():
@@ -8,12 +11,19 @@ def api_client():
 
 @pytest.fixture
 def test_user(db):
-    return User.objects.create_user(username="testuser", password="testpass")
+    role, _ = UserRole.objects.get_or_create(role="user")  # или нужная роль
+    return User.objects.create_user(
+        email="testuser@example.com",
+        password="testpass",
+        first_name="Test",
+        last_name="User",
+        role=role
+    )
 
 @pytest.mark.django_db
 def test_successful_login(api_client, test_user):
     response = api_client.post("/api/users/login/", {
-        "username": "testuser",
+        "email": "testuser@example.com",
         "password": "testpass"
     })
     assert response.status_code == 200
@@ -21,12 +31,12 @@ def test_successful_login(api_client, test_user):
     assert "access" in data
     assert "refresh" in data
     assert data["user_id"] == test_user.id
-    assert data["username"] == test_user.username
+    assert data["email"] == test_user.email
 
 @pytest.mark.django_db
 def test_login_wrong_password(api_client, test_user):
     response = api_client.post("/api/users/login/", {
-        "username": "testuser",
+        "email": "testuser@example.com",
         "password": "wrongpass"
     })
     assert response.status_code == 401
@@ -34,7 +44,7 @@ def test_login_wrong_password(api_client, test_user):
 @pytest.mark.django_db
 def test_login_nonexistent_user(api_client):
     response = api_client.post("/api/users/login/", {
-        "username": "ghost",
+        "email": "ghost@example.com",
         "password": "nopass"
     })
     assert response.status_code == 401
@@ -42,8 +52,6 @@ def test_login_nonexistent_user(api_client):
 @pytest.mark.django_db
 def test_login_missing_fields(api_client):
     response = api_client.post("/api/users/login/", {
-        "username": "testuser"
+        "email": "testuser@example.com"
     })
     assert response.status_code == 400
-
-

@@ -26,6 +26,29 @@ services:
     depends_on:
       - db
 
+  elasticsearch:
+    image: elasticsearch:8.13.4 
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false 
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200" 
+      - "9300:9300"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data 
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   db:
     image: postgres:14
     container_name: db
@@ -65,5 +88,7 @@ services:
 volumes:
   postgres_data:
   pgadmin_data:
+  esdata:
+    driver: local
 networks:
   forum:
