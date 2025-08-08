@@ -1,8 +1,14 @@
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenBlacklistView
 from .views import CustomTokenObtainPairView
+from .views import CustomPasswordResetView, CustomPasswordResetConfirmView
 
 urlpatterns = [
+    # ----------------------------------------
+    # Custom password recovery endpoints
+    # ----------------------------------------
+    path('reset_password/', CustomPasswordResetView.as_view(), name="custom_reset_password"),
+    path('reset_password_confirm/', CustomPasswordResetConfirmView.as_view(), name="custom_reset_password_confirm"),
     # ----------------------------------------
     # Custom authentication endpoint
     # ----------------------------------------
