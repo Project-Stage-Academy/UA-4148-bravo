@@ -6,11 +6,13 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Security and debug settings
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost',
                        cast=lambda v: [s.strip() for s in v.split(',')])
 
+# Installed apps
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -18,6 +20,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+
+    # Local apps
     'users',
     'profiles',
     'projects',
@@ -25,6 +30,8 @@ INSTALLED_APPS = [
     'communications',
     'dashboard',
     'investments',
+
+    # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
@@ -32,19 +39,62 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'django_elasticsearch_dsl',
-    'drf_spectacular'
+    'drf_spectacular',
+
+    # OAuth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
 ]
 
+SITE_ID = 1
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# OAuth provider configuration
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': config('GOOGLE_CLIENT_ID'),
+            'secret': config('GOOGLE_CLIENT_SECRET'),
+            'key': '',
+        },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+            'prompt': 'select_account',
+        },
+        'FETCH_USERINFO': True,
+    },
+    'github': {
+        'APP': {
+            'client_id': config('GITHUB_CLIENT_ID'),
+            'secret': config('GITHUB_CLIENT_SECRET'),
+            'key': '',
+        },
+        'SCOPE': ['user:email'],
+    }
+}
+
+SOCIALACCOUNT_EMAIL_REQUIRED = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+SOCIALACCOUNT_AUTO_SIGNUP = True
 
 AUTH_USER_MODEL = 'users.User'
 
+# DRF and JWT settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
-
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
@@ -54,7 +104,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': (
         'rest_framework_simplejwt.tokens.AccessToken',
-        'rest_framework.simplejwt.tokens.RefreshToken',
+        'rest_framework_simplejwt.tokens.RefreshToken',
     ),
 }
 
@@ -69,7 +119,9 @@ DJOSER = {
     },
 }
 
+# Middleware
 MIDDLEWARE = [
+    "allauth.account.middleware.AccountMiddleware",  # OAuth middleware
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -82,6 +134,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
+# Templates
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -99,6 +152,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
+# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -110,6 +164,7 @@ DATABASES = {
     }
 }
 
+# Password validation
 if DEBUG:
     AUTH_PASSWORD_VALIDATORS = []
 else:
@@ -126,11 +181,13 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
+# Internationalization
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='UTC')
 USE_I18N = True
 USE_TZ = True
 
+# Static and media files
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
@@ -140,6 +197,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 
 # File validation settings
@@ -163,7 +221,7 @@ ALLOWED_DOCUMENT_MIME_TYPES = [
     "application/vnd.oasis.opendocument.text"
 ]
 
-# Social platform validation settings
+# Allowed social platforms
 ALLOWED_SOCIAL_PLATFORMS = {
     'facebook': ['facebook.com'],
     'twitter': ['twitter.com'],
@@ -174,7 +232,7 @@ ALLOWED_SOCIAL_PLATFORMS = {
     'telegram': ['t.me', 'telegram.me'],
 }
 
-# Logs
+# Logging settings
 LOG_DIR = BASE_DIR / 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -306,12 +364,14 @@ if 'test' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
+# Elasticsearch
 ELASTICSEARCH_DSL = {
     'default': {
         'hosts': 'http://elasticsearch:9200'
     }
 }
 
+# SQLite for test environments
 if os.environ.get("USE_SQLITE_FOR_TESTS") == "1":
     DATABASES = {
         "default": {
