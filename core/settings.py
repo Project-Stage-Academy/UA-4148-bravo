@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'users',
     'investors',
     'projects',
@@ -31,7 +32,53 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'corsheaders',
+    
+    # OAuth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
 ]
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': config('GOOGLE_CLIENT_ID'),
+            'secret': config('GOOGLE_CLIENT_SECRET'),
+            'key': '',
+        },
+        'SCOPE': ['profile', 'email'], 
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+            'prompt': 'select_account', 
+        },
+        'FETCH_USERINFO': True,  
+    },
+
+    'github': {
+        'APP': {
+            'client_id': config('GITHUB_CLIENT_ID'),
+            'secret': config('GITHUB_CLIENT_SECRET'),
+            'key': '',
+        },
+        'SCOPE': ['user:email'],
+    }
+}
+
+# Ensure email is saved and verified
+SOCIALACCOUNT_EMAIL_REQUIRED = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory' 
+SOCIALACCOUNT_AUTO_SIGNUP = True
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -65,6 +112,7 @@ DJOSER = {
 }
 
 MIDDLEWARE = [
+    "allauth.account.middleware.AccountMiddleware", #OAuth
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
