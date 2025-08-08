@@ -1,12 +1,14 @@
-from rest_framework.test import APITestCase
-from rest_framework import status
-from projects.models import Project, Category
-from projects.documents import ProjectDocument
-from startups.models import Startup
-from django.urls import reverse
-from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl import Index
 import time
+
+from django.urls import reverse
+from elasticsearch_dsl import Index
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+from projects.documents import ProjectDocument
+from projects.models import Project, Category
+from startups.models import Startup
+
 
 class ProjectElasticsearchTests(APITestCase):
     def setUp(self):

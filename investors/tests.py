@@ -1,13 +1,18 @@
 from datetime import date
-from django.test import TestCase
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from rest_framework.test import APITestCase
-from rest_framework import status
+from django.test import TestCase
 from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient
+from rest_framework.test import APITestCase
 
-from profiles.models import Industry, Location, Startup, Investor
-from profiles.serializers import StartupSerializer, InvestorSerializer
+from investors.models import Investor
+from investors.serializers import InvestorSerializer
+from startups.models import Industry, Location, Startup
+from startups.serializers import StartupSerializer
+from users.models import UserRole
 
 User = get_user_model()
 
@@ -20,7 +25,15 @@ class StartupSerializerTests(TestCase):
     def setUp(self):
         self.industry = Industry.objects.create(name='AI')
         self.location = Location.objects.create(city='New York', region='NY', country='US')
-        self.user = User.objects.create(username='founder')
+
+        role = UserRole.objects.get(role='user')
+        self.user = User.objects.create_user(
+            email='apiinvestor@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Investor',
+            role=role,
+        )
 
     def test_valid_startup_data(self):
         data = {
@@ -103,7 +116,15 @@ class StartupSerializerTests(TestCase):
 
 class InvestorSerializerTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create(username='investor')
+        role = UserRole.objects.get(role='user')
+
+        self.user = User.objects.create_user(
+            email='apiinvestor@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Investor',
+            role=role,
+        )
 
     def test_valid_investor_data(self):
         data = {
@@ -153,12 +174,26 @@ class InvestorSerializerTests(TestCase):
 
 class StartupModelCleanTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create(username='cleanuser')
+        role = UserRole.objects.get(role='user')
+
+        self.user = User.objects.create_user(
+            email='apiinvestor@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Investor',
+            role=role,
+        )
+
+        self.industry = Industry.objects.create(name="Technology")
+        self.location = Location.objects.create(country="US")
 
     def test_invalid_social_links_clean_should_raise(self):
         startup = Startup(
             user=self.user,
             company_name='CleanTech',
+            founded_year=2022,
+            industry=self.industry,
+            location=self.location,
             social_links={
                 'linkedin': 'https://notlinkedin.com/profile',
                 'unknown': 'https://example.com'
@@ -171,12 +206,26 @@ class StartupModelCleanTests(TestCase):
 
 class InvestorModelCleanTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create(username='cleaninvestor')
+        role = UserRole.objects.get(role='user')
+
+        self.user = User.objects.create_user(
+            email='apiinvestor@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Investor',
+            role=role,
+        )
+
+        self.industry = Industry.objects.create(name="Technology")
+        self.location = Location.objects.create(country="US")
 
     def test_valid_clean_should_pass(self):
         investor = Investor(
             user=self.user,
             company_name='InvestX',
+            founded_year=2020,
+            industry=self.industry,
+            location=self.location,
             fund_size=1000000,
             stage='mvp',
             social_links={
@@ -195,8 +244,21 @@ class InvestorModelCleanTests(TestCase):
 
 class StartupAPITests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='apiuser', password='pass')
-        self.client.login(username='apiuser', password='pass')
+        role = UserRole.objects.get(role='user')
+
+        self.user = User.objects.create_user(
+            email='apiinvestor@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Investor',
+            role=role,
+        )
+
+        self.industry = Industry.objects.create(name="Technology")
+        self.location = Location.objects.create(country="US")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
 
     def test_create_startup(self):
         url = reverse('startup-list')
@@ -212,7 +274,13 @@ class StartupAPITests(APITestCase):
         self.assertEqual(response.data['company_name'], 'API Startup')
 
     def test_get_startup_list(self):
-        Startup.objects.create(user=self.user, company_name='ListStartup')
+        Startup.objects.create(
+            user=self.user,
+            company_name='ListStartup',
+            founded_year=2022,
+            industry=self.industry,
+            location=self.location,
+        )
         url = reverse('startup-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -221,8 +289,21 @@ class StartupAPITests(APITestCase):
 
 class InvestorAPITests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='apiinvestor', password='pass')
-        self.client.login(username='apiinvestor', password='pass')
+        role = UserRole.objects.get(role='user')
+
+        self.user = User.objects.create_user(
+            email='apiinvestor@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Investor',
+            role=role,
+        )
+
+        self.industry = Industry.objects.create(name="Technology")
+        self.location = Location.objects.create(country="US")
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
 
     def test_create_investor(self):
         url = reverse('investor-list')
@@ -236,14 +317,26 @@ class InvestorAPITests(APITestCase):
         self.assertEqual(response.data['company_name'], 'API Investor')
 
     def test_get_investor_list(self):
-        Investor.objects.create(user=self.user, company_name='ListInvestor')
+        Investor.objects.create(
+            user=self.user,
+            company_name='ListInvestor',
+            founded_year=2019,
+            industry=self.industry,
+            location=self.location,
+        )
         url = reverse('investor-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
     def test_update_investor(self):
-        investor = Investor.objects.create(user=self.user, company_name='OldName')
+        investor = Investor.objects.create(
+            user=self.user,
+            company_name='OldName',
+            founded_year=2020,
+            industry=self.industry,
+            location=self.location
+        )
         url = reverse('investor-detail', args=[investor.id])
         data = {'company_name': 'UpdatedName'}
         response = self.client.patch(url, data, format='json')
@@ -251,7 +344,13 @@ class InvestorAPITests(APITestCase):
         self.assertEqual(response.data['company_name'], 'UpdatedName')
 
     def test_delete_investor(self):
-        investor = Investor.objects.create(user=self.user, company_name='ToDelete')
+        investor = Investor.objects.create(
+            user=self.user,
+            company_name='ToDelete',
+            founded_year=2019,
+            industry=self.industry,
+            location=self.location
+        )
         url = reverse('investor-detail', args=[investor.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code)
