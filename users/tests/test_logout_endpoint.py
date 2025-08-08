@@ -1,12 +1,13 @@
 from rest_framework import status
-from rest_framework.test import APITestCase
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from users.models import UserRole, User
+from users.tests.test_setup import BaseUserTestCase
 
 
-class JWTLogoutTest(APITestCase):
+class JWTLogoutTest(BaseUserTestCase):
+
     def setUp(self):
         role = UserRole.objects.get(role=UserRole.Role.USER)
         self.user = User.objects.create_user(
