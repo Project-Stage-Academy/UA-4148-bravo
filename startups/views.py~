@@ -8,7 +8,6 @@ from django_elasticsearch_dsl_drf.filter_backends import (
 )
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
-from elasticsearch import ConnectionError, TransportError
 
 from .documents import StartupDocument
 from .serializers import StartupDocumentSerializer, StartupDetailSerializer
@@ -18,7 +17,7 @@ from .models import Startup
 class StartupDocumentView(DocumentViewSet):
     """
     Elasticsearch-backed viewset for search.
-    Endpoint: /startups/search/
+    Endpoint: /.../search/
     """
     document = StartupDocument
     serializer_class = StartupDocumentSerializer
@@ -57,9 +56,6 @@ class StartupDocumentView(DocumentViewSet):
     )
 
     def list(self, request, *args, **kwargs):
-        """
-        Handles search requests with graceful fallback if Elasticsearch is unavailable.
-        """
         try:
             return super().list(request, *args, **kwargs)
         except (ConnectionError, TransportError):
@@ -72,10 +68,10 @@ class StartupDocumentView(DocumentViewSet):
 class StartupViewSet(viewsets.ReadOnlyModelViewSet):
     """
     DB-backed API for startup list / detail.
-    - GET /startups/ → list of startups (supports filtering/search)
-    - GET /startups/{id}/ → detailed startup with nested projects
+    - GET /.../ → list of startups (supports filtering/search)
+    - GET /.../{id}/ → detailed startup with nested projects
     """
-    queryset = Startup.objects.all().select_related('location').prefetch_related('industries', 'projects__category')
+    queryset = Startup.objects.all().prefetch_related('industries', 'projects__category')
     serializer_class = StartupDetailSerializer
     lookup_field = 'id'
 
@@ -106,15 +102,13 @@ class StartupViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['get'], url_path='short')
     def short(self, request, id=None):
         """
-        Returns a short representation of the startup (e.g. for card view).
+        Returns a short representation (e.g. for card view).
         """
         instance = self.get_object()
         data = {
             "id": instance.id,
             "company_name": instance.company_name,
             "funding_stage": instance.funding_stage,
-            "industries": [i.name for i in instance.industries.all()] if hasattr(instance, 'industries') else [],
-            "location": instance.location.country if instance.location else None
+            "industries": [i.name for i in instance.industries.all()] if hasattr(instance, 'industries') else []
         }
         return Response(data)
-

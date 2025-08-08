@@ -12,25 +12,36 @@ Include the token in the `Authorization` header using the following format:
 
 Authorization: Bearer <your_access_token>
 
+Use `/api/token/refresh/` to obtain a new access token.
+
+### Response Example
+
+```json
+{
+  "refresh": "<your_refresh_token>",
+  "access": "<your_new_access_token>"
+}
+```
+
 ---
 
 ## Startup API
 
 ### Endpoints
 
-- `GET /api/profiles/startups/` — Retrieve a list of all startup profiles  
-- `POST /api/profiles/startups/` — Create a new startup profile  
-- `GET /api/profiles/startups/{id}/` — Retrieve details of a specific startup profile  
-- `PATCH /api/profiles/startups/{id}/` — Update an existing startup profile  
-- `DELETE /api/profiles/startups/{id}/` — Delete a startup profile  
+- `GET /api/v1/startups/profiles/` — Retrieve a list of all startup profiles  
+- `GET /api/v1/startups/profiles/{id}/` — Retrieve detailed startup profile  
+- `GET /api/v1/startups/profiles/{id}/short/` — Retrieve short version of startup profile  
+- `GET /api/v1/startups/search/` — Search startups using Elasticsearch  
 
-## Investor API
+**Supports filtering by:**  
+industries__name, location__country, funding_stage, company_size, is_active, projects__status, projects__category__name
 
-### Endpoints
+**Supports search by:**  
+company_name, description, investment_needs, projects__title, projects__description
 
-- `GET /api/profiles/investors/` — Retrieve a list of all investors  
-- `POST /api/profiles/investors/` — Create a new investor  
-...
+**Supports ordering by:**  
+company_name, funding_stage, company_size, created_at
 
 ### Request Example: Create Startup Profile
 
@@ -39,7 +50,12 @@ Authorization: Bearer <your_access_token>
   "company_name": "GreenTech",
   "description": "Eco-friendly solutions",
   "website": "https://greentech.ua",
-  "startup_logo": null
+  "logo": null,
+  "funding_stage": "Seed",
+  "investment_needs": "Looking for angel investors",
+  "company_size": "1-10",
+  "location": 1,
+  "industries": [2, 3]
 }
 ```
 
@@ -51,7 +67,18 @@ Authorization: Bearer <your_access_token>
   "company_name": "GreenTech",
   "description": "Eco-friendly solutions",
   "website": "https://greentech.ua",
-  "startup_logo": null,
+  "logo": null,
+  "funding_stage": "Seed",
+  "investment_needs": "Looking for angel investors",
+  "company_size": "1-10",
+  "location": {
+    "id": 1,
+    "country": "Ukraine"
+  },
+  "industries": [
+    {"id": 2, "name": "CleanTech"},
+    {"id": 3, "name": "Energy"}
+  ],
   "projects": [],
   "created_at": "2025-08-05T00:00:00Z",
   "updated_at": "2025-08-05T00:00:00Z"
@@ -64,13 +91,11 @@ Authorization: Bearer <your_access_token>
 
 ### Endpoints
 
-- `GET /api/projects/` — Retrieve a list of all projects  
-- `POST /api/projects/` — Create a new project  
-- `GET /api/projects/{id}/` — Retrieve details of a specific project  
-- `PATCH /api/projects/{id}/` — Update an existing project  
-- `DELETE /api/projects/{id}/` — Delete a project  
-
----
+- `GET /api/v1/projects/` — Retrieve a list of all projects  
+- `POST /api/v1/projects/` — Create a new project  
+- `GET /api/v1/projects/{id}/` — Retrieve details of a specific project  
+- `PATCH /api/v1/projects/{id}/` — Update an existing project  
+- `DELETE /api/v1/projects/{id}/` — Delete a project  
 
 ### Request Example: Create Project
 
@@ -103,7 +128,10 @@ Authorization: Bearer <your_access_token>
   "duration": 30,
   "funding_goal": "100000.00",
   "current_funding": "5000.00",
-  "category": 2,
+  "category": {
+    "id": 2,
+    "name": "Artificial Intelligence"
+  },
   "email": "project@example.com",
   "has_patents": true,
   "is_participant": false,
@@ -121,8 +149,13 @@ Authorization: Bearer <your_access_token>
 
 - company_name: required, unique  
 - description: required  
-- website: optional  
-- startup_logo: optional  
+- website: optional, must be valid URL  
+- logo: optional, must be image (jpg, png, ≤10MB)  
+- funding_stage: required, must be one of predefined choices  
+- investment_needs: optional  
+- company_size: optional, must match predefined choices  
+- location: required, must reference existing location  
+- industries: optional, must reference existing industries  
 
 ### Project
 
@@ -132,18 +165,63 @@ Authorization: Bearer <your_access_token>
 - current_funding: must not exceed funding_goal  
 - business_plan: required if status is completed  
 - email: required, must be valid  
+- category: required  
+- status: must be one of allowed enum values  
 
 ---
 
-## Token Refresh
+## Search API (Elasticsearch)
 
-Use `/api/token/refresh/` to obtain a new access token.
+### Endpoint
+
+- `GET /api/v1/startups/search/`
+
+### Parameters
+
+- search: full-text search across company_name, description, investment_needs  
+- funding_stage, location.country, industries.name, company_size, is_active: filter fields  
+- ordering: sort by company_name, funding_stage, created_at, etc.
 
 ### Response Example
 
 ```json
-{
-  "refresh": "<your_refresh_token>",
-  "access": "<your_new_access_token>"
-}
+[
+  {
+    "id": 1,
+    "company_name": "GreenTech",
+    "description": "Eco-friendly solutions",
+    "funding_stage": "Seed",
+    "investment_needs": "Looking for angel investors",
+    "company_size": "1-10",
+    "is_active": true,
+    "location": {
+      "id": 1,
+      "country": "Ukraine"
+    },
+    "industries": ["CleanTech", "Energy"]
+  }
+]
 ```
+
+---
+
+## Schema & Documentation
+
+- `GET /api/schema/` — OpenAPI schema (JSON)  
+- `GET /api/schema/swagger-ui/` — Swagger UI  
+- `GET /api/schema/redoc/` — Redoc documentation  
+
+---
+
+## Healthcheck
+
+- `GET /health/elasticsearch/` — Returns 200 OK if Elasticsearch is available, 503 otherwise  
+
+---
+
+## Notes
+
+- All timestamps are in UTC and ISO 8601 format  
+- All IDs are integers  
+- All list endpoints support pagination via limit and offset query parameters  
+- All endpoints are versioned under `/api/v1/` for future compatibility  
