@@ -2,8 +2,10 @@ import './home.css';
 import Button from '../../components/Button/button';
 import { Link, useNavigate } from 'react-router-dom';
 import ParticipantCard from '../../components/ParticipantCard/participantCard';
-import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
+import useIsMobile from '../../hooks/useIsMobile/useIsMobile';
+import GenericGrid from '../../components/GenericGrid/genericGrid';
+import clsx from 'clsx';
 
 /**
  * A reusable section component for the home page.
@@ -25,7 +27,7 @@ import PropTypes from 'prop-types';
 function HomeSection({ color, className, children }) {
     return (
         <section className={`home--section__${color}`}>
-            <div className={`container home--container ${className}`}>
+            <div className={clsx('container', 'home--container', className)}>
                 { children }
             </div>
         </section>
@@ -48,11 +50,23 @@ HomeSection.propTypes = {
  */
 function NewParticipantGrid({ data }) {
     return (
-        <div className={'participants--grid'}>
-            {data?.map((item, index) => (
-                <ParticipantCard key={index} className={'participants--grid-item'} uid={item.uid} bcgImgSrc={item.bcgImgSrc} ppImgSrc={item.ppImgSrc} alt={item.alt} title={item.title} location={item.location} />
-            ))}
-        </div>
+        <GenericGrid
+            data={data}
+            expectedLength={4}
+            className="participants--grid"
+            renderItem={(item) => (
+                <ParticipantCard
+                    key={item.uid}
+                    className="participants--grid-item"
+                    uid={item.uid}
+                    bcgImgSrc={item.bcgImgSrc}
+                    ppImgSrc={item.ppImgSrc}
+                    alt={item.alt}
+                    title={item.title}
+                    location={item.location}
+                />
+            )}
+        />
     );
 }
 
@@ -67,16 +81,23 @@ NewParticipantGrid.propTypes = {
  * @param {Array.<Object>} data - Array of objects containing imgSrc, alt, and title for each target audience item
  * @returns {JSX.Element}
  */
-function TargetAudienceGrid({data}) {
+function TargetAudienceGrid({ data }) {
     return (
-        <div className={'target--grid'}>
-            {data?.map((item, index) => (
-                <div className={'target--grid-item'} key={index}>
-                    <img src={item.imgSrc} alt={item.alt} className={'target--grid-item-picture'}/>
-                    <h3 className={'target--grid-item-title'}>{ item.title }</h3>
+        <GenericGrid
+            data={data}
+            expectedLength={8}
+            className="target--grid"
+            renderItem={(item) => (
+                <div className="target--grid-item" key={item.id}>
+                    <img
+                        src={item.imgSrc}
+                        alt={item.alt}
+                        className="target--grid-item-picture"
+                    />
+                    <h3 className="target--grid-item-title">{item.title}</h3>
                 </div>
-            ))}
-        </div>
+            )}
+        />
     );
 }
 
@@ -91,16 +112,19 @@ TargetAudienceGrid.propTypes = {
  * @param {Array.<Object>} data - Array of objects containing title and description for each benefit
  * @returns {JSX.Element}
  */
-function BenefitsGrid({data}) {
+function BenefitsGrid({ data }) {
     return (
-        <div className={'benefits--grid'}>
-            {data?.map((item, index) => (
-                <div className={'benefits--grid-item'} key={index}>
-                    <h3 className={'benefits--grid-item-title'}>{ item.title }</h3>
-                    <p>{ item.description }</p>
+        <GenericGrid
+            data={data}
+            expectedLength={6}
+            className="benefits--grid"
+            renderItem={(item) => (
+                <div className="benefits--grid-item" key={item.id}>
+                    <h3 className="benefits--grid-item-title">{item.title}</h3>
+                    <p>{item.description}</p>
                 </div>
-            ))}
-        </div>
+            )}
+        />
     );
 }
 
@@ -129,40 +153,30 @@ function HomePage() {
 
     // Target audience data
     const targetAudienceData = [
-        {imgSrc: '/pictures/svg/bread.svg', alt: 'Bread', title: 'Виробники крафтової продукції'},
-        {imgSrc: '/pictures/svg/vine.svg', alt: 'Vine', title: 'Сомельє та ресторатори'},
-        {imgSrc: '/pictures/svg/building.svg', alt: 'Building', title: 'Представники готельно-ресторанного бізнесу'},
-        {imgSrc: '/pictures/svg/cart.svg', alt: 'Cart', title: 'Представники роздрібних та гуртових торгових мереж'},
-        {imgSrc: '/pictures/svg/box.svg', alt: 'Box', title: 'Представники пакувальної індустрії'},
-        {imgSrc: '/pictures/svg/truck.svg', alt: 'Truck', title: 'Представники логістичних компаній та служб доставки'},
-        {imgSrc: '/pictures/svg/rocket.svg', alt: 'Rocket', title: 'Стартапери'},
-        {imgSrc: '/pictures/svg/people.svg', alt: 'People', title: 'Інші фахівці галузі'}
+        {id: '1', imgSrc: '/pictures/svg/bread.svg', alt: 'Bread', title: 'Виробники крафтової продукції'},
+        {id: '2', imgSrc: '/pictures/svg/vine.svg', alt: 'Vine', title: 'Сомельє та ресторатори'},
+        {id: '3', imgSrc: '/pictures/svg/building.svg', alt: 'Building', title: 'Представники готельно-ресторанного бізнесу'},
+        {id: '4', imgSrc: '/pictures/svg/cart.svg', alt: 'Cart', title: 'Представники роздрібних та гуртових торгових мереж'},
+        {id: '5', imgSrc: '/pictures/svg/box.svg', alt: 'Box', title: 'Представники пакувальної індустрії'},
+        {id: '6', imgSrc: '/pictures/svg/truck.svg', alt: 'Truck', title: 'Представники логістичних компаній та служб доставки'},
+        {id: '7', imgSrc: '/pictures/svg/rocket.svg', alt: 'Rocket', title: 'Стартапери'},
+        {id: '8', imgSrc: '/pictures/svg/people.svg', alt: 'People', title: 'Інші фахівці галузі'}
     ];
 
     // Benefits data
     const benefitsData = [
-        {title: 'Прямий зв\'язок з виробниками', description: 'Знайомтеся з історією та цінностями брендів'},
-        {title: 'Ексклюзивні пропозиції', description: 'Знаходьте унікальні продукти, недоступні в масовому продажі'},
-        {title: 'Інновації та тренди', description: 'Будьте в курсі останніх новинок та технологій галузі'},
-        {title: 'Співпраця та синергія', description: 'Об\'єднуйтесь, щоб творити нове та ділитися досвідом'},
-        {title: 'Розвиток та масштабування', description: 'Знаходьте нових партнерів, клієнтів та ринки збуту'},
-        {title: 'Підтримка та знання', description: 'Отримуйте консультації, експертну допомогу та доступ до освітніх ресурсів'}
+        {id: '1', title: 'Прямий зв\'язок з виробниками', description: 'Знайомтеся з історією та цінностями брендів'},
+        {id: '2', title: 'Ексклюзивні пропозиції', description: 'Знаходьте унікальні продукти, недоступні в масовому продажі'},
+        {id: '3', title: 'Інновації та тренди', description: 'Будьте в курсі останніх новинок та технологій галузі'},
+        {id: '4', title: 'Співпраця та синергія', description: 'Об\'єднуйтесь, щоб творити нове та ділитися досвідом'},
+        {id: '5', title: 'Розвиток та масштабування', description: 'Знаходьте нових партнерів, клієнтів та ринки збуту'},
+        {id: '6', title: 'Підтримка та знання', description: 'Отримуйте консультації, експертну допомогу та доступ до освітніх ресурсів'}
     ];
 
     const navigate = useNavigate();
 
     // State for changing the link text in the “New participants section”
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 769);
-
-    // Set's boolean to isMobile
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth <= 769);
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const isMobile = useIsMobile(769);
 
     return (
         <div className={'home'}>

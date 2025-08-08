@@ -1,6 +1,7 @@
 import './image.css';
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import clsx from 'clsx';
 
 /**
  * Image component that displays an image with a fallback pattern
@@ -22,10 +23,10 @@ function Image({ src, alt, className }) {
                     src={src}
                     alt={alt}
                     onError={() => setHasError(true)}
-                    className={`main-image ${className}`}
+                    className={`main-image ${className || ""}`}
                 />
             ) : (
-                <div className={`pattern-fallback ${className}`} />
+                <div className={clsx('pattern-fallback', className)} />
             )}
         </div>
     );

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext/authContext';
 import FollowStar from '../FollowStar/followStar';
 import PropTypes from 'prop-types';
+import clsx from 'clsx';
 
 /**
  * ParticipantCard component
@@ -45,7 +46,7 @@ function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, classN
     const [companyLink] = useState(`/profile/company/${uid}`);
 
     return (
-        <div className={`participant-card ${className || ''}`}>
+        <div className={clsx('participant-card', className)}>
             <Link to={companyLink} className={'participant-card--background'} tabIndex={-1}>
                 <Image
                     src={bcgImgSrc}
