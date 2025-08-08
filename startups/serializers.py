@@ -39,37 +39,9 @@ class SocialLinksValidationMixin:
         return value
 
 
-class StartupDocumentSerializer(DocumentSerializer):
-    industries = serializers.SerializerMethodField()
-
-    class Meta:
-        document = StartupDocument
-        fields = ('id', 'company_name', 'description', 'location', 'funding_stage', 'industries')
-
-    def get_industries(self, obj):
-        if obj.industries:
-            return [industry.name for industry in obj.industries]
-        return []
-
-
-class StartupShortSerializer(serializers.ModelSerializer):
-    """
-    Lightweight serializer for nested use (e.g., inside Investor).
-    """
-
-    class Meta:
-        model = Startup
-        fields = [
-            'id', 'company_name', 'industry', 'country',
-            'website', 'stage', 'is_participant'
-        ]
-        read_only_fields = fields
-
-
 class StartupSerializer(SocialLinksValidationMixin, serializers.ModelSerializer):
     """
     Full serializer for Startup.
-    Uses shared mixin for social_links validation.
     Includes nested project details.
     """
     projects = ProjectSerializer(many=True, read_only=True)
@@ -79,12 +51,9 @@ class StartupSerializer(SocialLinksValidationMixin, serializers.ModelSerializer)
         model = Startup
         fields = [
             'id', 'company_name', 'description', 'industry',
-            'country', 'website', 'email', 'phone',
-            'contact_person', 'location', 'status',
-            'stage', 'social_links', 'is_participant',
-            'founded_at', 'team_size', 'is_active',
-            'user', 'created_at', 'updated_at',
-            'projects'
+            'location', 'website', 'email', 'founded_year',
+            'team_size', 'stage', 'social_links', 'user',
+            'created_at', 'updated_at', 'projects'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'projects']
 
@@ -99,21 +68,23 @@ class StartupSerializer(SocialLinksValidationMixin, serializers.ModelSerializer)
         Cross-field validation logic:
         - team_size must be at least 1
         - either website or email must be provided
-        - industry, country, and user must be present
+        - industry, location, and user must be present
         """
         errors = {}
 
         team_size = data.get('team_size')
-        website = data.get('website')
-        email = data.get('email')
+        website = data.get('website', '').strip()
+        email = data.get('email', '').strip()
 
         if team_size is not None and team_size < 1:
             errors['team_size'] = "Team size must be at least 1."
 
         if not website and not email:
-            errors['contact'] = "At least one contact method (website or email) must be provided."
+            errors['non_field_errors'] = [
+                "At least one contact method (website or email) must be provided."
+            ]
 
-        required_fields = ['industry', 'country', 'user']
+        required_fields = ['industry', 'location', 'user']
         missing = [field for field in required_fields if not data.get(field)]
         if missing:
             errors['missing_fields'] = f"Missing required fields: {', '.join(missing)}"
@@ -122,3 +93,28 @@ class StartupSerializer(SocialLinksValidationMixin, serializers.ModelSerializer)
             raise serializers.ValidationError(errors)
 
         return data
+
+
+class StartupDocumentSerializer(DocumentSerializer):
+    industry = serializers.SerializerMethodField()
+
+    class Meta:
+        document = StartupDocument
+        fields = ('id', 'company_name', 'description', 'location', 'stage', 'industry')
+
+    def get_industry(self, obj):
+        return obj.industry.name if obj.industry else None
+
+
+class StartupShortSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for nested use (e.g., inside Investor).
+    """
+
+    class Meta:
+        model = Startup
+        fields = [
+            'id', 'company_name', 'industry', 'location',
+            'website', 'stage'
+        ]
+        read_only_fields = fields

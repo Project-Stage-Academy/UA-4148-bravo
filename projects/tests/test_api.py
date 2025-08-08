@@ -1,23 +1,41 @@
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from projects.models import Project, Category
-from startups.models import Startup
+from startups.models import Startup, Industry, Location
 
 from rest_framework.test import APIClient
 
-User = get_user_model()
+from users.models import UserRole, User
 
 
 class ProjectAPITests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='apiuser', password='pass')
-        self.startup = Startup.objects.create(user=self.user, company_name='APIStartup')
+        role = UserRole.objects.get(role='user')
+        self.user = User.objects.create_user(
+            email='apiinvestor@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Investor',
+            role=role,
+        )
+        self.user.refresh_from_db()
+
+        self.industry = Industry.objects.create(name="Technology")
+        self.location = Location.objects.create(country="US")
+
+        self.startup = Startup.objects.create(
+            user=self.user,
+            company_name='ListStartup',
+            founded_year=2019,
+            industry=self.industry,
+            location=self.location
+        )
         self.category = Category.objects.create(name='API Tech')
+
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 

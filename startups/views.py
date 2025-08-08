@@ -15,10 +15,9 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
 from .documents import StartupDocument
 from .models import Startup
-from .serializers import StartupDocumentSerializer, StartupSerializer
+from .serializers import StartupSerializer, StartupDocumentSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ class StartupViewSet(viewsets.ModelViewSet):
     serializer_class = StartupSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ['industry', 'stage', 'is_participant', 'country']
+    filterset_fields = ['industry', 'stage', 'location__country']
     search_fields = ['company_name', 'contact_person', 'email']
 
     def perform_create(self, serializer):

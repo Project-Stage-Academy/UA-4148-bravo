@@ -2,6 +2,7 @@ from urllib.parse import urlparse
 from django.core.validators import URLValidator
 from publicsuffix2 import get_sld
 
+
 def validate_social_links_dict(social_links, allowed_platforms, raise_serializer=False):
     """
     Validates a dictionary of social links.
@@ -51,4 +52,4 @@ def validate_social_links_dict(social_links, allowed_platforms, raise_serializer
             errors[platform] = f"Invalid domain for platform '{platform}': {netloc}"
 
     if errors:
-        raise (DRFValidationError if raise_serializer else DjangoValidationError)({'social_links': errors})
+        raise (DRFValidationError if raise_serializer else DjangoValidationError)(errors)

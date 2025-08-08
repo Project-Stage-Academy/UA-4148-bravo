@@ -12,7 +12,6 @@ class InvestorViewSet(viewsets.ModelViewSet):
     ViewSet for managing Investor investors.
     Optimized to avoid N+1 queries when accessing startup_details.
     """
-    queryset = Investor.objects.select_related('user', 'industry', 'location') \
-        .prefetch_related('startups__industry')
+    queryset = Investor.objects.select_related('user', 'industry', 'location')
     serializer_class = InvestorSerializer
     permission_classes = [IsAuthenticated]

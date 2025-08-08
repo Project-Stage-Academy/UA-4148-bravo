@@ -1,42 +1,40 @@
 from rest_framework import serializers
 
 from investors.models import Investor
-from startups.models import Startup
-from startups.serializers import StartupShortSerializer, SocialLinksValidationMixin
 
 
-class InvestorSerializer(SocialLinksValidationMixin, serializers.ModelSerializer):
+class InvestorSerializer(serializers.ModelSerializer):
     """
-    Full serializer for Investor.
-    Uses shared mixin for social_links validation.
-    Includes nested startup details.
+    Serializer for the Investor model.
+    Includes all fields defined in the abstract Company base class and Investor-specific fields.
     """
-    social_links = serializers.DictField(required=False)
-
-    startups = serializers.PrimaryKeyRelatedField(
-        queryset=Startup.objects.all(),
-        many=True,
-        required=False,
-        help_text="List of startup IDs this investor is associated with"
-    )
-    startup_details = StartupShortSerializer(
-        source='startups',
-        many=True,
-        read_only=True
-    )
-
     class Meta:
         model = Investor
         fields = [
-            'id', 'company_name', 'email', 'phone', 'country',
-            'fund_size', 'stage', 'is_active', 'social_links',
-            'startups', 'startup_details', 'user',
-            'created_at', 'updated_at'
+            'id',
+            'user',
+            'industry',
+            'company_name',
+            'location',
+            'logo',
+            'description',
+            'website',
+            'email',
+            'founded_year',
+            'team_size',
+            'stage',
+            'fund_size',
+            'created_at',
+            'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'startup_details']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'user']
 
     def validate_company_name(self, value):
         value = value.strip()
         if not value:
             raise serializers.ValidationError("Company name must not be empty.")
         return value
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)

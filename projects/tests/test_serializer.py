@@ -4,6 +4,7 @@ from django.test import TestCase
 from projects.models import Category
 from projects.serializers import ProjectSerializer
 from startups.models import Startup
+from startups.serializers import StartupSerializer
 
 User = get_user_model()
 
@@ -71,3 +72,18 @@ class ProjectSerializerTests(TestCase):
         serializer = ProjectSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('funding_goal', serializer.errors)
+
+    def test_invalid_social_links_should_fail(self):
+        data = {
+            'company_name': 'CapitalBridge',
+            'user': self.user.pk,
+            'industry': self.industry.pk,
+            'location': self.location.pk,
+            'founded_year': 2020
+        }
+        serializer = StartupSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+
+        errors = serializer.errors['social_links']
+        self.assertIn("Invalid domain for platform 'facebook'", errors.get('facebook', ''))
+        self.assertIn("Platform 'unknown' is not supported.", errors.get('unknown', ''))
