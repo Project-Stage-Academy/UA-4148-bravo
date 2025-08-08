@@ -16,13 +16,14 @@ import PropTypes from 'prop-types';
  * const [isFavorite, setIsFavorite] = useState(false);
  * return <FollowStar value={isFavorite} setter={setIsFavorite} />;
  */
-function FollowStar({ value, setter }) {
+function FollowStar({ participantId, value, setter }) {
     const handleToggle = () => {
         setter(!value);
     };
 
     return (
         <button
+            key={participantId}
             onClick={handleToggle}
             className={'button button__outline-color'}
         >

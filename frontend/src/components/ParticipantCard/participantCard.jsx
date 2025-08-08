@@ -25,6 +25,7 @@ import clsx from 'clsx';
  * @param {string} props.location - Location of the participant.
  * @param {string|number} props.uid - Unique ID for building the company profile link.
  * @param {string} [props.className] - Additional CSS classes for the card container.
+ * @param {boolean} [props.followed] - Whether the user has kept the card.
  * @param {boolean} [props.recentlyUpdated] - Whether the participant was recently updated.
  *
  * @example
@@ -35,15 +36,16 @@ import clsx from 'clsx';
  *   title="My Company"
  *   location="New York"
  *   uid="12345"
+ *   followed={true}
  *   recentlyUpdated={true}
  * />
  */
-function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, className, recentlyUpdated}) {
+function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, className, followed, recentlyUpdated}) {
     const { user } = useAuth();
-    const [isFollowed, setFollow] = useState(false);
-    const [isRecentlyUpdated] = useState(!!recentlyUpdated);
+    const [isFollowed, setFollow] = useState(!!followed);
     const navigate = useNavigate();
-    const [companyLink] = useState(`/profile/company/${uid}`);
+    const isRecentlyUpdated = !!recentlyUpdated;
+    const companyLink = `/profile/company/${uid}`;
 
     return (
         <div className={clsx('participant-card', className)}>
@@ -74,7 +76,7 @@ function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, classN
                             <span>{title}</span>
                         </Link>
                     </h3>
-                    <p className={'participant-card--location'}>{location}</p>
+                    <p className={'participant-card--location'}>{location && "Локація не знайдена"}</p>
                 </div>
                 <div className={'participant-card--nav-menu'}>
                     <div>
@@ -86,7 +88,7 @@ function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, classN
                         </Button>
                     </div>
                     {user && (
-                        <FollowStar value={isFollowed} setter={setFollow} />
+                        <FollowStar participantId={uid} value={isFollowed} setter={setFollow} />
                     )}
                 </div>
             </div>
@@ -102,6 +104,7 @@ ParticipantCard.propTypes = {
     location: PropTypes.string.isRequired,
     uid: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     className: PropTypes.string,
+    followed: PropTypes.bool,
     recentlyUpdated: PropTypes.bool
 };
 
