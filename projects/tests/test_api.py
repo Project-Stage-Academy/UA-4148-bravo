@@ -1,52 +1,22 @@
 from decimal import Decimal
-
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
-
-from projects.models import Project, Category
-from startups.models import Startup, Industry, Location
-
-from rest_framework.test import APIClient
-
-from users.models import UserRole, User
+from projects.models import Project
+from projects.tests.test_setup import BaseProjectTestCase
+from startups.models import Startup
+from users.models import User, UserRole
 
 
-class ProjectAPITests(APITestCase):
-    def setUp(self):
-        role = UserRole.objects.get(role='user')
-        self.user = User.objects.create_user(
-            email='apiinvestor@example.com',
-            password='pass12345',
-            first_name='Api',
-            last_name='Investor',
-            role=role,
-        )
-        self.user.refresh_from_db()
-
-        self.industry = Industry.objects.create(name="Technology")
-        self.location = Location.objects.create(country="US")
-
-        self.startup = Startup.objects.create(
-            user=self.user,
-            company_name='ListStartup',
-            founded_year=2019,
-            industry=self.industry,
-            location=self.location
-        )
-        self.category = Category.objects.create(name='API Tech')
-
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.user)
+class ProjectAPITests(BaseProjectTestCase):
 
     def test_create_project(self):
         url = reverse('project-list')
         data = {
-            'startup': self.startup.id,
+            'startup_id': self.startup.id,
             'title': 'API Project',
             'funding_goal': '50000.00',
             'current_funding': '1000.00',
-            'category': self.category.id,
+            'category_id': self.category.id,
             'email': 'api@example.com'
         }
         response = self.client.post(url, data, format='json')
@@ -120,8 +90,21 @@ class ProjectAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_user_cannot_update_other_users_project(self):
-        other_user = User.objects.create_user(username='otheruser', password='pass')
-        other_startup = Startup.objects.create(user=other_user, company_name='OtherStartup')
+        role = UserRole.objects.get(role=UserRole.Role.USER)
+        other_user = User.objects.create_user(
+            email='apiother@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Other',
+            role=role,
+        )
+        other_startup = Startup.objects.create(
+            user=other_user,
+            company_name='ListStartup',
+            founded_year=2019,
+            industry=self.industry,
+            location=self.location
+        )
         project = Project.objects.create(
             startup=other_startup,
             title='OtherProject',
@@ -136,8 +119,21 @@ class ProjectAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_user_cannot_delete_other_users_project(self):
-        other_user = User.objects.create_user(username='otheruser2', password='pass')
-        other_startup = Startup.objects.create(user=other_user, company_name='OtherStartup2')
+        role = UserRole.objects.get(role=UserRole.Role.USER)
+        other_user = User.objects.create_user(
+            email='apiother@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Other',
+            role=role,
+        )
+        other_startup = Startup.objects.create(
+            user=other_user,
+            company_name='ListStartup',
+            founded_year=2019,
+            industry=self.industry,
+            location=self.location
+        )
         project = Project.objects.create(
             startup=other_startup,
             title='OtherDelete',

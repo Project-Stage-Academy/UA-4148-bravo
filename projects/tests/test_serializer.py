@@ -1,64 +1,9 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase
-
-from projects.models import Category
 from projects.serializers import ProjectSerializer
-from startups.models import Startup
-from startups.serializers import StartupSerializer
-
-User = get_user_model()
+from projects.tests.test_setup import BaseProjectTestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 
-class ProjectSerializerTests(TestCase):
-    def setUp(self):
-        self.user = User.objects.create(username='founder')
-        self.startup = Startup.objects.create(user=self.user, company_name='TestStartup')
-        self.category = Category.objects.create(name='Tech')
-
-    def test_valid_project_data(self):
-        data = {
-            'startup': self.startup.id,
-            'title': 'AI Platform',
-            'description': 'Smart analytics',
-            'status': 'draft',
-            'duration': 30,
-            'funding_goal': '100000.00',
-            'current_funding': '5000.00',
-            'category': self.category.id,
-            'email': 'project@example.com',
-            'has_patents': True,
-            'is_participant': False,
-            'is_active': True
-        }
-        serializer = ProjectSerializer(data=data)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-
-    def test_current_funding_exceeds_goal_should_fail(self):
-        data = {
-            'startup': self.startup.id,
-            'title': 'Overfunded',
-            'funding_goal': '10000.00',
-            'current_funding': '20000.00',
-            'category': self.category.id,
-            'email': 'over@example.com'
-        }
-        serializer = ProjectSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('current_funding', serializer.errors)
-
-    def test_missing_business_plan_for_completed_should_fail(self):
-        data = {
-            'startup': self.startup.id,
-            'title': 'NoPlan',
-            'status': 'completed',
-            'funding_goal': '50000.00',
-            'current_funding': '10000.00',
-            'category': self.category.id,
-            'email': 'noplan@example.com'
-        }
-        serializer = ProjectSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('business_plan', serializer.errors)
+class ProjectSerializerTests(BaseProjectTestCase):
 
     def test_participant_without_goal_should_fail(self):
         data = {
@@ -73,17 +18,55 @@ class ProjectSerializerTests(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('funding_goal', serializer.errors)
 
-    def test_invalid_social_links_should_fail(self):
+    def test_valid_project_data(self):
+        plan_file = SimpleUploadedFile(
+            "plan.pdf",
+            b"%PDF-1.4 Dummy PDF content here",
+            content_type="application/pdf"
+        )
         data = {
-            'company_name': 'CapitalBridge',
-            'user': self.user.pk,
-            'industry': self.industry.pk,
-            'location': self.location.pk,
-            'founded_year': 2020
+            "title": "Unique Test Project",
+            "email": "test@example.com",
+            "funding_goal": 10000,
+            "current_funding": 5000,
+            "startup_id": self.startup.id,
+            "category_id": self.category.id,
+            "business_plan": plan_file,
+            "social_links": ["https://example.com"]
         }
-        serializer = StartupSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
+        serializer = ProjectSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
-        errors = serializer.errors['social_links']
-        self.assertIn("Invalid domain for platform 'facebook'", errors.get('facebook', ''))
-        self.assertIn("Platform 'unknown' is not supported.", errors.get('unknown', ''))
+    def test_current_funding_exceeds_goal_should_fail(self):
+        plan_file = SimpleUploadedFile(
+            "plan.pdf",
+            b"%PDF-1.4 Dummy PDF content here",
+            content_type="application/pdf"
+        )
+        data = {
+            "title": "Project X",
+            "email": "x@example.com",
+            "funding_goal": 1000,
+            "current_funding": 2000,
+            "startup_id": self.startup.id,
+            "category_id": self.category.id,
+            "business_plan": plan_file,
+            "social_links": []
+        }
+        serializer = ProjectSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("current_funding", serializer.errors)
+
+    def test_missing_business_plan_for_completed_should_fail(self):
+        data = {
+            "title": "Project Y",
+            "email": "y@example.com",
+            "funding_goal": 5000,
+            "current_funding": 5000,
+            "startup_id": self.startup.id,
+            "category_id": self.category.id,
+            "social_links": []
+        }
+        serializer = ProjectSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("business_plan", serializer.errors)

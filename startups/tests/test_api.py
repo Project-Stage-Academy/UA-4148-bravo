@@ -19,8 +19,6 @@ class StartupAPITests(BaseStartupTestCase):
             'email': 'startup@example.com'
         }
         response = self.client.post(url, data, format='json')
-        print(response.status_code)
-        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['company_name'], 'API Startup')
 

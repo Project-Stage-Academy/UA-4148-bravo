@@ -13,6 +13,7 @@ class CategorySerializer(serializers.ModelSerializer):
     """
     Read-only serializer for displaying category details.
     """
+
     class Meta:
         model = Category
         fields = ['id', 'name', 'description']
@@ -22,6 +23,7 @@ class StartupSerializer(serializers.ModelSerializer):
     """
     Read-only serializer for displaying startup details.
     """
+
     class Meta:
         model = Startup
         fields = ['id', 'company_name', 'stage', 'website']
@@ -29,8 +31,7 @@ class StartupSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     """
-    Main serializer for Project.
-    Includes nested read-only fields and cross-field validation logic.
+    Serializer for Project with nested read-only fields and cross-field validation.
     """
     category = CategorySerializer(read_only=True)
     startup = StartupSerializer(read_only=True)
@@ -76,9 +77,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_status_display(self, obj):
-        """
-        Returns the human-readable label for the project's status.
-        """
         return ProjectStatus(obj.status).label if obj.status else None
 
     def validate(self, data):
@@ -94,7 +92,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         business_plan = data.get('business_plan')
         is_participant = data.get('is_participant')
 
-        # fallback to instance values for partial updates
         if self.instance:
             funding_goal = funding_goal if funding_goal is not None else self.instance.funding_goal
             current_funding = current_funding if current_funding is not None else self.instance.current_funding
@@ -106,6 +103,9 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         if funding_goal is not None and current_funding > funding_goal:
             errors['current_funding'] = 'Current funding cannot exceed funding goal.'
+
+        if funding_goal is not None and current_funding >= funding_goal and not business_plan:
+            errors['business_plan'] = 'Business plan is required when funding goal is reached.'
 
         if status in [ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED] and not business_plan:
             errors['business_plan'] = 'Business plan is required for projects in progress or completed.'
