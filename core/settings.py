@@ -33,6 +33,9 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     
+    # Elasticsearch
+    'django_elasticsearch_dsl',
+    
     # OAuth
     'allauth',
     'allauth.account',
@@ -184,6 +187,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Elasticsearch DSL Configuration
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': config('ELASTICSEARCH_HOST', default='localhost:9200'),
+    },
+}
+
+# Override Elasticsearch index names for testing
+if 'test' in sys.argv:
+    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='localhost:9200')
 
 # File validation settings
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]

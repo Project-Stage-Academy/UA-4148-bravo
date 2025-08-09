@@ -6,14 +6,29 @@ from startups.models import Startup
 from django.urls import reverse
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import Index
+from django.conf import settings
 import time
 
 class ProjectElasticsearchTests(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Configure Elasticsearch connection for tests
+        es_config = getattr(settings, 'ELASTICSEARCH_DSL', {}).get('default', {})
+        hosts = es_config.get('hosts', 'localhost:9200')
+        connections.configure(default={'hosts': hosts})
+
     def setUp(self):
         self.client = self.client
-        self.index = Index('projects')
+        self.index = Index('projects_test')
+        # Try to delete the index if it exists, ignore errors
+        try:
+            self.index.delete()
+        except:
+            pass
         self.index.create()
-        self.index.mapping(ProjectDocument)
+        # Apply the document mapping to the index
+        ProjectDocument._doc_type.mapping.save('projects_test')
         
         self.category1 = Category.objects.create(name="Tech")
         self.category2 = Category.objects.create(name="Finance")
@@ -38,7 +53,10 @@ class ProjectElasticsearchTests(APITestCase):
         time.sleep(1) 
 
     def tearDown(self):
-        self.index.delete()
+        try:
+            self.index.delete()
+        except:
+            pass
 
     def test_empty_query_returns_all_projects(self):
         url = reverse('project-list')
