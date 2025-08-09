@@ -4,6 +4,8 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
+from django.db import transaction
+from django.db.models import F
 
 from .models import Project
 from investments.models import Subscription
@@ -22,27 +24,53 @@ from .serializers import ProjectDocumentSerializer
 import logging
 logger = logging.getLogger(__name__)
 
+
 class SubscriptionCreateView(CreateAPIView):
+    """
+    API endpoint to handle the creation of new investment subscriptions.
+
+    This view uses the SubscriptionCreateSerializer to validate the
+    investment request and atomically update the project's funding.
+    It requires the user to be both authenticated and identified as an investor.
+    """
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionCreateSerializer
     permission_classes = [IsAuthenticated, IsInvestor]
 
-    def perform_create(self, serializer):
-        subscription = serializer.save(investor=self.request.user)
-        project = subscription.project
-        remaining_funding = project.funding_goal - project.current_funding
+    def create(self, request, *args, **kwargs):
+        """
+        Customizes the create method to handle subscription creation
+        and return a structured response.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            self.perform_create(serializer)
+            subscription = serializer.instance
+            project = subscription.project
 
-        message = "Subscription created successfully."
-        project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
+            project.refresh_from_db()
 
-        return Response(
-            {
-                "message": message,
-                "remaining_funding": remaining_funding,
-                "project_status": project_status
-            },
-            status=status.HTTP_201_CREATED
-        )
+            remaining_funding = project.funding_goal - project.current_funding
+            project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
+
+            logger.info(f"Subscription created successfully for project {project.id} by user {request.user.id}")
+
+            return Response(
+                {
+                    "message": "Subscription created successfully.",
+                    "remaining_funding": remaining_funding,
+                    "project_status": project_status
+                },
+                status=status.HTTP_201_CREATED
+            )
+        except Exception as e:
+            logger.error(f"Failed to create subscription for user {request.user.id}: {e}")
+            return Response(
+                {"detail": "Failed to create subscription. Please try again."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
@@ -50,7 +78,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     Optimized to avoid N+1 queries by using select_related.
     Includes filtering, searching, and ordering.
     """
-    queryset = Project.objects.all()
+    queryset = Project.objects.select_related('startup', 'category').all()
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
 
@@ -62,6 +90,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 
 class ProjectDocumentView(DocumentViewSet):
+    """
+    API endpoint for searching projects using Elasticsearch.
+    """
     document = ProjectDocument
     serializer_class = ProjectDocumentSerializer
 
@@ -89,6 +120,9 @@ class ProjectDocumentView(DocumentViewSet):
     )
 
     def list(self, request, *args, **kwargs):
+        """
+        Handles Elasticsearch connection errors gracefully.
+        """
         try:
             return super().list(request, *args, **kwargs)
         except (ConnectionError, TransportError) as e:
@@ -97,8 +131,3 @@ class ProjectDocumentView(DocumentViewSet):
                 {"detail": "Search service is temporarily unavailable. Please try again later."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    filterset_fields = ['status', 'category', 'startup']
-    search_fields = ['title', 'description', 'email']
-    ordering_fields = ['created_at', 'funding_goal', 'current_funding']
-    ordering = ['-created_at']

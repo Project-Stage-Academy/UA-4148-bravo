@@ -1,4 +1,6 @@
 from decimal import Decimal
+from django.db import transaction
+from django.db.models import F
 from rest_framework import serializers
 
 from projects.models import Project, Category
@@ -8,57 +10,7 @@ from common.enums import ProjectStatus
 from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
 from projects.documents import ProjectDocument
 
-from rest_framework import serializers
-from .models import Project
 from investments.models import Subscription
-
-class ProjectSerializer(serializers.ModelSerializer):
-    startup_name = serializers.CharField(source='startup.company_name', read_only=True)
-    startup_logo = serializers.ImageField(source='startup.logo', read_only=True)
-
-    class Meta:
-        model = Project
-        fields = [
-            'id', 'title', 'description', 'startup_name', 'startup_logo',
-            'funding_goal', 'current_funding', 'status', 'created_at'
-        ]
-
-class SubscriptionCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Subscription
-        fields = ['project', 'investment_amount']
-        read_only_fields = ['investor']
-
-    def validate(self, data):
-        project = data.get('project')
-        investment_amount = data.get('investment_amount')
-
-        if not project:
-            raise serializers.ValidationError({"project": "This field is required."})
-
-        if project.current_funding >= project.funding_goal:
-            raise serializers.ValidationError("This project is already fully funded.")
-
-        remaining_funding = project.funding_goal - project.current_funding
-        if investment_amount > remaining_funding:
-            raise serializers.ValidationError(
-                f"The investment amount exceeds the remaining funding. Only {remaining_funding} is available."
-            )
-            
-        return data
-
-    def create(self, validated_data):
-        project = validated_data['project']
-        investment_amount = validated_data['investment_amount']
-        
-        project.current_funding += investment_amount
-        project.save()
-
-        return Subscription.objects.create(
-            investor=self.context['request'].user,
-            **validated_data
-        )
-
 
 class CategorySerializer(serializers.ModelSerializer):
     """
@@ -68,7 +20,6 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id', 'name', 'description']
 
-
 class StartupSerializer(serializers.ModelSerializer):
     """
     Read-only serializer for displaying startup details.
@@ -77,14 +28,15 @@ class StartupSerializer(serializers.ModelSerializer):
         model = Startup
         fields = ['id', 'company_name', 'stage', 'website']
 
-
 class ProjectSerializer(serializers.ModelSerializer):
     """
-    Main serializer for Project.
-    Includes nested read-only fields and cross-field validation logic.
+    Main serializer for the Project model, including nested fields,
+    custom method fields for startup details, and validation logic.
     """
     category = CategorySerializer(read_only=True)
     startup = StartupSerializer(read_only=True)
+    startup_name = serializers.SerializerMethodField()
+    startup_logo = serializers.SerializerMethodField()
 
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
@@ -114,7 +66,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = [
-            'id', 'startup', 'startup_id',
+            'id', 'startup', 'startup_id', 'startup_name', 'startup_logo',
             'title', 'description',
             'business_plan', 'media_files',
             'status', 'status_display', 'duration',
@@ -132,12 +84,28 @@ class ProjectSerializer(serializers.ModelSerializer):
         """
         return ProjectStatus(obj.status).label if obj.status else None
 
+    def get_startup_name(self, obj):
+        """
+        Returns the name of the associated startup, or None if no startup is linked.
+        """
+        return obj.startup.company_name if obj.startup else None
+
+    def get_startup_logo(self, obj):
+        """
+        Returns the URL of the startup's logo, or None if no logo or startup exists.
+        """
+        request = self.context.get('request')
+        if obj.startup and obj.startup.logo:
+            return request.build_absolute_uri(obj.startup.logo.url)
+        return None
+
     def validate(self, data):
         """
         Cross-field validation logic based on business rules:
         - current_funding must not exceed funding_goal
         - business_plan required for in_progress or completed
         - funding_goal required if is_participant is True
+        - investment amounts must be positive (handled in SubscriptionCreateSerializer)
         """
         funding_goal = data.get('funding_goal')
         current_funding = data.get('current_funding', Decimal('0.00'))
@@ -154,7 +122,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         errors = {}
 
-        if funding_goal is not None and current_funding > funding_goal:
+        if funding_goal is not None and Decimal(str(current_funding)) > Decimal(str(funding_goal)):
             errors['current_funding'] = 'Current funding cannot exceed funding goal.'
 
         if status in [ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED] and not business_plan:
@@ -169,7 +137,84 @@ class ProjectSerializer(serializers.ModelSerializer):
         return data
 
 
+class SubscriptionCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating a new investment subscription.
+    Handles validation for investment amount and project status.
+    Uses atomic updates to prevent race conditions.
+    """
+    class Meta:
+        model = Subscription
+        fields = ['project', 'investment_amount']
+        read_only_fields = ['investor']
+
+    def validate(self, data):
+        """
+        Validates the investment amount and the state of the project.
+        """
+        project = data.get('project')
+        investment_amount = data.get('investment_amount')
+        user = self.context['request'].user
+
+        # 1. Validate required fields
+        if not project:
+            raise serializers.ValidationError({"project": "This field is required."})
+
+        # 2. Check for authenticated user and investment permissions
+        if not user or not user.is_authenticated:
+            raise serializers.ValidationError({"user": "Authentication is required to make an investment."})
+        
+        # Here, we assume the startup owner cannot invest in their own project.
+        if project.startup and user == project.startup.owner:
+            raise serializers.ValidationError({"user": "You cannot invest in your own project."})
+
+        # 3. Validate investment amount
+        if investment_amount is None or investment_amount <= 0:
+            raise serializers.ValidationError({"investment_amount": "Investment amount must be a positive number."})
+
+        current_funding = Decimal(str(project.current_funding))
+        funding_goal = Decimal(str(project.funding_goal))
+
+        # 4. Check project funding status
+        if current_funding >= funding_goal:
+            raise serializers.ValidationError("This project is already fully funded.")
+
+        remaining_funding = funding_goal - current_funding
+        if investment_amount > remaining_funding:
+            raise serializers.ValidationError(
+                f"The investment amount exceeds the remaining funding. Only {remaining_funding} is available."
+            )
+        
+        return data
+
+    def create(self, validated_data):
+        """
+        Creates a new subscription and atomically updates the project's funding.
+        """
+        project = validated_data['project']
+        investment_amount = validated_data['investment_amount']
+        investor = self.context['request'].user
+
+        with transaction.atomic():
+            project.refresh_from_db()
+
+            project.current_funding = F('current_funding') + investment_amount
+            project.save()
+
+            project.refresh_from_db()
+
+            subscription = Subscription.objects.create(
+                investor=investor,
+                **validated_data
+            )
+        
+        return subscription
+
+
 class ProjectDocumentSerializer(DocumentSerializer):
+    """
+    Serializer for the Elasticsearch ProjectDocument.
+    """
     class Meta:
         document = ProjectDocument
         fields = ('id', 'title', 'description', 'status', 'startup', 'category')
