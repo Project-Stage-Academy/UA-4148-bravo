@@ -4,30 +4,57 @@ from startups.models import Startup, Industry, Location
 from startups.documents import StartupDocument
 from django.urls import reverse
 from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl import Index
 from django.conf import settings
 import time
+from rest_framework.test import APIClient
+from users.models import UserRole, User
+from elasticsearch import Elasticsearch
 
-class StartupElasticsearchTests(APITestCase):
+def wait_for_elasticsearch(host='http://localhost:9200', timeout=30):
+    client = Elasticsearch(host)
+    start_time = time.time()
+    while True:
+        try:
+            if client.ping():
+                break
+        except Exception:
+            pass
+        if time.time() - start_time > timeout:
+            raise RuntimeError("Elasticsearch server is not available")
+        time.sleep(1)
+
+class ProjectElasticsearchTests(APITestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Configure Elasticsearch connection for tests
+        wait_for_elasticsearch()
+        # Встановити з’єднання з ES та ініціалізувати індекс лише один раз
         es_config = getattr(settings, 'ELASTICSEARCH_DSL', {}).get('default', {})
-        hosts = es_config.get('hosts', 'localhost:9200')
+        hosts = es_config.get('hosts', 'http://localhost:9200')
         connections.configure(default={'hosts': hosts})
+        StartupDocument.init()  # Це створить індекс і mapping
 
     def setUp(self):
-        self.client = self.client
-        self.index = Index('startups_test')
-        # Try to delete the index if it exists, ignore errors
+        role = UserRole.objects.get(role=UserRole.Role.USER)
+        self.user = User.objects.create_user(
+            email='apistartup@example.com',
+            password='pass12345',
+            first_name='Api',
+            last_name='Startup',
+            role=role,
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        wait_for_elasticsearch()
+        client = connections.get_connection()
+        # Видалити індекс перед кожним тестом
         try:
-            self.index.delete()
-        except:
+            client.indices.delete(index=StartupDocument._index._name, ignore=[400, 404])
+        except Exception:
             pass
-        self.index.create()
-        # Apply the document mapping to the index
-        StartupDocument._doc_type.mapping.save('startups_test')
+
+        # Створити індекс з mapping знову
+        StartupDocument.init()
 
         self.industry1 = Industry.objects.create(name="Fintech")
         self.industry2 = Industry.objects.create(name="E-commerce")
@@ -49,13 +76,18 @@ class StartupElasticsearchTests(APITestCase):
             location=self.location2
         )
         self.startup2.industries.add(self.industry2)
-        
-        time.sleep(1)
+
+        # Індексувати документи
+        for startup in Startup.objects.all():
+            StartupDocument().update(startup)
+
+        time.sleep(1)  # Дати час індексу оновитися
 
     def tearDown(self):
+        client = connections.get_connection()
         try:
-            self.index.delete()
-        except:
+            client.indices.delete(index=StartupDocument._index._name, ignore=[400, 404])
+        except Exception:
             pass
 
     def test_empty_query_returns_all_startups(self):
@@ -73,7 +105,7 @@ class StartupElasticsearchTests(APITestCase):
     def test_combined_filters_work_correctly(self):
         url = reverse('startup-list')
         response = self.client.get(url, {
-            'funding_stage': 'Series A', 
+            'funding_stage': 'Series A',
             'location.country': 'Germany'
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
