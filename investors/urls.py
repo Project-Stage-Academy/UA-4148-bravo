@@ -1,6 +1,7 @@
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from profiles.views import StartupViewSet, InvestorViewSet
+
+from investors.views import InvestorViewSet
+from startups.views import StartupViewSet
 
 # Register viewsets with the router
 router = DefaultRouter()

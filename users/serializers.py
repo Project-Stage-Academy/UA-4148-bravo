@@ -1,13 +1,16 @@
 from djoser.serializers import UserSerializer
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework import serializers
 
 User = get_user_model()
+
 
 class CustomUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         model = User
         fields = ('id', 'username', 'email')
+
 
 # Custom serializer for obtaining JWT with additional fields
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -28,8 +31,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         for display purposes or authorization logic.
         """
         token = super().get_token(user)
-        token['username'] = user.username
         token['email'] = user.email
+        token['user_id'] = user.user_id
         return token
 
     def validate(self, attrs):
@@ -44,7 +47,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if not self.user.is_active:
             raise serializers.ValidationError('User account is disabled.')
 
-        data['user_id'] = self.user.id
-        data['username'] = self.user.username
+        data['user_id'] = self.user.user_id
         data['email'] = self.user.email
         return data

@@ -7,35 +7,9 @@ from django.core.validators import (
 )
 from django.db import models
 
+from common.enums import Stage
 from validation.validate_email import validate_email_custom
 from validation.validate_image import validate_image_file
-
-
-class Stage(models.TextChoices):
-    """
-    Enumeration of possible stages for companies (startups and investors).
-    Stages represent the lifecycle or maturity of a company, such as idea, prototype,
-    MVP, growth, scale, and enterprise.
-    """
-    IDEA = 'idea', 'Idea'
-    PROTOTYPE = 'prototype', 'Prototype'
-    MVP = 'mvp', 'MVP'
-    GROWTH = 'growth', 'Growth'
-    SCALE = 'scale', 'Scale'
-    ENTERPRISE = 'enterprise', 'Enterprise'
-
-    @classmethod
-    def display(cls, value: str) -> str:
-        """
-        Returns the human-readable label for a given stage value.
-
-        Example:
-            Stage.display("mvp") -> "MVP"
-        """
-        try:
-            return cls(value).label
-        except ValueError:
-            return value
 
 
 class Company(models.Model):
@@ -73,12 +47,12 @@ class Company(models.Model):
         on_delete=models.CASCADE
     )
     industry = models.ForeignKey(
-        'profiles.Industry',
+        'startups.Industry',
         on_delete=models.PROTECT
     )
     company_name = models.CharField(max_length=254, unique=True)
     location = models.ForeignKey(
-        'profiles.Location',
+        'startups.Location',
         on_delete=models.PROTECT
     )
     logo = models.ImageField(

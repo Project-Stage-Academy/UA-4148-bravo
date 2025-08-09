@@ -1,36 +1,28 @@
 from decimal import Decimal, ROUND_HALF_UP
-from django.db import models
+
+
+def calculate_investment_share(amount: Decimal, total_funding_goal: Decimal) -> Decimal:
+    """
+    Calculate the investment share as a percentage of the total funding goal, rounded to 2 decimals.
+    """
+    if total_funding_goal == 0:
+        return Decimal('0.00')
+    return (amount / total_funding_goal * Decimal('100.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
 def recalculate_investment_shares(project):
     """
     Recalculates and updates the 'investment_share' field for all Subscription instances
-    related to the given project.
-
-    This function is idempotent and safe to call multiple times. It uses bulk_update
-    for efficient database writes and skips updates if the calculated share hasn't changed.
-
-    Args:
-        project (Project): The project instance whose subscriptions' investment shares
-                           need to be recalculated.
-
-    Notes:
-        - If the total invested amount is zero, all shares will be set to 0.00.
-        - Assumes that Subscription.amount is always non-negative.
-        - Designed to be used after changes to Subscription amounts, creations, or deletions.
+    based on the project's funding goal.
     """
     from investments.models import Subscription
 
+    funding_goal = project.funding_goal or Decimal("0.00")
     investments = Subscription.objects.filter(project=project)
-    total = investments.aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
 
     to_update = []
     for investment in investments:
-        if total == 0:
-            share = Decimal('0.00')
-        else:
-            share = (investment.amount / total * 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-
+        share = calculate_investment_share(investment.amount, funding_goal)
         if investment.investment_share != share:
             investment.investment_share = share
             to_update.append(investment)

@@ -1,8 +1,9 @@
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+
+from validation.validate_self_investment import validate_self_investment
 
 
 class Subscription(models.Model):
@@ -23,7 +24,7 @@ class Subscription(models.Model):
     """
 
     investor = models.ForeignKey(
-        'profiles.Investor',
+        'investors.Investor',
         on_delete=models.CASCADE,
         related_name='subscriptions'
     )
@@ -48,22 +49,8 @@ class Subscription(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        """
-        Custom validation to prevent investors from investing in their own projects.
-
-        Raises:
-            ValidationError: If the investor is the owner of the project's startup.
-        """
-        if (
-                self.investor
-                and self.project
-                and hasattr(self.project, 'startup')
-                and self.project.startup
-                and self.project.startup.user_id
-                and self.investor.user_id
-                and self.project.startup.user_id == self.investor.user_id
-        ):
-            raise ValidationError("Investors cannot invest in their own startup's project.")
+        """ Custom validation to prevent investors from investing in their own projects. """
+        validate_self_investment(self.investor, self.project)
 
     def __str__(self):
         percent_str = f", {self.investment_share}%" if self.investment_share is not None else ""

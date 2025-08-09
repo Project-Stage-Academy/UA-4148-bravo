@@ -13,9 +13,11 @@ from django_elasticsearch_dsl_drf.filter_backends import (
     SearchFilterBackend,
 )
 from .documents import ProjectDocument
+from .permissions import IsOwnerOrReadOnly
 from .serializers import ProjectDocumentSerializer
-
+from rest_framework.permissions import IsAuthenticated
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,6 +29,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     """
     queryset = Project.objects.select_related('startup', 'category').all()
     serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['status', 'category', 'startup']
@@ -71,6 +74,7 @@ class ProjectDocumentView(DocumentViewSet):
                 {"detail": "Search service is temporarily unavailable. Please try again later."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
+
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['status', 'category', 'startup']
     search_fields = ['title', 'description', 'email']
