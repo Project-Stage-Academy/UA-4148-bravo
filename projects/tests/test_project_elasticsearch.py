@@ -10,7 +10,6 @@ from elasticsearch_dsl import Index
 from common.enums import Stage
 from projects.documents import ProjectDocument
 from projects.models import Project, Category
-from projects.views import ProjectDocumentView
 from startups.models import Location, Industry
 from startups.models import Startup
 from users.models import User, UserRole

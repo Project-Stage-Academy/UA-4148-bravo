@@ -1,20 +1,37 @@
-from unittest.mock import patch, MagicMock
-
+import time
+from django.conf import settings
 from django.urls import reverse
+from elasticsearch_dsl import Index
+from elasticsearch_dsl.connections import connections
 from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
+from rest_framework.test import APITestCase
 
 from common.enums import Stage
+from startups.documents import StartupDocument
 from startups.models import Startup, Industry, Location
 from users.models import UserRole, User
 
 
-@patch('startups.documents.StartupDocument._doc_type.mapping.save', MagicMock())
-@patch('elasticsearch_dsl.Index.create', MagicMock())
-@patch('elasticsearch_dsl.Index.delete', MagicMock())
 class StartupElasticsearchTests(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Configure Elasticsearch connection for tests
+        es_config = getattr(settings, 'ELASTICSEARCH_DSL', {}).get('default', {})
+        hosts = es_config.get('hosts', 'http://localhost:9200')
+        connections.configure(default={'hosts': hosts})
 
     def setUp(self):
+        self.index = Index('startups')
+        # Try to delete the index if it exists, ignore errors
+        try:
+            self.index.delete()
+        except:
+            pass
+        self.index.create()
+        # Apply the document mapping to the index
+        StartupDocument._doc_type.mapping.save('startups')
+
         role = UserRole.objects.get(role=UserRole.Role.USER)
         self.user1 = User.objects.create_user(
             email='apistartup@example.com',
@@ -30,8 +47,8 @@ class StartupElasticsearchTests(APITestCase):
             last_name='Startup2',
             role=role,
         )
-        self.client = APIClient()
         self.client.force_authenticate(user=self.user1)
+        self.client.force_authenticate(user=self.user2)
 
         self.industry1 = Industry.objects.create(name="Fintech")
         self.industry2 = Industry.objects.create(name="E-commerce")
@@ -62,6 +79,13 @@ class StartupElasticsearchTests(APITestCase):
             team_size=15,
             stage=Stage.MVP,
         )
+        time.sleep(1)
+
+    def tearDown(self):
+        try:
+            self.index.delete()
+        except:
+            pass
 
     def test_empty_query_returns_all_startups(self):
         url = reverse('startup-list')
