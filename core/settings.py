@@ -193,13 +193,13 @@ CORS_ALLOW_ALL_ORIGINS = True
 # Elasticsearch DSL Configuration
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': config('ELASTICSEARCH_HOST', default='localhost:9200'),
+        'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
     },
 }
 
 # Override Elasticsearch index names for testing
 if 'test' in sys.argv:
-    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='localhost:9200')
+    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
 
 # File validation settings
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]

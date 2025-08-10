@@ -14,7 +14,7 @@ class StartupElasticsearchTests(APITestCase):
         super().setUpClass()
         # Configure Elasticsearch connection for tests
         es_config = getattr(settings, 'ELASTICSEARCH_DSL', {}).get('default', {})
-        hosts = es_config.get('hosts', 'localhost:9200')
+        hosts = es_config.get('hosts', 'http://localhost:9200')
         connections.configure(default={'hosts': hosts})
 
     def setUp(self):

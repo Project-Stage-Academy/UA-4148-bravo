@@ -5,7 +5,7 @@ from django.conf import settings
 def elasticsearch_healthcheck(request):
     # Get Elasticsearch host from settings
     es_config = getattr(settings, 'ELASTICSEARCH_DSL', {}).get('default', {})
-    hosts = es_config.get('hosts', 'localhost:9200')
+    hosts = es_config.get('hosts', 'http://localhost:9200')
     
     # Ensure hosts is a list for Elasticsearch client
     if isinstance(hosts, str):
