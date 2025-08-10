@@ -33,7 +33,7 @@ class StartupViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['industry', 'stage', 'location__country']
-    search_fields = ['company_name', 'contact_person', 'email']
+    search_fields = ['company_name', 'user__first_name', 'user__last_name', 'email']
 
     def perform_create(self, serializer):
         instance = serializer.save(user=self.request.user)
@@ -68,18 +68,18 @@ class StartupDocumentView(DocumentViewSet):
 
     filter_fields = {
         'company_name': 'company_name.raw',
-        'funding_stage': 'funding_stage',
+        'stage': 'stage',
         'location.country': 'location.country',
         'industries.name': 'industries.name',
     }
 
     ordering_fields = {
         'company_name': 'company_name.raw',
-        'funding_stage': 'funding_stage.raw',
+        'stage': 'stage.raw',
         'location.country': 'location.country.raw',
     }
 
-    ordering = ('-funding_stage',)
+    ordering = ('-stage',)
 
     search_fields = (
         'company_name',
