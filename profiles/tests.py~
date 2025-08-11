@@ -9,6 +9,8 @@ from django.urls import reverse
 from profiles.models import Industry, Location, Startup, Investor
 from profiles.serializers import StartupSerializer, InvestorSerializer
 
+from users.models import UserRole
+
 User = get_user_model()
 
 
@@ -18,9 +20,18 @@ User = get_user_model()
 
 class StartupSerializerTests(TestCase):
     def setUp(self):
+        # Ensure the default role exists
+        self.default_role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
         self.industry = Industry.objects.create(name='AI')
         self.location = Location.objects.create(city='New York', region='NY', country='US')
-        self.user = User.objects.create(username='founder')
+        # Create a user properly for the custom user model
+        self.user = User.objects.create_user(
+            email='founder@example.com',
+            password='pass12345',
+            first_name='Found',
+            last_name='Er',
+            role=self.default_role
+        )
 
     def test_valid_startup_data(self):
         data = {
@@ -103,7 +114,14 @@ class StartupSerializerTests(TestCase):
 
 class InvestorSerializerTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create(username='investor')
+        self.default_role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
+        self.user = User.objects.create_user(
+            email='investor@example.com',
+            password='pass12345',
+            first_name='Invest',
+            last_name='Or',
+            role=self.default_role
+        )
 
     def test_valid_investor_data(self):
         data = {
@@ -149,11 +167,18 @@ class InvestorSerializerTests(TestCase):
 
 # ─────────────────────────────────────────────────────────────
 # MODEL CLEAN() TESTS
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 
 class StartupModelCleanTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create(username='cleanuser')
+        self.default_role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
+        self.user = User.objects.create_user(
+            email='cleanuser@example.com',
+            password='pass12345',
+            first_name='Clean',
+            last_name='User',
+            role=self.default_role
+        )
 
     def test_invalid_social_links_clean_should_raise(self):
         startup = Startup(
@@ -171,7 +196,14 @@ class StartupModelCleanTests(TestCase):
 
 class InvestorModelCleanTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create(username='cleaninvestor')
+        self.default_role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
+        self.user = User.objects.create_user(
+            email='cleaninvestor@example.com',
+            password='pass12345',
+            first_name='Clean',
+            last_name='Investor',
+            role=self.default_role
+        )
 
     def test_valid_clean_should_pass(self):
         investor = Investor(
@@ -191,12 +223,20 @@ class InvestorModelCleanTests(TestCase):
 
 # ─────────────────────────────────────────────────────────────
 # API TESTS
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────
 
 class StartupAPITests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='apiuser', password='pass')
-        self.client.login(username='apiuser', password='pass')
+        self.default_role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
+        self.user = User.objects.create_user(
+            email='apiuser@example.com',
+            password='pass12345',
+            first_name='API',
+            last_name='User',
+            role=self.default_role
+        )
+        # Safe way to authenticate in DRF tests with a custom user model
+        self.client.force_authenticate(user=self.user)
 
     def test_create_startup(self):
         url = reverse('startup-list')
@@ -216,13 +256,27 @@ class StartupAPITests(APITestCase):
         url = reverse('startup-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.data), 1)
+
+        # Handle possible pagination (results) or a direct list
+        resp_data = response.data
+        if isinstance(resp_data, dict) and 'results' in resp_data:
+            count = len(resp_data['results'])
+        else:
+            count = len(resp_data)
+        self.assertGreaterEqual(count, 1)
 
 
 class InvestorAPITests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='apiinvestor', password='pass')
-        self.client.login(username='apiinvestor', password='pass')
+        self.default_role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
+        self.user = User.objects.create_user(
+            email='apiinvestor@example.com',
+            password='pass12345',
+            first_name='API',
+            last_name='Investor',
+            role=self.default_role
+        )
+        self.client.force_authenticate(user=self.user)
 
     def test_create_investor(self):
         url = reverse('investor-list')
@@ -240,7 +294,13 @@ class InvestorAPITests(APITestCase):
         url = reverse('investor-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.data), 1)
+
+        resp_data = response.data
+        if isinstance(resp_data, dict) and 'results' in resp_data:
+            count = len(resp_data['results'])
+        else:
+            count = len(resp_data)
+        self.assertGreaterEqual(count, 1)
 
     def test_update_investor(self):
         investor = Investor.objects.create(user=self.user, company_name='OldName')
@@ -254,4 +314,5 @@ class InvestorAPITests(APITestCase):
         investor = Investor.objects.create(user=self.user, company_name='ToDelete')
         url = reverse('investor-detail', args=[investor.id])
         response = self.client.delete(url)
-        self.assertEqual(response.status_code)
+        # обычно удаление возвращает 204 No Content
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

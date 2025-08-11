@@ -1,109 +1,117 @@
-from rest_framework import serializers
 from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
+from rest_framework import serializers
+from core import settings
+from projects.serializers import ProjectSerializer
 from startups.documents import StartupDocument
-from startups.models import Startup, Industry, Location
-from projects.models import Project
-from common.enums import ProjectStatus
+from startups.models import Startup
+from validation.validate_social_links import validate_social_links_dict
 
 
-class LocationSerializer(serializers.ModelSerializer):
+class SocialLinksValidationMixin:
     """
-    Serializer for Location model.
-    """
-    class Meta:
-        model = Location
-        fields = ['id', 'country']
+    Provides validation logic for the `social_links` field.
 
+    This method ensures that:
+    - Each platform key is supported (based on settings.ALLOWED_SOCIAL_PLATFORMS).
+    - Each URL is syntactically valid.
+    - The domain of each URL matches one of the expected domains for the given platform.
 
-class IndustrySerializer(serializers.ModelSerializer):
-    """
-    Serializer for Industry model.
-    """
-    class Meta:
-        model = Industry
-        fields = ['id', 'name']
+    Args:
+        value (dict): A dictionary of platform names mapped to URLs.
 
+    Returns:
+        dict: The validated `social_links` dictionary.
 
-class StartupDocumentSerializer(DocumentSerializer):
+    Raises:
+        serializers.ValidationError: If any platform is unsupported, any URL is malformed,
+                                     or any domain does not match the expected values.
     """
-    Serializer for Elasticsearch-backed search results.
-    Used by the DocumentViewSet for search responses.
-    """
-    industries = serializers.SerializerMethodField()
-    location = serializers.SerializerMethodField()
 
-    class Meta:
-        document = StartupDocument
-        fields = (
-            'id', 'company_name', 'description', 'location',
-            'funding_stage', 'industries',
-            'investment_needs', 'company_size', 'is_active'
+    def validate_social_links(self, value):
+        validate_social_links_dict(
+            social_links=value,
+            allowed_platforms=settings.ALLOWED_SOCIAL_PLATFORMS,
+            raise_serializer=True
         )
-
-    def get_industries(self, obj):
-        try:
-            return [i.name for i in obj.industries.all()]
-        except Exception:
-            try:
-                return [i.get('name') for i in obj.industries]
-            except Exception:
-                return []
-
-    def get_location(self, obj):
-        try:
-            loc = obj.location
-            return {'id': loc.id, 'country': loc.country} if loc else None
-        except Exception:
-            return None
+        return value
 
 
-class ProjectNestedSerializer(serializers.ModelSerializer):
+class StartupSerializer(SocialLinksValidationMixin, serializers.ModelSerializer):
     """
-    Lightweight nested serializer for including projects inside Startup detail.
-    Avoids circular imports by not using full ProjectSerializer.
+    Full serializer for Startup.
+    Includes nested project details.
     """
-    category = serializers.SerializerMethodField()
-    status_display = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Project
-        fields = [
-            'id', 'title', 'description', 'status', 'status_display',
-            'duration', 'funding_goal', 'current_funding',
-            'category', 'website', 'email', 'has_patents', 'is_participant',
-            'is_active', 'created_at', 'updated_at'
-        ]
-        read_only_fields = fields
-
-    def get_category(self, obj):
-        cat = getattr(obj, 'category', None)
-        if cat:
-            return {'id': cat.id, 'name': getattr(cat, 'name', None)}
-        return None
-
-    def get_status_display(self, obj):
-        try:
-            return ProjectStatus(obj.status).label if obj.status else None
-        except Exception:
-            return obj.status
-
-
-class StartupDetailSerializer(serializers.ModelSerializer):
-    """
-    Full serializer for Startup detail view (DB-based).
-    Includes industries, location, and nested projects.
-    """
-    industries = IndustrySerializer(many=True, read_only=True)
-    location = LocationSerializer(read_only=True)
-    projects = ProjectNestedSerializer(many=True, read_only=True)
+    projects = ProjectSerializer(many=True, read_only=True)
+    social_links = serializers.DictField(required=False)
 
     class Meta:
         model = Startup
         fields = [
-            'id', 'company_name', 'description', 'location',
-            'funding_stage', 'industries', 'logo', 'website',
-            'investment_needs', 'company_size', 'is_active',
+            'id', 'company_name', 'description', 'industry',
+            'location', 'website', 'email', 'founded_year',
+            'team_size', 'stage', 'social_links', 'user',
             'created_at', 'updated_at', 'projects'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'projects']
 
+    def validate_company_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Company name must not be empty.")
+        return value
+
+    def validate(self, data):
+        """
+        Cross-field validation logic:
+        - team_size must be at least 1
+        - either website or email must be provided
+        - industry, location, and user must be present
+        """
+        errors = {}
+
+        team_size = data.get('team_size')
+        website = data.get('website', '').strip()
+        email = data.get('email', '').strip()
+
+        if team_size is not None and team_size < 1:
+            errors['team_size'] = "Team size must be at least 1."
+
+        if not website and not email:
+            errors['non_field_errors'] = [
+                "At least one contact method (website or email) must be provided."
+            ]
+
+        required_fields = ['industry', 'location', 'user']
+        missing = [field for field in required_fields if not data.get(field)]
+        if missing:
+            errors['missing_fields'] = f"Missing required fields: {', '.join(missing)}"
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return data
+
+
+class StartupDocumentSerializer(DocumentSerializer):
+    industry = serializers.SerializerMethodField()
+
+    class Meta:
+        document = StartupDocument
+        fields = ('id', 'company_name', 'description', 'location', 'stage', 'industry')
+
+    def get_industry(self, obj):
+        return obj.industry.name if obj.industry else None
+
+
+class StartupShortSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for nested use (e.g., inside Investor).
+    """
+
+    class Meta:
+        model = Startup
+        fields = [
+            'id', 'company_name', 'industry', 'location',
+            'website', 'stage'
+        ]
+        read_only_fields = fields

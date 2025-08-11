@@ -24,8 +24,8 @@ api_urlpatterns = [
     # Startup-related endpoints
     path('startups/', include('startups.urls')),
 
-    # Profile-related endpoints
-    path('profiles/', include('profiles.urls')),
+    # Investor-related endpoints
+    path('investors/', include('investors.urls')),
   
     # OAuth endpoints
     path('api/accounts/', include('allauth.urls')),

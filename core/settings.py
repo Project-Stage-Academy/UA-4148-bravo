@@ -24,7 +24,7 @@ INSTALLED_APPS = [
 
     # Local apps
     'users',
-    'profiles',
+    'investors',
     'projects',
     'startups',
     'communications',
@@ -106,6 +106,8 @@ SIMPLE_JWT = {
         'rest_framework_simplejwt.tokens.AccessToken',
         'rest_framework_simplejwt.tokens.RefreshToken',
     ),
+    'USER_ID_FIELD': 'user_id',
+    'USER_ID_CLAIM': 'user_id',
 }
 
 DJOSER = {
@@ -200,6 +202,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Elasticsearch DSL Configuration
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
+    },
+}
+
+# Override Elasticsearch index names for testing
+if 'test' in sys.argv:
+    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
+
 # File validation settings
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
 ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png"]
@@ -210,7 +223,7 @@ MAX_IMAGE_DIMENSIONS = (5000, 5000)
 
 ALLOWED_DOCUMENT_EXTENSIONS = [
     "pdf", "doc", "docx", "txt", "odt", "rtf",
-    "xls", "xlsx", "ppt",
+    "xls", "xlsx", "ppt", "pptx", "zip", "rar"
 ]
 
 ALLOWED_DOCUMENT_MIME_TYPES = [
@@ -218,7 +231,14 @@ ALLOWED_DOCUMENT_MIME_TYPES = [
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/plain",
-    "application/vnd.oasis.opendocument.text"
+    "application/vnd.oasis.opendocument.text",
+    "application/rtf",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+    "application/x-rar-compressed",
 ]
 
 # Allowed social platforms
@@ -326,7 +346,12 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
-        'profiles': {
+        'startups': {
+            'handlers': ['console', 'file_apps'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'investors': {
             'handlers': ['console', 'file_apps'],
             'level': 'DEBUG',
             'propagate': False,

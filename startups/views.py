@@ -1,18 +1,59 @@
-from rest_framework.response import Response
-from rest_framework import status, viewsets, filters
-from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
+import logging
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django_elasticsearch_dsl_drf.filter_backends import (
     FilteringFilterBackend,
     OrderingFilterBackend,
     SearchFilterBackend,
 )
+from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.decorators import action
-from elasticsearch import ConnectionError, TransportError
+from elasticsearch.exceptions import ConnectionError, TransportError
+from rest_framework import status
+from rest_framework import viewsets
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.filters import SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .documents import StartupDocument
-from .serializers import StartupDocumentSerializer, StartupDetailSerializer
 from .models import Startup
+from .serializers import StartupSerializer, StartupDocumentSerializer
+
+logger = logging.getLogger(__name__)
+
+
+class StartupViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Startup profiles.
+    Optimized to avoid N+1 queries when accessing projects.
+    """
+    queryset = Startup.objects.select_related('user', 'industry', 'location') \
+        .prefetch_related('projects')
+    serializer_class = StartupSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['industry', 'stage', 'location__country']
+    search_fields = ['company_name', 'user__first_name', 'user__last_name', 'email']
+
+    def perform_create(self, serializer):
+        instance = serializer.save(user=self.request.user)
+        try:
+            instance.clean()
+        except DjangoValidationError as e:
+            logger.warning(f"Validation error during creation: {e}")
+            raise DRFValidationError(e.message_dict)
+        logger.info(f"Startup created: {instance}")
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        try:
+            instance.clean()
+        except DjangoValidationError as e:
+            logger.warning(f"Validation error during update: {e}")
+            raise DRFValidationError(e.message_dict)
+        serializer.save()
+        logger.info(f"Startup updated: {instance}")
 
 
 class StartupDocumentView(DocumentViewSet):
@@ -32,7 +73,7 @@ class StartupDocumentView(DocumentViewSet):
 
     filter_fields = {
         'company_name': 'company_name.raw',
-        'funding_stage': 'funding_stage',
+        'stage': 'stage',
         'location.country': 'location.country',
         'industries.name': 'industries.name',
         'investment_needs': 'investment_needs',
@@ -42,13 +83,13 @@ class StartupDocumentView(DocumentViewSet):
 
     ordering_fields = {
         'company_name': 'company_name.raw',
-        'funding_stage': 'funding_stage.raw',
+        'stage': 'stage.raw',
         'location.country': 'location.country.raw',
         'company_size': 'company_size',
         'created_at': 'created_at',
     }
 
-    ordering = ('-funding_stage',)
+    ordering = ('-stage',)
 
     search_fields = (
         'company_name',
@@ -67,54 +108,3 @@ class StartupDocumentView(DocumentViewSet):
                 {"detail": "Search service is temporarily unavailable. Please try again later."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-
-
-class StartupViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    DB-backed API for startup list / detail.
-    - GET /startups/ → list of startups (supports filtering/search)
-    - GET /startups/{id}/ → detailed startup with nested projects
-    """
-    queryset = Startup.objects.all().select_related('location').prefetch_related('industries', 'projects__category')
-    serializer_class = StartupDetailSerializer
-    lookup_field = 'id'
-
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-
-    filterset_fields = {
-        'industries__name': ['exact'],
-        'funding_stage': ['exact', 'icontains'],
-        'location__country': ['exact'],
-        'projects__status': ['exact'],
-        'projects__category__name': ['exact'],
-        'is_active': ['exact'],
-        'company_size': ['exact'],
-    }
-
-    search_fields = [
-        'company_name',
-        'description',
-        'industries__name',
-        'projects__title',
-        'projects__description',
-        'investment_needs',
-    ]
-
-    ordering_fields = ['company_name', 'created_at', 'funding_stage', 'company_size']
-    ordering = ['company_name']
-
-    @action(detail=True, methods=['get'], url_path='short')
-    def short(self, request, id=None):
-        """
-        Returns a short representation of the startup (e.g. for card view).
-        """
-        instance = self.get_object()
-        data = {
-            "id": instance.id,
-            "company_name": instance.company_name,
-            "funding_stage": instance.funding_stage,
-            "industries": [i.name for i in instance.industries.all()] if hasattr(instance, 'industries') else [],
-            "location": instance.location.country if instance.location else None
-        }
-        return Response(data)
-

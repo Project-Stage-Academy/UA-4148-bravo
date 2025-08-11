@@ -5,7 +5,8 @@ from startups.models import Startup, Industry, Location
 
 @registry.register_document
 class StartupDocument(Document):
-    industries = fields.ObjectField(properties={
+
+    industry = fields.ObjectField(properties={
         'id': fields.IntegerField(),
         'name': fields.KeywordField(),
     })
@@ -13,6 +14,10 @@ class StartupDocument(Document):
     location = fields.ObjectField(properties={
         'id': fields.IntegerField(),
         'country': fields.KeywordField(),
+        'region': fields.KeywordField(),
+        'city': fields.KeywordField(),
+        'address_line': fields.TextField(),
+        'postal_code': fields.KeywordField(),
     })
 
     company_name = fields.TextField(fields={
@@ -39,6 +44,12 @@ class StartupDocument(Document):
         fields = [
             'id',
             'description',
+            'website',
+            'email',
+            'founded_year',
+            'team_size',
+            'created_at',
+            'updated_at',
         ]
         related_models = [Industry, Location]
 

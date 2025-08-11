@@ -10,31 +10,13 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('investments', '0001_initial'),
-        ('profiles', '0001_initial'),
-        ('projects', '0001_initial'),
+        ('investors', '0001_initial'),
     ]
 
     operations = [
         migrations.AddField(
             model_name='subscription',
             name='investor',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='subscriptions', to='profiles.investor'),
-        ),
-        migrations.AddField(
-            model_name='subscription',
-            name='project',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='subscriptions', to='projects.project'),
-        ),
-        migrations.AddIndex(
-            model_name='subscription',
-            index=models.Index(fields=['project'], name='idx_subscription_project'),
-        ),
-        migrations.AddIndex(
-            model_name='subscription',
-            index=models.Index(fields=['investor'], name='idx_subscription_investor'),
-        ),
-        migrations.AddConstraint(
-            model_name='subscription',
-            constraint=models.UniqueConstraint(fields=('investor', 'project'), name='unique_investor_project'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='subscriptions', to='investors.investor'),
         ),
     ]

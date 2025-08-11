@@ -11,7 +11,9 @@ def api_client():
 
 @pytest.fixture
 def test_user(db):
-    role, _ = UserRole.objects.get_or_create(role="user")  # или нужная роль
+    # Create the role if it doesn't exist
+    role, _ = UserRole.objects.get_or_create(role="user")
+    # Создаём тестового пользователя с email как логином
     return User.objects.create_user(
         email="testuser@example.com",
         password="testpass",
@@ -30,7 +32,7 @@ def test_successful_login(api_client, test_user):
     data = response.json()
     assert "access" in data
     assert "refresh" in data
-    assert data["user_id"] == test_user.id
+    assert str(data["user_id"]) == str(test_user.id)
     assert data["email"] == test_user.email
 
 @pytest.mark.django_db
@@ -55,3 +57,4 @@ def test_login_missing_fields(api_client):
         "email": "testuser@example.com"
     })
     assert response.status_code == 400
+
