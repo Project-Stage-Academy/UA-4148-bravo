@@ -1,11 +1,12 @@
-from django.core.files.uploadedfile import SimpleUploadedFile
-from projects.serializers import ProjectWriteSerializer
-from tests.test_setup import BaseProjectTestCase
 import ddt
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 
+from projects.serializers import ProjectWriteSerializer
+from tests.test_generic_case import DisableSignalMixinStartup, BaseAPITestCase
 
-class ProjectSerializerBaseTests(BaseProjectTestCase):
+
+class ProjectSerializerBaseTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Test suite for validating ProjectSerializer behavior, including
     required fields, file uploads, and validation constraints.
@@ -144,7 +145,7 @@ class ProjectSerializerBaseTests(BaseProjectTestCase):
 
 
 @ddt.ddt
-class ProjectSerializerValidationTests(BaseProjectTestCase):
+class ProjectSerializerValidationTests(DisableSignalMixinStartup, BaseAPITestCase):
 
     @ddt.data(
         'title',

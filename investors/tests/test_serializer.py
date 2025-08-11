@@ -1,10 +1,10 @@
 import datetime
 from investors.serializers import InvestorSerializer
-from tests.test_setup import BaseInvestorTestCase
+from tests.test_generic_case import DisableSignalMixinInvestor, BaseAPITestCase
 from ddt import ddt, data, unpack
 
 
-class InvestorSerializerValidDataTests(BaseInvestorTestCase):
+class InvestorSerializerValidDataTests(DisableSignalMixinInvestor, BaseAPITestCase):
     """Tests for valid investor data and some edge cases."""
 
     def test_valid_investor_data(self):
@@ -84,7 +84,7 @@ class InvestorSerializerValidDataTests(BaseInvestorTestCase):
 
 
 @ddt
-class InvestorSerializerInvalidFieldsTests(BaseInvestorTestCase):
+class InvestorSerializerInvalidFieldsTests(DisableSignalMixinInvestor, BaseAPITestCase):
     """Parameterized tests for invalid field values in the serializer."""
 
     @data(

@@ -1,14 +1,16 @@
 import threading
 from decimal import Decimal
+
 from django.db import transaction
 from django.db.models import Sum
 from rest_framework import serializers
+
 from investments.serializers.subscription_create import SubscriptionCreateSerializer
 from investments.serializers.subscription_update import SubscriptionUpdateSerializer
-from tests.test_setup import BaseInvestmentTestCase
+from tests.test_generic_case import BaseAPITestCase, DisableSignalMixinStartup
 
 
-class SubscriptionSerializerValidDataTests(BaseInvestmentTestCase):
+class SubscriptionSerializerValidDataTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Tests for validating correct behavior of SubscriptionSerializer with valid input data.
 
@@ -87,7 +89,7 @@ class SubscriptionSerializerValidDataTests(BaseInvestmentTestCase):
         self.assertGreater(total_share, Decimal("99.99"))
 
 
-class SubscriptionSerializerAmountValidationTests(BaseInvestmentTestCase):
+class SubscriptionSerializerAmountValidationTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Tests focusing on validation errors related to the 'amount' field
     in SubscriptionSerializer, such as missing, negative, or zero amounts.
@@ -132,7 +134,7 @@ class SubscriptionSerializerAmountValidationTests(BaseInvestmentTestCase):
         )
 
 
-class SubscriptionSerializerInvestmentConstraintsTests(BaseInvestmentTestCase):
+class SubscriptionSerializerInvestmentConstraintsTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Tests enforcing business logic and investment constraints during subscription creation.
 
@@ -265,7 +267,7 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseInvestmentTestCase):
         )
 
 
-class SubscriptionSerializerUpdateTests(BaseInvestmentTestCase):
+class SubscriptionSerializerUpdateTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Tests for updating existing Subscription instances through the serializer.
 
@@ -382,7 +384,7 @@ class SubscriptionSerializerUpdateTests(BaseInvestmentTestCase):
         self.assertIn("project", context.exception.detail)
 
 
-class SubscriptionSerializerConcurrencyTests(BaseInvestmentTestCase):
+class SubscriptionSerializerConcurrencyTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Tests for updating existing Subscription instances through the serializer.
 

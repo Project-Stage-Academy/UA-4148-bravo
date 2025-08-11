@@ -1,14 +1,15 @@
 from decimal import Decimal
+
 from django.db import models
 from django.test.utils import override_settings
 
 from investments.models import Subscription
 from investments.services.investment_share_service import recalculate_investment_shares
-from tests.test_setup import BaseInvestmentTestCase
+from tests.test_generic_case import BaseAPITestCase, DisableSignalMixinStartup
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-class InvestmentShareServiceTest(BaseInvestmentTestCase):
+class InvestmentShareServiceTest(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Test case for verifying the correct calculation of investment shares
     for subscriptions related to a project.

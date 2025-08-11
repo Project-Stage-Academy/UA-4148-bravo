@@ -8,9 +8,7 @@ from rest_framework.test import APITestCase
 
 from common.enums import Stage
 from startups.documents import StartupDocument
-from tests.factories import (
-    UserFactory, IndustryFactory, LocationFactory, StartupFactory
-)
+from tests.elasticsearch.factories import UserFactory, LocationFactory, IndustryFactory, StartupFactory
 
 
 class StartupElasticsearchTests(APITestCase):
@@ -79,7 +77,6 @@ class StartupElasticsearchTests(APITestCase):
             stage=Stage.MVP,
         )
 
-        # Allow time for Elasticsearch indexing
         time.sleep(1)
 
     def tearDown(self):

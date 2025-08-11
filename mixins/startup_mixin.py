@@ -62,6 +62,7 @@ class StartupMixin:
 
         assert Industry.objects.filter(name=cls.industry.name).exists(), "Industry not created"
         assert Location.objects.filter(country=cls.location.country).exists(), "Location not created"
+        assert User.objects.filter(email=cls.user.email).exists(), "User not created"
 
     @classmethod
     def setup_startup(cls):
@@ -95,7 +96,7 @@ class StartupMixin:
         cls.setup_startup()
 
     @classmethod
-    def tearDownClass(cls):
+    def tear_down(cls):
         """
         Clean up created Startup, Industry, and Location instances after tests.
         Deletes the instances referenced by `cls.startup`, `cls.industry`, and `cls.location`.
@@ -109,4 +110,5 @@ class StartupMixin:
         if hasattr(cls, 'location'):
             Location.objects.filter(pk=cls.location.pk).delete()
 
-        super().tearDownClass()
+        if hasattr(cls, 'user'):
+            User.objects.filter(pk=cls.user.pk).delete()

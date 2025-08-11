@@ -1,10 +1,10 @@
-from tests.elasticsearch import UserFactory, IndustryFactory, LocationFactory, StartupFactory, CategoryFactory, \
-    ProjectFactory
+from tests.elasticsearch.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, \
+    CategoryFactory, ProjectFactory
 
 
 class ProjectTestSetupMixin:
     @classmethod
-    def setUpTestData(cls):
+    def setup(cls):
         cls.user1 = UserFactory()
         cls.user2 = UserFactory()
         cls.industry1 = IndustryFactory(name="Fintech")

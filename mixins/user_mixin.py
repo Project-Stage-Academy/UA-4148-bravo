@@ -61,7 +61,7 @@ class UserMixin:
         cls.setup_users()
 
     @classmethod
-    def tearDownClass(cls):
+    def tear_down(cls):
         """
         Clean up User instances created during tests to avoid polluting other test cases.
 
@@ -70,4 +70,3 @@ class UserMixin:
         if hasattr(cls, '_created_users'):
             for user in cls._created_users:
                 User.objects.filter(pk=user.pk).delete()
-        super().tearDownClass()

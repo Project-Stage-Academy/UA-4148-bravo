@@ -1,10 +1,10 @@
 from django.core.exceptions import ValidationError
 
 from startups.models import Startup
-from tests.test_setup import BaseStartupTestCase
+from tests.test_generic_case import DisableSignalMixinStartup, BaseAPITestCase
 
 
-class StartupModelCleanTests(BaseStartupTestCase):
+class StartupModelCleanTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Tests for the Startup model's clean() method to ensure proper validation of fields,
     particularly the social_links field for supported platforms and valid URLs.

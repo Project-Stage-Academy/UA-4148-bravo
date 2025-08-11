@@ -1,9 +1,10 @@
 from django.urls import reverse
 from rest_framework import status
-from tests.test_setup import BaseStartupTestCase
+
+from tests.test_generic_case import DisableSignalMixinStartup, BaseAPITestCase
 
 
-class StartupAPITests(BaseStartupTestCase):
+class StartupAPITests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Test suite for Startup API endpoints, including creation and retrieval of startups.
     """

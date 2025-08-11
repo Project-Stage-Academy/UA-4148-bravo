@@ -1,11 +1,13 @@
 from decimal import Decimal
+
+from ddt import ddt, data, unpack
 from django.urls import reverse
 from rest_framework import status
-from tests.test_setup import BaseProjectTestCase
-from ddt import ddt, data, unpack
+
+from tests.test_generic_case import DisableSignalMixinStartup, BaseAPITestCase
 
 
-class ProjectAPICRUDTests(BaseProjectTestCase):
+class ProjectAPICRUDTests(DisableSignalMixinStartup, BaseAPITestCase):
     def get_project_data(self, **overrides):
         """
         Generate default project data dictionary, with optional overrides.
@@ -92,7 +94,7 @@ class ProjectAPICRUDTests(BaseProjectTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
 
-class ProjectAPIPermissionTests(BaseProjectTestCase):
+class ProjectAPIPermissionTests(DisableSignalMixinStartup, BaseAPITestCase):
     def create_other_user_startup_project(self, project_title, project_email):
         """
         Create a project owned by a different user for permission tests.
@@ -177,7 +179,7 @@ class ProjectAPIPermissionTests(BaseProjectTestCase):
 
 
 @ddt
-class ProjectAPIValidationTests(BaseProjectTestCase):
+class ProjectAPIValidationTests(DisableSignalMixinStartup, BaseAPITestCase):
     def get_project_data(self, **overrides):
         """
         Return a dictionary of default project data, optionally overridden by kwargs.

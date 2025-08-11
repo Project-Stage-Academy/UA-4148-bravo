@@ -78,7 +78,7 @@ class SubscriptionMixin:
         return data
 
     @classmethod
-    def tearDownClass(cls):
+    def tear_down(cls):
         """
         Clean up all Subscription instances created during the tests.
 
@@ -87,4 +87,3 @@ class SubscriptionMixin:
         if hasattr(cls, '_created_subscriptions'):
             for subscription in cls._created_subscriptions:
                 Subscription.objects.filter(pk=subscription.pk).delete()
-        super().tearDownClass()

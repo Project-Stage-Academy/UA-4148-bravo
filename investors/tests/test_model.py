@@ -1,11 +1,13 @@
 import datetime
-from django.core.exceptions import ValidationError
 from decimal import Decimal
+
+from django.core.exceptions import ValidationError
+
 from investors.models import Investor
-from tests.test_setup import BaseInvestorTestCase
+from tests.test_generic_case import DisableSignalMixinInvestor, BaseAPITestCase
 
 
-class InvestorModelCleanTests(BaseInvestorTestCase):
+class InvestorModelCleanTests(DisableSignalMixinInvestor, BaseAPITestCase):
     """
     Unit tests for the Investor model's validation logic.
 

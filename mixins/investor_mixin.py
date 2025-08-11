@@ -91,7 +91,8 @@ class InvestorMixin:
 
         assert Investor.objects.filter(company_name=cls.investor1.company_name).exists(), "Investor1 not created"
         assert Investor.objects.filter(company_name=cls.investor2.company_name).exists(), "Investor2 not created"
-        assert Investor.objects.filter(company_name=cls.startup_investor.company_name).exists(), "Startup Investor not created"
+        assert Investor.objects.filter(
+            company_name=cls.startup_investor.company_name).exists(), "Startup Investor not created"
 
     @classmethod
     def setup_all(cls):
@@ -103,7 +104,7 @@ class InvestorMixin:
         cls.setup_investors()
 
     @classmethod
-    def tearDownClass(cls):
+    def tear_down(cls):
         """
         Clean up all created database objects after tests finish.
 
@@ -124,5 +125,3 @@ class InvestorMixin:
 
         if hasattr(cls, 'user_startup'):
             cls.user_startup.delete()
-
-        super().tearDownClass()

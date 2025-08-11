@@ -57,7 +57,7 @@ class ProjectMixin:
         cls.setup_project()
 
     @classmethod
-    def tearDownClass(cls):
+    def tear_down(cls):
         """
         Clean up Project and Category instances created during tests.
         Deletes the project referenced by `cls.project` and category referenced by `cls.category`.
@@ -67,5 +67,3 @@ class ProjectMixin:
 
         if hasattr(cls, 'category'):
             Category.objects.filter(pk=cls.category.pk).delete()
-
-        super().tearDownClass()

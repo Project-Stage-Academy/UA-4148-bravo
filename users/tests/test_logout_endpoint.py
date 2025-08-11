@@ -1,14 +1,16 @@
 from rest_framework import status
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
+
 from mixins.user_mixin import TEST_USER_PASSWORD
-from tests.test_setup import BaseUserTestCase
+from tests.test_generic_case import DisableSignalMixinUser, BaseAPITestCase
 
 
-class JWTLogoutTest(BaseUserTestCase):
+class JWTLogoutTest(DisableSignalMixinUser, BaseAPITestCase):
     """
     Test suite for JWT logout functionality with token blacklisting.
     """
+    authenticate = False
 
     @classmethod
     def setUpTestData(cls):

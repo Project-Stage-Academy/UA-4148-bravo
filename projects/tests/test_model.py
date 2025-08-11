@@ -1,10 +1,12 @@
 from decimal import Decimal
+
 from django.core.exceptions import ValidationError
+
 from projects.models import Project
-from tests.test_setup import BaseProjectTestCase
+from tests.test_generic_case import DisableSignalMixinStartup, BaseAPITestCase
 
 
-class ProjectModelCleanTests(BaseProjectTestCase):
+class ProjectModelCleanTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Test suite for the Project model's clean() method validation logic,
     ensuring that business rules are enforced before saving.

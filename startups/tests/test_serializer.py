@@ -1,8 +1,8 @@
 from startups.serializers.startup_full import StartupSerializer
-from tests.test_setup import BaseStartupTestCase
+from tests.test_generic_case import DisableSignalMixinStartup, BaseAPITestCase
 
 
-class StartupSerializerTests(BaseStartupTestCase):
+class StartupSerializerTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Tests for StartupSerializer to validate proper serialization and validation
     of Startup data, including required fields, field constraints, and nested data.

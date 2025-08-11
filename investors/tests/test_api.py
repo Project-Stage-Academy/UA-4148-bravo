@@ -1,11 +1,12 @@
 from django.urls import reverse, reverse_lazy
 from rest_framework import status
+
 from common.enums import Stage
 from investors.models import Investor
-from tests.test_setup import BaseInvestorTestCase
+from tests.test_generic_case import DisableSignalMixinInvestor, BaseAPITestCase
 
 
-class InvestorAPITests(BaseInvestorTestCase):
+class InvestorAPITests(DisableSignalMixinInvestor, BaseAPITestCase):
     """
     API tests for Investor model: create, list, update, delete,
     including validation and permission checks.
