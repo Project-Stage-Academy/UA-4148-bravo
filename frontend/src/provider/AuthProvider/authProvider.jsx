@@ -37,47 +37,100 @@ const useAuth = () => useContext(AuthCtx);
 function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
 
-    async function loadUser() {
-        try {
-            const { data } = await api.get("/auth/me/");
-            setUser(data);
-        } catch { setUser(null); }
+    /**
+     * Sign up: POST /api/v1/auth/register/
+     *
+     * Body: { email, password, first_name, last_name } --> 201 {id,email}
+     *
+     * @param {string} email
+     * @param {string} password
+     * @param {string | null} first_name
+     * @param {string | null} last_name
+     */
+    async function signUp(email, password, first_name, last_name) {
+        await api.post("/api/v1/auth/register/", { email, password, first_name, last_name });
     }
 
+    /**
+     * Log in (SimpleJWT): POST /api/v1/auth/jwt/create/
+     *
+     * Body: { email, password } → 200 { access, refresh }
+     *
+     * @param {string} email
+     * @param {string} password
+     * @returns {Promise<void>}
+     */
     async function login(email, password) {
-        const { data } = await api.post("/auth/jwt/create/", { email, password });
+        const { data } = await api.post("/api/v1/auth/jwt/create/", { email, password });
         localStorage.setItem("refresh_token", data.refresh);
         setAccessToken(data.access);
         await loadUser();
     }
 
-    async function register(payload) {
-        await api.post("/auth/register/", payload);
-        // optional: auto-login after register (if BE returns tokens)
+    /**
+     * Me: GET /api/v1/auth/me/
+     *
+     * (optional but recommended) → 200 { id, email, role, ... }
+     *
+     * @returns {Promise<void>}
+     */
+    async function loadUser() {
+        try {
+            const { data } = await api.get("/api/v1/auth/me/");
+            setUser(data);
+        } catch { setUser(null); }
     }
 
+    /**
+     * Log out: client-side (drop tokens).
+     *
+     * If BE supports blacklist: POST /api/v1/auth/jwt/blacklist/ { refresh } → 205
+     */
     function logout() {
         const refresh = localStorage.getItem("refresh_token");
-        if (refresh) { api.post("/auth/jwt/blacklist/", { refresh }).catch(() => {}); }
+        if (refresh) { api.post("/api/v1/auth/jwt/blacklist/", { refresh }).catch(() => {}); }
         localStorage.removeItem("refresh_token");
         setAccessToken(null);
         setUser(null);
     }
 
+    /**
+     * Password reset request: POST /api/v1/auth/password/reset/
+     *
+     * Body: { email } → 200
+     *
+     * @param {string} email
+     * @returns {Promise<void>}
+     */
     async function requestReset(email) {
-        await api.post("/auth/password/reset/", { email });
+        await api.post("/api/v1/auth/password/reset/", { email });
     }
 
+    /**
+     * Password reset confirm: POST /api/v1/auth/password/reset/confirm/
+     *
+     * Body: { uid, token, new_password } → 200
+     *
+     * @param {string} uid
+     * @param {string} token
+     * @param {string} new_password
+     * @returns {Promise<void>}
+     */
     async function confirmReset(uid, token, new_password) {
-        await api.post("/auth/password/reset/confirm/", { uid, token, new_password });
+        await api.post("/api/v1/auth/password/reset/confirm/", { uid, token, new_password });
     }
 
-    useEffect(() => { // try to restore session on mount
+    /**
+     * Refresh: POST /api/v1/auth/jwt/refresh/
+     *
+     * Body: { refresh } → 200 { access }
+     */
+    useEffect(() => {
         (async () => {
             const refresh = localStorage.getItem("refresh_token");
             if (!refresh) return;
             try {
-                const { data } = await api.post("/auth/jwt/refresh/", { refresh });
+                const { data } = await api.post("/api/v1/auth/jwt/refresh/", { refresh });
                 setAccessToken(data.access);
                 await loadUser();
             } catch {
@@ -87,7 +140,7 @@ function AuthProvider({ children }) {
     }, []);
 
     return (
-        <AuthCtx.Provider value={{ user, login, register, logout, requestReset, confirmReset }}>
+        <AuthCtx.Provider value={{ user, login, register: signUp, logout, requestReset, confirmReset }}>
             {children}
         </AuthCtx.Provider>
     );
