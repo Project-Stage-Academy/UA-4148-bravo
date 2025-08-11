@@ -97,3 +97,8 @@ pytest-django==4.11.1
 
 # Для типів та FastAPI
 annotated-types==0.7.0
+
+# OAuth
+django-allauth==65.10.0
+
+

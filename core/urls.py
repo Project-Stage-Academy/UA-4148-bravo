@@ -26,6 +26,9 @@ api_urlpatterns = [
 
     # Profile-related endpoints
     path('profiles/', include('profiles.urls')),
+  
+    # OAuth endpoints
+    path('api/accounts/', include('allauth.urls')),
 ]
 
 urlpatterns = [
