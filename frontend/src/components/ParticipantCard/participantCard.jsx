@@ -3,7 +3,7 @@ import Image from '../Image/image';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '../Button/button';
 import { useState } from 'react';
-import { useAuth } from '../../context/AuthContext/authContext';
+import { useAuth } from '../../provider/AuthProvider/authProvider';
 import FollowStar from '../FollowStar/followStar';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
