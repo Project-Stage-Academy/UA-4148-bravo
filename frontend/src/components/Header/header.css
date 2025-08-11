@@ -67,6 +67,10 @@
 }
 
 @media screen and (max-width: 646px) {
+    .header {
+        padding: 16px;
+    }
+
     .header--logo__disposal {
         display: none;
     }
