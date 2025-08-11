@@ -1,25 +1,23 @@
-from django.test import Client
-
-from users.models import UserRole, User
-from users.tests.test_setup import BaseUserTestCase
+from mixins.user_mixin import TEST_USER_PASSWORD
+from tests.test_setup import BaseUserTestCase
 
 
 class LoginTestCase(BaseUserTestCase):
-    def setUp(self):
-        self.client = Client()
-        self.role, _ = UserRole.objects.get_or_create(role="user")
-        self.user = User.objects.create_user(
-            email="testuser@example.com",
-            password="testpass",
-            first_name="Test",
-            last_name="User",
-            role=self.role
-        )
+    """
+    TestCase for verifying user login API functionality.
+    Uses UserMixin to create a test user with a password from environment variables.
+    """
 
     def test_successful_login(self):
+        """
+        Test successful login with valid credentials.
+        Checks that the response status is 200,
+        and that the access and refresh tokens are included in the response,
+        along with correct user_id and email.
+        """
         response = self.client.post("/api/v1/users/login/", {
             "email": "testuser@example.com",
-            "password": "testpass"
+            "password": TEST_USER_PASSWORD
         }, content_type="application/json")
 
         self.assertEqual(response.status_code, 200)
@@ -30,6 +28,10 @@ class LoginTestCase(BaseUserTestCase):
         self.assertEqual(data["email"], self.user.email)
 
     def test_login_wrong_password(self):
+        """
+        Test login attempt with an incorrect password.
+        Expects a 401 Unauthorized response.
+        """
         response = self.client.post("/api/v1/users/login/", {
             "email": "testuser@example.com",
             "password": "wrongpass"
@@ -38,6 +40,10 @@ class LoginTestCase(BaseUserTestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_login_nonexistent_user(self):
+        """
+        Test login attempt with a non-existent user.
+        Expects a 401 Unauthorized response.
+        """
         response = self.client.post("/api/v1/users/login/", {
             "email": "ghost@example.com",
             "password": "nopass"
@@ -46,6 +52,10 @@ class LoginTestCase(BaseUserTestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_login_missing_fields(self):
+        """
+        Test login attempt with missing required fields.
+        Expects a 400 Bad Request response.
+        """
         response = self.client.post("/api/v1/users/login/", {
             "email": "testuser@example.com"
         }, content_type="application/json")

@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from projects.models import Project
-from projects.tests.test_setup import BaseProjectTestCase
+from tests.test_setup import BaseProjectTestCase
 
 
 class ProjectModelCleanTests(BaseProjectTestCase):

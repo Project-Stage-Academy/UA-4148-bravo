@@ -1,5 +1,5 @@
 from investors.serializers import InvestorSerializer
-from investors.tests.test_setup import BaseInvestorTestCase
+from tests.test_setup import BaseInvestorTestCase
 
 
 class InvestorSerializerTests(BaseInvestorTestCase):

@@ -1,11 +1,9 @@
 from decimal import Decimal
-
 from django.db import models
 from django.test.utils import override_settings
 
-from investments.models import Subscription
 from investments.services.investment_share_service import recalculate_investment_shares
-from investments.tests.test_setup import BaseInvestmentTestCase
+from tests.test_setup import BaseInvestmentTestCase
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
@@ -16,8 +14,12 @@ class InvestmentShareServiceTest(BaseInvestmentTestCase):
     """
 
     def test_recalculate_shares(self):
-        s1 = Subscription.objects.create(project=self.project, investor=self.investor1, amount=Decimal('100'))
-        s2 = Subscription.objects.create(project=self.project, investor=self.investor2, amount=Decimal('300'))
+        """
+        Subscriptions with amounts 100 and 300 should have shares 1.00 and 3.00,
+        and total shares should be 4.00.
+        """
+        s1 = self.create_subscription(self.investor1, self.project, '100', '0.00')
+        s2 = self.create_subscription(self.investor2, self.project, '300', '0.00')
 
         recalculate_investment_shares(self.project)
 
@@ -27,15 +29,14 @@ class InvestmentShareServiceTest(BaseInvestmentTestCase):
         self.assertEqual(s1.investment_share, Decimal('1.00'))
         self.assertEqual(s2.investment_share, Decimal('3.00'))
 
-        total_share = Subscription.objects.filter(project=self.project).aggregate(
+        total_share = self.model.objects.filter(project=self.project).aggregate(
             total=models.Sum('investment_share')
         )['total']
         self.assertEqual(total_share, Decimal('4.00'))
 
     def test_no_subscriptions(self):
         """
-        Test that recalculating shares on a project with no subscriptions
-        does not raise errors.
+        Recalculation on a project with no subscriptions should not raise errors.
         """
         try:
             recalculate_investment_shares(self.project)
@@ -44,11 +45,10 @@ class InvestmentShareServiceTest(BaseInvestmentTestCase):
 
     def test_zero_total_amount(self):
         """
-        Test that when all subscriptions have zero amount,
-        all investment shares are set to 0.00.
+        If all amounts are zero, all investment shares should be 0.00.
         """
-        s1 = Subscription.objects.create(project=self.project, investor=self.investor1, amount=Decimal('0.00'))
-        s2 = Subscription.objects.create(project=self.project, investor=self.investor2, amount=Decimal('0.00'))
+        s1 = self.create_subscription(self.investor1, self.project, '0.00', '0.00')
+        s2 = self.create_subscription(self.investor2, self.project, '0.00', '0.00')
 
         recalculate_investment_shares(self.project)
 
@@ -60,9 +60,9 @@ class InvestmentShareServiceTest(BaseInvestmentTestCase):
 
     def test_single_subscription_gets_100_percent(self):
         """
-        Test that a single subscription receives 100% investment share.
+        A single subscription should get 100% investment share.
         """
-        s1 = Subscription.objects.create(project=self.project, investor=self.investor1, amount=Decimal('10000.00'))
+        s1 = self.create_subscription(self.investor1, self.project, '10000.00', '0.00')
 
         recalculate_investment_shares(self.project)
 
@@ -71,10 +71,10 @@ class InvestmentShareServiceTest(BaseInvestmentTestCase):
 
     def test_investment_share_precision(self):
         """
-        Test that share is correctly rounded to 2 decimal places.
+        Shares should be rounded to 2 decimal places.
         """
-        s1 = Subscription.objects.create(project=self.project, investor=self.investor1, amount=Decimal('3333.33'))
-        s2 = Subscription.objects.create(project=self.project, investor=self.investor2, amount=Decimal('6666.67'))
+        s1 = self.create_subscription(self.investor1, self.project, '3333.33', '0.00')
+        s2 = self.create_subscription(self.investor2, self.project, '6666.67', '0.00')
 
         recalculate_investment_shares(self.project)
 

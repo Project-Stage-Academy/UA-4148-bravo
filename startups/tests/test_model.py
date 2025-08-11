@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 
 from startups.models import Startup
-from startups.tests.test_setup import BaseStartupTestCase
+from tests.test_setup import BaseStartupTestCase
 
 
 class StartupModelCleanTests(BaseStartupTestCase):

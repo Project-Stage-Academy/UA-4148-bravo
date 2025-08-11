@@ -1,6 +1,6 @@
 from projects.serializers import ProjectSerializer
-from projects.tests.test_setup import BaseProjectTestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
+from tests.test_setup import BaseProjectTestCase
 
 
 class ProjectSerializerTests(BaseProjectTestCase):

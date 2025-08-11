@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 
 from investors.models import Investor
-from investors.tests.test_setup import BaseInvestorTestCase
+from tests.test_setup import BaseInvestorTestCase
 
 
 class InvestorModelCleanTests(BaseInvestorTestCase):
@@ -17,6 +17,6 @@ class InvestorModelCleanTests(BaseInvestorTestCase):
             stage='mvp'
         )
         try:
-            investor.clean()  # should not raise
+            investor.clean()
         except ValidationError:
             self.fail("Investor.clean() raised ValidationError unexpectedly")

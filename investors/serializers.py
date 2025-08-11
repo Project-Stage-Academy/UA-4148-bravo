@@ -36,5 +36,8 @@ class InvestorSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        user = self.context.get('request', None)
+        if user is None or not hasattr(user, 'user'):
+            raise serializers.ValidationError("Request user is missing in serializer context.")
+        validated_data['user'] = user.user
         return super().create(validated_data)

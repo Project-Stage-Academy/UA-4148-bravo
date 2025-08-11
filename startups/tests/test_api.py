@@ -1,8 +1,6 @@
 from django.urls import reverse
 from rest_framework import status
-
-from startups.models import Startup
-from startups.tests.test_setup import BaseStartupTestCase
+from tests.test_setup import BaseStartupTestCase
 
 
 class StartupAPITests(BaseStartupTestCase):
@@ -23,7 +21,7 @@ class StartupAPITests(BaseStartupTestCase):
         self.assertEqual(response.data['company_name'], 'API Startup')
 
     def test_get_startup_list(self):
-        Startup.objects.create(
+        self.create_startup(
             user=self.user,
             company_name='ListStartup',
             founded_year=2019,
