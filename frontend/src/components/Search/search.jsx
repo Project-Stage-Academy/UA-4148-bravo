@@ -1,13 +1,14 @@
 import "./search.css";
 import PropTypes from 'prop-types';
 import Button from '../Button/button';
+import clsx from 'clsx';
 
 /**
  * Search component
  */
-function Search({ className = '' }) {
+function Search({ className }) {
     return (
-        <div className={`search ${className}`}>
+        <div className={clsx('search', className)}>
             <input placeholder={"Пошук"}
                    className={"search--input"}
             />
