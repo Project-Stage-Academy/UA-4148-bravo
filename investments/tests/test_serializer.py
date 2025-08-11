@@ -3,16 +3,26 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models import Sum
 from rest_framework import serializers
-from investments.serializers import SubscriptionSerializer
+from investments.serializers.subscription_create import SubscriptionCreateSerializer
+from investments.serializers.subscription_update import SubscriptionUpdateSerializer
 from tests.test_setup import BaseInvestmentTestCase
 
 
 class SubscriptionSerializerValidDataTests(BaseInvestmentTestCase):
+    """
+    Tests for validating correct behavior of SubscriptionSerializer with valid input data.
+
+    Includes tests for:
+    - Typical valid subscription creation
+    - Proper rounding of investment shares
+    - Handling minimum boundary values
+    - Cumulative rounding effects over multiple subscriptions
+    """
 
     def test_subscription_serializer_valid_data(self):
         """Validate serializer with typical valid data."""
         data = self.get_subscription_data(self.investor1, self.project, 250.00)
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         is_valid = serializer.is_valid()
         if not is_valid:
             print("Validation errors:", serializer.errors)
@@ -21,7 +31,7 @@ class SubscriptionSerializerValidDataTests(BaseInvestmentTestCase):
     def test_valid_subscription_creation(self):
         """Test creating a valid subscription with proper amount and share."""
         data = self.get_subscription_data(self.investor1, self.project, 250.00)
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         is_valid = serializer.is_valid()
         if not is_valid:
             for field, errors in serializer.errors.items():
@@ -37,7 +47,7 @@ class SubscriptionSerializerValidDataTests(BaseInvestmentTestCase):
         Test that the investment_share is correctly rounded for typical decimal amounts.
         """
         data = self.get_subscription_data(self.investor1, self.project, 333.33)
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         subscription = serializer.save()
         self.assertEqual(subscription.investment_share, Decimal("3.33"))
@@ -47,7 +57,7 @@ class SubscriptionSerializerValidDataTests(BaseInvestmentTestCase):
         Test that the minimum allowed amount (0.01) is accepted and investment_share calculated correctly.
         """
         data = self.get_subscription_data(self.investor1, self.project, Decimal("0.01"))
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         subscription = serializer.save()
         expected_share = (Decimal("0.01") / self.project.funding_goal * 100).quantize(Decimal("0.01"))
@@ -68,7 +78,7 @@ class SubscriptionSerializerValidDataTests(BaseInvestmentTestCase):
                 investor = self.create_investor(user=user, company_name=f"Investor {i}", fund_size="1000000.00")
                 setattr(self, f'investor{i}', investor)
             data = self.get_subscription_data(investor, self.project, amount)
-            serializer = SubscriptionSerializer(data=data)
+            serializer = SubscriptionCreateSerializer(data=data)
             self.assertTrue(serializer.is_valid(), serializer.errors)
             subscription = serializer.save()
             total_share += subscription.investment_share
@@ -78,12 +88,16 @@ class SubscriptionSerializerValidDataTests(BaseInvestmentTestCase):
 
 
 class SubscriptionSerializerAmountValidationTests(BaseInvestmentTestCase):
+    """
+    Tests focusing on validation errors related to the 'amount' field
+    in SubscriptionSerializer, such as missing, negative, or zero amounts.
+    """
 
     def test_missing_amount_field(self):
         """Ensure serializer rejects subscription missing the 'amount' field."""
         data = self.get_subscription_data(self.investor1, self.project, 250.00)
         data.pop("amount")
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("amount", serializer.errors)
         self.assertTrue(
@@ -94,7 +108,7 @@ class SubscriptionSerializerAmountValidationTests(BaseInvestmentTestCase):
     def test_negative_amount_is_rejected(self):
         """Ensure negative subscription amounts are rejected."""
         data = self.get_subscription_data(self.investor1, self.project, -100.00)
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("amount", serializer.errors)
 
@@ -107,7 +121,7 @@ class SubscriptionSerializerAmountValidationTests(BaseInvestmentTestCase):
     def test_zero_amount_is_rejected(self):
         """Ensure zero subscription amount is rejected."""
         data = self.get_subscription_data(self.investor1, self.project, 0.00)
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("amount", serializer.errors)
 
@@ -119,11 +133,20 @@ class SubscriptionSerializerAmountValidationTests(BaseInvestmentTestCase):
 
 
 class SubscriptionSerializerInvestmentConstraintsTests(BaseInvestmentTestCase):
+    """
+    Tests enforcing business logic and investment constraints during subscription creation.
+
+    Includes tests for:
+    - Rejecting self-investments
+    - Preventing exceeding project funding goals
+    - Disallowing subscriptions after project fully funded
+    - Ensuring total investment share does not surpass 100%
+    """
 
     def test_self_investment_rejected(self):
         """Reject self-investment where investor owns the project."""
         data = self.get_subscription_data(self.investor1, self.project, 100.00)
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("investor", serializer.errors)
 
@@ -147,7 +170,7 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseInvestmentTestCase):
             self.project,
             str(self.project.funding_goal * Decimal("0.2"))
         )
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("amount", serializer.errors)
 
@@ -164,7 +187,7 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseInvestmentTestCase):
             self.project,
             str(self.project.funding_goal * Decimal("0.6"))
         )
-        serializer1 = SubscriptionSerializer(data=first_data)
+        serializer1 = SubscriptionCreateSerializer(data=first_data)
         self.assertTrue(serializer1.is_valid(), serializer1.errors)
         serializer1.save()
 
@@ -173,7 +196,7 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseInvestmentTestCase):
             self.project,
             str(self.project.funding_goal * Decimal("0.5"))
         )
-        serializer2 = SubscriptionSerializer(data=second_data)
+        serializer2 = SubscriptionCreateSerializer(data=second_data)
         self.assertFalse(serializer2.is_valid())
         self.assertIn("amount", serializer2.errors)
 
@@ -192,7 +215,7 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseInvestmentTestCase):
             investment_share=Decimal("100.00")
         )
         data = self.get_subscription_data(self.investor1, self.project, 1.00)
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("project", serializer.errors)
 
@@ -231,7 +254,7 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseInvestmentTestCase):
             fund_size="500000.00"
         )
         data = self.get_subscription_data(investor3, self.project, 2000.00)
-        serializer = SubscriptionSerializer(data=data)
+        serializer = SubscriptionCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("amount", serializer.errors)
 
@@ -243,6 +266,15 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseInvestmentTestCase):
 
 
 class SubscriptionSerializerUpdateTests(BaseInvestmentTestCase):
+    """
+    Tests for updating existing Subscription instances through the serializer.
+
+    Covers:
+    - Successful amount updates and share recalculation
+    - No change when amount remains the same
+    - Partial updates without amount field
+    - Restrictions on changing investor or project during update
+    """
 
     def test_update_subscription_amount_successfully(self):
         """Allow updating subscription amount and recalculate share."""
@@ -254,7 +286,7 @@ class SubscriptionSerializerUpdateTests(BaseInvestmentTestCase):
         )
         data = self.get_subscription_data(None, None, 500.00)
 
-        serializer = SubscriptionSerializer(subscription, data=data, partial=True)
+        serializer = SubscriptionUpdateSerializer(subscription, data=data, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         updated = serializer.save()
 
@@ -273,7 +305,7 @@ class SubscriptionSerializerUpdateTests(BaseInvestmentTestCase):
         )
         data = self.get_subscription_data(None, None, 200.00)
 
-        serializer = SubscriptionSerializer(subscription, data=data, partial=True)
+        serializer = SubscriptionUpdateSerializer(subscription, data=data, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         updated = serializer.save()
         self.assertAlmostEqual(updated.amount, Decimal("200.00"))
@@ -290,7 +322,7 @@ class SubscriptionSerializerUpdateTests(BaseInvestmentTestCase):
 
         data = {}
 
-        serializer = SubscriptionSerializer(subscription, data=data, partial=True)
+        serializer = SubscriptionUpdateSerializer(subscription, data=data, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         updated = serializer.save()
 
@@ -313,7 +345,7 @@ class SubscriptionSerializerUpdateTests(BaseInvestmentTestCase):
             100.00
         )
 
-        serializer = SubscriptionSerializer(subscription, data=data, partial=True)
+        serializer = SubscriptionUpdateSerializer(subscription, data=data, partial=True)
 
         with self.assertRaises(serializers.ValidationError) as context:
             serializer.save()
@@ -334,7 +366,7 @@ class SubscriptionSerializerUpdateTests(BaseInvestmentTestCase):
         )
         data = self.get_subscription_data(None, new_project.pk, 100.00)
 
-        serializer = SubscriptionSerializer(
+        serializer = SubscriptionUpdateSerializer(
             subscription,
             data=self.get_subscription_data(
                 subscription.investor.pk,
@@ -351,6 +383,15 @@ class SubscriptionSerializerUpdateTests(BaseInvestmentTestCase):
 
 
 class SubscriptionSerializerConcurrencyTests(BaseInvestmentTestCase):
+    """
+    Tests for updating existing Subscription instances through the serializer.
+
+    Covers:
+    - Successful amount updates and share recalculation
+    - No change when amount remains the same
+    - Partial updates without amount field
+    - Restrictions on changing investor or project during update
+    """
 
     def test_concurrent_subscriptions(self):
         """
@@ -365,7 +406,7 @@ class SubscriptionSerializerConcurrencyTests(BaseInvestmentTestCase):
 
         def subscribe(investor, amount):
             data = self.get_subscription_data(investor, self.project, amount)
-            serializer = SubscriptionSerializer(data=data)
+            serializer = SubscriptionCreateSerializer(data=data)
             try:
                 with transaction.atomic():
                     if serializer.is_valid(raise_exception=True):

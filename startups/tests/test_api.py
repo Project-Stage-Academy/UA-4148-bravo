@@ -4,8 +4,15 @@ from tests.test_setup import BaseStartupTestCase
 
 
 class StartupAPITests(BaseStartupTestCase):
+    """
+    Test suite for Startup API endpoints, including creation and retrieval of startups.
+    """
 
     def test_create_startup(self):
+        """
+        Test that a startup can be successfully created via POST request to the startup-list endpoint.
+        Verifies that the response status is HTTP 201 Created and the returned data matches the input.
+        """
         url = reverse('startup-list')
         data = {
             'company_name': 'API Startup',
@@ -21,6 +28,11 @@ class StartupAPITests(BaseStartupTestCase):
         self.assertEqual(response.data['company_name'], 'API Startup')
 
     def test_get_startup_list(self):
+        """
+        Test that the GET request to startup-list endpoint returns a list of startups,
+        including at least one startup created in the test setup.
+        Verifies response status is HTTP 200 OK and that at least one startup is returned.
+        """
         self.create_startup(
             user=self.user,
             company_name='ListStartup',

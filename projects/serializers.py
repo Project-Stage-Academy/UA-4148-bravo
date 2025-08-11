@@ -1,83 +1,73 @@
 from decimal import Decimal
 from rest_framework import serializers
-
 from projects.models import Project, Category
 from startups.models import Startup
 from common.enums import ProjectStatus
-
 from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
 from projects.documents import ProjectDocument
+from startups.serializers.startup_project import StartupProjectSerializer
+from utils.get_field_value import get_field_value
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    """
-    Read-only serializer for displaying category details.
-    """
+    """Read-only serializer for category details."""
 
     class Meta:
         model = Category
         fields = ['id', 'name', 'description']
 
 
-class StartupSerializer(serializers.ModelSerializer):
-    """
-    Read-only serializer for displaying startup details.
-    """
+class ProjectReadSerializer(serializers.ModelSerializer):
+    """Serializer for reading Project with nested related objects."""
 
-    class Meta:
-        model = Startup
-        fields = ['id', 'company_name', 'stage', 'website']
-
-
-class ProjectSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Project with nested read-only fields and cross-field validation.
-    """
     category = CategorySerializer(read_only=True)
-    startup = StartupSerializer(read_only=True)
-
-    category_id = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(),
-        source='category',
-        write_only=True
-    )
-    startup_id = serializers.PrimaryKeyRelatedField(
-        queryset=Startup.objects.all(),
-        source='startup',
-        write_only=True
-    )
-
-    funding_goal = serializers.DecimalField(
-        required=True,
-        max_digits=20,
-        decimal_places=2
-    )
-    current_funding = serializers.DecimalField(
-        required=False,
-        max_digits=20,
-        decimal_places=2,
-        default=Decimal('0.00')
-    )
-
+    startup = StartupProjectSerializer(read_only=True)
     status_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         fields = [
-            'id', 'startup', 'startup_id',
-            'title', 'description',
-            'business_plan', 'media_files',
-            'status', 'status_display', 'duration',
-            'funding_goal', 'current_funding',
-            'category', 'category_id',
-            'website', 'email',
-            'has_patents', 'is_participant', 'is_active',
-            'created_at', 'updated_at'
+            'id', 'startup', 'title', 'description', 'business_plan',
+            'media_files', 'status', 'status_display', 'duration',
+            'funding_goal', 'current_funding', 'category', 'website', 'email',
+            'has_patents', 'is_participant', 'is_active', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = fields
 
     def get_status_display(self, obj):
         return ProjectStatus(obj.status).label if obj.status else None
+
+
+class ProjectWriteSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating Project with validation."""
+
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        source='category'
+    )
+    startup_id = serializers.PrimaryKeyRelatedField(
+        queryset=Startup.objects.all(),
+        source='startup'
+    )
+    funding_goal = serializers.DecimalField(
+        max_digits=20,
+        decimal_places=2
+    )
+    current_funding = serializers.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        required=False
+    )
+
+    class Meta:
+        model = Project
+        fields = [
+            'startup_id', 'title', 'description', 'business_plan',
+            'media_files', 'status', 'duration',
+            'funding_goal', 'current_funding', 'category_id', 'website',
+            'email', 'has_patents', 'is_participant', 'is_active'
+        ]
 
     def validate(self, data):
         """
@@ -86,18 +76,11 @@ class ProjectSerializer(serializers.ModelSerializer):
         - business_plan required for in_progress or completed
         - funding_goal required if is_participant is True
         """
-        funding_goal = data.get('funding_goal')
-        current_funding = data.get('current_funding', Decimal('0.00'))
-        status = data.get('status')
-        business_plan = data.get('business_plan')
-        is_participant = data.get('is_participant')
-
-        if self.instance:
-            funding_goal = funding_goal if funding_goal is not None else self.instance.funding_goal
-            current_funding = current_funding if current_funding is not None else self.instance.current_funding
-            status = status if status is not None else self.instance.status
-            business_plan = business_plan if business_plan is not None else self.instance.business_plan
-            is_participant = is_participant if is_participant is not None else self.instance.is_participant
+        funding_goal = get_field_value(self, data, 'funding_goal')
+        current_funding = get_field_value(self, data, 'current_funding') or Decimal('0.00')
+        status = get_field_value(self, data, 'status')
+        business_plan = get_field_value(self, data, 'business_plan')
+        is_participant = get_field_value(self, data, 'is_participant')
 
         errors = {}
 

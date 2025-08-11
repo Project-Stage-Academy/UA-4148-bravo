@@ -1,10 +1,17 @@
-from startups.serializers import StartupSerializer
+from startups.serializers.startup_full import StartupSerializer
 from tests.test_setup import BaseStartupTestCase
 
 
 class StartupSerializerTests(BaseStartupTestCase):
+    """
+    Tests for StartupSerializer to validate proper serialization and validation
+    of Startup data, including required fields, field constraints, and nested data.
+    """
 
     def test_valid_startup_data(self):
+        """
+        Test that the serializer accepts valid startup data including nested social_links.
+        """
         data = {
             'company_name': 'TechNova',
             'description': 'AI-powered analytics for startups and enterprises.',
@@ -25,6 +32,9 @@ class StartupSerializerTests(BaseStartupTestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_empty_company_name_should_fail(self):
+        """
+        Test that the serializer rejects empty or whitespace-only company_name.
+        """
         data = {
             'company_name': '   ',
             'user': self.user.pk,
@@ -37,6 +47,9 @@ class StartupSerializerTests(BaseStartupTestCase):
         self.assertIn('company_name', serializer.errors)
 
     def test_missing_email_should_fail(self):
+        """
+        Test that the serializer rejects empty or missing email field.
+        """
         data = {
             'company_name': 'ValidName',
             'team_size': 5,
@@ -52,6 +65,9 @@ class StartupSerializerTests(BaseStartupTestCase):
         self.assertIn('email', serializer.errors)
 
     def test_team_size_too_small_should_fail(self):
+        """
+        Test that the serializer rejects team_size values less than 1.
+        """
         data = {
             'company_name': 'ValidName',
             'team_size': 0,
@@ -65,6 +81,9 @@ class StartupSerializerTests(BaseStartupTestCase):
         self.assertIn('team_size', serializer.errors)
 
     def test_invalid_social_links_should_fail(self):
+        """
+        Test that the serializer rejects social_links with unsupported platforms or invalid URLs.
+        """
         data = {
             'company_name': 'ValidName',
             'team_size': 5,

@@ -1,6 +1,7 @@
 from rest_framework import status
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
+from mixins.user_mixin import TEST_USER_PASSWORD
 from tests.test_setup import BaseUserTestCase
 
 
@@ -25,7 +26,7 @@ class JWTLogoutTest(BaseUserTestCase):
         """
         login_response = self.client.post(self.login_url, {
             'email': self.user.email,
-            'password': self.user_mixin.TEST_USER_PASSWORD
+            'password': TEST_USER_PASSWORD
         })
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
 

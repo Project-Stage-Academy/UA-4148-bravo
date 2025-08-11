@@ -5,8 +5,16 @@ from tests.test_setup import BaseProjectTestCase
 
 
 class ProjectModelCleanTests(BaseProjectTestCase):
+    """
+    Test suite for the Project model's clean() method validation logic,
+    ensuring that business rules are enforced before saving.
+    """
 
     def test_clean_should_raise_for_invalid_funding(self):
+        """
+        Validate that the clean() method raises ValidationError if
+        current_funding exceeds funding_goal.
+        """
         project = Project(
             startup=self.startup,
             title='BadFunding',
@@ -20,6 +28,10 @@ class ProjectModelCleanTests(BaseProjectTestCase):
         self.assertIn('current_funding', context.exception.message_dict)
 
     def test_clean_should_raise_for_missing_plan(self):
+        """
+        Validate that the clean() method raises ValidationError if
+        a project marked as 'completed' status does not have a business_plan.
+        """
         project = Project(
             startup=self.startup,
             title='MissingPlan',

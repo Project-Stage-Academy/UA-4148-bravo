@@ -2,6 +2,7 @@ from decimal import Decimal
 from django.db import models
 from django.test.utils import override_settings
 
+from investments.models import Subscription
 from investments.services.investment_share_service import recalculate_investment_shares
 from tests.test_setup import BaseInvestmentTestCase
 
@@ -29,7 +30,7 @@ class InvestmentShareServiceTest(BaseInvestmentTestCase):
         self.assertEqual(s1.investment_share, Decimal('1.00'))
         self.assertEqual(s2.investment_share, Decimal('3.00'))
 
-        total_share = self.model.objects.filter(project=self.project).aggregate(
+        total_share = Subscription.objects.filter(project=self.project).aggregate(
             total=models.Sum('investment_share')
         )['total']
         self.assertEqual(total_share, Decimal('4.00'))

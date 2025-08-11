@@ -32,7 +32,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         """
         token = super().get_token(user)
         token['email'] = user.email
-        token['user_id'] = user.user_id
+        token['user_id'] = user.id
         return token
 
     def validate(self, attrs):
@@ -48,5 +48,4 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError('User account is disabled.')
 
         data['user_id'] = self.user.user_id
-        data['email'] = self.user.email
         return data

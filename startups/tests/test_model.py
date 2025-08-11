@@ -5,8 +5,16 @@ from tests.test_setup import BaseStartupTestCase
 
 
 class StartupModelCleanTests(BaseStartupTestCase):
+    """
+    Tests for the Startup model's clean() method to ensure proper validation of fields,
+    particularly the social_links field for supported platforms and valid URLs.
+    """
 
     def test_invalid_social_links_clean_should_raise(self):
+        """
+        Test that the clean() method raises ValidationError when social_links contain
+        unsupported platforms or invalid domain URLs.
+        """
         startup = Startup(
             user=self.user,
             company_name='CleanTech',

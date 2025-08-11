@@ -8,10 +8,14 @@ TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
 
 
 class UserMixin:
+    """
+    Mixin providing utility methods for creating and managing User instances used in tests.
+    """
+
     @classmethod
     def create_user(cls, email, first_name, last_name):
         """
-        Create and return a new User instance with default password and role USER.
+        Create and return a new User instance with a default password and role USER.
 
         Args:
             email (str): Email address for the user.
@@ -32,6 +36,17 @@ class UserMixin:
 
     @classmethod
     def setup_users(cls):
+        """
+        Create several default User instances for testing and assign them as class attributes.
+
+        Creates three users:
+        - cls.user
+        - cls.user2
+        - cls.user_startup
+
+        Raises:
+            AssertionError: If the expected number of users are not created.
+        """
         cls.user = cls.create_user("user1@example.com", "Investor", "One")
         cls.user2 = cls.create_user("user2@example.com", "Investor", "Two")
         cls.user_startup = cls.create_user("userstartup@example.com", "Startup", "User")
@@ -40,4 +55,19 @@ class UserMixin:
 
     @classmethod
     def setup_all(cls):
+        """
+        Convenience method to setup all necessary users.
+        """
         cls.setup_users()
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Clean up User instances created during tests to avoid polluting other test cases.
+
+        Deletes users tracked in the class attribute '_created_users', if it exists.
+        """
+        if hasattr(cls, '_created_users'):
+            for user in cls._created_users:
+                User.objects.filter(pk=user.pk).delete()
+        super().tearDownClass()
