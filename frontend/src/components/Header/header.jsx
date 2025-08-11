@@ -1,7 +1,7 @@
 import "./header.css";
 import { Link, useNavigate } from 'react-router-dom';
 import Search from "../Search/search";
-import {useAuth} from "../../context/AuthContext/authContext";
+import {useAuth} from "../../provider/AuthProvider/authProvider";
 import PropTypes from 'prop-types';
 import Button from '../Button/button';
 

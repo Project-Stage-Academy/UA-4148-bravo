@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import React from 'react';
-import AuthProvider from '../../context/AuthContext/authContext';
+import AuthProvider from '../../provider/AuthProvider/authProvider';
 import Layout from '../Layout/layout';
 import ProfileEditing from '../../pages/ProfileEditing/profileEditing';
 import NotFound from '../../pages/NotFound/notFound';
@@ -16,8 +16,8 @@ import LogInPage from '../../pages/LogIn/logIn';
 import RegistrationPage from '../../pages/Registration/registration';
 
 /**
- * Main application component that sets up routing and context providers.
- * It wraps the application in an AuthProvider for authentication context
+ * Main application component that sets up routing and provider providers.
+ * It wraps the application in an AuthProvider for authentication provider
  * and uses React Router for navigation.
  * The main layout is defined in the Layout component, which includes
  * the header, sidebar, and footer.
