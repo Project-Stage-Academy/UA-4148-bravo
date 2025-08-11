@@ -1,5 +1,7 @@
 from common.enums import Stage
+from mixins.user_mixin import TEST_USER_PASSWORD
 from startups.models import Startup, Industry, Location
+from users.models import User, UserRole
 
 
 class StartupMixin:
@@ -36,18 +38,27 @@ class StartupMixin:
         )
 
     @classmethod
-    def setup_industry_location_category(cls):
+    def setup_industry_location_user(cls):
         """
         Create and assign Industry and Location instances for use in startup creation.
 
         Sets:
             cls.industry (Industry): Created Industry instance.
             cls.location (Location): Created Location instance.
+            cls.user (User): Created User instance.
 
         Asserts that created instances exist in the database.
         """
         cls.industry = Industry.objects.create(name="Technology")
         cls.location = Location.objects.create(country="US")
+        role = UserRole.objects.get(role='user')
+        cls.user = User.objects.create_user(
+            email='maxstartup@example.com',
+            password=TEST_USER_PASSWORD,
+            first_name='Max',
+            last_name='Startup',
+            role=role,
+        )
 
         assert Industry.objects.filter(name=cls.industry.name).exists(), "Industry not created"
         assert Location.objects.filter(country=cls.location.country).exists(), "Location not created"
@@ -63,7 +74,7 @@ class StartupMixin:
         Asserts that the startup instance exists in the database.
         """
         cls.startup = Startup.objects.create(
-            user=cls.user_startup,
+            user=cls.user,
             industry=cls.industry,
             company_name="Test Startup",
             location=cls.location,
@@ -80,7 +91,7 @@ class StartupMixin:
         """
         Run all setup steps: create industry, location, and startup instances.
         """
-        cls.setup_industry_location_category()
+        cls.setup_industry_location_user()
         cls.setup_startup()
 
     @classmethod
