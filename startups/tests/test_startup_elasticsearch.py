@@ -2,67 +2,84 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
+from django.db.models.signals import post_save
+from startups.signals import update_startup_document
 from users.models import User
 from startups.models import Startup, Industry, Location
 
 
 class StartupElasticsearchTests(TestCase):
-    """Test cases for Elasticsearch-powered startup search and filtering."""
+    """Test Elasticsearch-based search and filters for startups."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Disable ES update signal to avoid real Elasticsearch calls in tests
+        post_save.disconnect(update_startup_document, sender=Startup)
+
+    @classmethod
+    def tearDownClass(cls):
+        # Re-enable signal after tests are done
+        post_save.connect(update_startup_document, sender=Startup)
+        super().tearDownClass()
 
     def setUp(self):
-        """Prepare test data for all test cases."""
+        """Set up test data including user, industries, locations, and startups."""
         self.client = APIClient()
 
-        # Create and authenticate user
+        # Create and authenticate test user
         self.user = User.objects.create_user(
             email="test@example.com",
             password="testpass123"
         )
         self.client.force_authenticate(user=self.user)
 
-        # Create industries
+        # Create some industries
         tech = Industry.objects.create(name="Technology")
         energy = Industry.objects.create(name="Energy")
         healthcare = Industry.objects.create(name="Healthcare")
 
-        # Create locations
-        usa = Location.objects.create(country="USA")
-        germany = Location.objects.create(country="Germany")
-        canada = Location.objects.create(country="Canada")
+        # Create locations with 2-letter ISO country codes
+        usa = Location.objects.create(country="US")
+        germany = Location.objects.create(country="DE")
+        canada = Location.objects.create(country="CA")
 
-        # Create startups
+        # Create startups with correct field names and types
         self.startup1 = Startup.objects.create(
+            user=self.user,
             company_name="TechVision",
             description="Innovative AI solutions",
             location=usa,
             funding_stage="Seed",
-            investment_needs="500000",
+            investment_needs=500000,  # Integer, not string
             company_size="Small",
-            is_active=True
+            is_active=True,
+            industry=tech,
         )
-        self.startup1.industries.add(tech)
 
         self.startup2 = Startup.objects.create(
+            user=self.user,
             company_name="GreenFuture",
             description="Eco-friendly energy startup",
             location=germany,
             funding_stage="Series A",
-            investment_needs="750000",
+            investment_needs=750000,
             company_size="Medium",
-            is_active=True
+            is_active=True,
+            industry=energy,
         )
-        self.startup2.industries.add(energy)
 
         self.startup3 = Startup.objects.create(
+            user=self.user,
             company_name="MediCare Plus",
             description="Healthcare services for seniors",
             location=canada,
             funding_stage="Series B",
-            investment_needs="1000000",
+            investment_needs=1000000,
             company_size="Large",
-            is_active=False
+            is_active=False,
+            industry=healthcare,
         )
-        self.startup3.industries.add(healthcare)
 
     def test_empty_query_returns_all_startups(self):
         url = reverse('startup-search')
@@ -86,17 +103,14 @@ class StartupElasticsearchTests(TestCase):
 
     def test_filter_by_industry_and_active_status(self):
         url = reverse('startup-search')
-        response = self.client.get(url, {
-            'industry': 'Healthcare',
-            'is_active': 'false'
-        })
+        response = self.client.get(url, {'industry': 'Healthcare', 'is_active': 'false'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['company_name'], "MediCare Plus")
 
     def test_filter_by_location_country(self):
         url = reverse('startup-search')
-        response = self.client.get(url, {'location_country': 'Germany'})
+        response = self.client.get(url, {'location_country': 'DE'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['company_name'], "GreenFuture")
@@ -123,11 +137,7 @@ class StartupElasticsearchTests(TestCase):
 
     def test_combined_filters_work_correctly(self):
         url = reverse('startup-search')
-        response = self.client.get(url, {
-            'industry': 'Technology',
-            'location_country': 'USA',
-            'is_active': 'true'
-        })
+        response = self.client.get(url, {'industry': 'Technology', 'location_country': 'US', 'is_active': 'true'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['company_name'], "TechVision")
@@ -136,7 +146,7 @@ class StartupElasticsearchTests(TestCase):
         url = reverse('startup-search')
         response = self.client.get(url, {'short': 'true'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
         if response.data:
             keys = list(response.data[0].keys())
             self.assertTrue(set(keys).issubset({'id', 'company_name'}))
+

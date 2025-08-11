@@ -5,15 +5,16 @@ from startups.models import Startup, Industry, Location
 
 @registry.register_document
 class StartupDocument(Document):
-
+    # Define nested Industry fields for indexing
     industry = fields.ObjectField(properties={
         'id': fields.IntegerField(),
         'name': fields.KeywordField(),
     })
 
+    # Define nested Location fields for indexing
     location = fields.ObjectField(properties={
         'id': fields.IntegerField(),
-        'country': fields.KeywordField(),
+        'country': fields.KeywordField(),  # Store as string, not Country object
         'region': fields.KeywordField(),
         'city': fields.KeywordField(),
         'address_line': fields.TextField(),
@@ -28,9 +29,6 @@ class StartupDocument(Document):
     investment_needs = fields.TextField()
     company_size = fields.KeywordField()
     is_active = fields.BooleanField()
-
-    created_at = fields.DateField(format="yyyy-MM-dd")
-    updated_at = fields.DateField(format="yyyy-MM-dd")
 
     class Index:
         name = 'startups'
@@ -59,3 +57,21 @@ class StartupDocument(Document):
             return related_instance.startups.all()
         elif isinstance(related_instance, Location):
             return related_instance.startups.all()
+
+    def prepare_location(self, instance):
+        """Prepare the location field for Elasticsearch indexing.
+
+        Convert 'country' field from Country object to string code.
+        """
+        location = instance.location
+        if not location:
+            return {}
+
+        return {
+            'id': location.id,
+            'country': str(location.country) if location.country else None,
+            'region': location.region,
+            'city': location.city,
+            'address_line': location.address_line,
+            'postal_code': location.postal_code,
+        }

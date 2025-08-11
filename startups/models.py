@@ -19,18 +19,7 @@ class Location(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
-        """
-        Validates the Location instance.
-
-        - Ensures postal code is at least 3 characters and contains only Latin characters.
-        - Validates city, region, and address_line for non-empty and Latin-only content.
-        - Enforces logical dependencies between address_line, city, and region.
-
-        Raises:
-            ValidationError: A dictionary of field-specific error messages.
-        """
         errors = {}
-
         if self.postal_code:
             postal = self.postal_code.strip()
             if len(postal) < 3:
@@ -83,20 +72,11 @@ class Location(models.Model):
 
 
 class Industry(models.Model):
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
+    name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        """
-        Validates the Industry name against forbidden terms.
-
-        Raises:
-            ValidationError: If the name contains forbidden content.
-        """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")
 
@@ -123,16 +103,49 @@ class Startup(Company):
     )
     social_links = models.JSONField(blank=True, default=dict)
 
+    # Added fields
+    industry = models.ForeignKey(
+        Industry,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='startups'
+    )
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='startups'
+    )
+    founded_year = models.PositiveIntegerField(blank=True, null=True)
+    team_size = models.PositiveIntegerField(blank=True, null=True)
+    funding_stage = models.CharField(
+        max_length=50,
+        choices=[
+            ('pre_seed', 'Pre-Seed'),
+            ('seed', 'Seed'),
+            ('series_a', 'Series A'),
+            ('series_b', 'Series B'),
+            ('growth', 'Growth'),
+        ],
+        blank=True,
+        null=True
+    )
+    investment_needs = models.TextField(blank=True, null=True)
+    company_size = models.CharField(
+        max_length=50,
+        choices=[
+            ('1-10', '1-10'),
+            ('11-50', '11-50'),
+            ('51-200', '51-200'),
+            ('201-500', '201-500'),
+            ('500+', '500+'),
+        ],
+        blank=True,
+        null=True
+    )
+    is_active = models.BooleanField(default=True)
+
     def clean(self):
-        """
-        Validates the Startup instance.
-
-        - Ensures social_links contain only supported platforms.
-        - Validates that each URL has a domain matching the expected domains for the platform.
-
-        Raises:
-            ValidationError: A dictionary of field-specific error messages.
-        """
         super().clean()
         if not self.stage:
             self.stage = Stage.IDEA

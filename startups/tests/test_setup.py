@@ -1,34 +1,23 @@
-from django.db.models.signals import post_save
 from django.test import TestCase
-from startups.models import Industry, Location, Startup
-from startups.signals import update_startup_document
-from users.models import UserRole, User
-from rest_framework.test import APIClient
+from django.contrib.auth import get_user_model
+from startups.models import Industry, Location
 
 
 class BaseStartupTestCase(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        post_save.disconnect(update_startup_document, sender=Startup)
-
-    @classmethod
-    def tearDownClass(cls):
-        post_save.connect(update_startup_document, sender=Startup)
-        super().tearDownClass()
+    """
+    Base test case for Startup-related tests.
+    Creates a default user, industry, and location for reuse in child tests.
+    """
 
     def setUp(self):
-        role = UserRole.objects.get(role='user')
-        self.user = User.objects.create_user(
-            email='apistartup@example.com',
-            password='pass12345',
-            first_name='Api',
-            last_name='Startup',
-            role=role,
+        # Create a test user
+        self.user = get_user_model().objects.create_user(
+            email='testuser@example.com',
+            password='password123'
         )
-        self.user.refresh_from_db()
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.user)
 
-        self.industry = Industry.objects.create(name="Technology")
-        self.location = Location.objects.create(country="US")
+        # Create an industry instance
+        self.industry = Industry.objects.create(name='Technology')
+
+        # Create a location instance
+        self.location = Location.objects.create(name='Kyiv', country='UA')

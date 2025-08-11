@@ -9,32 +9,37 @@ from django_elasticsearch_dsl_drf.filter_backends import (
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
-from rest_framework import status
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.generics import RetrieveAPIView
 
 from .documents import StartupDocument
 from .models import Startup
-from .serializers import StartupSerializer, StartupDocumentSerializer
+from .serializers import (
+    StartupSerializer,
+    StartupDocumentSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class StartupViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing Startup profiles.
-    Optimized to avoid N+1 queries when accessing projects.
-    """
     queryset = Startup.objects.select_related('user', 'industry', 'location') \
         .prefetch_related('projects')
     serializer_class = StartupSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ['industry', 'stage', 'location__country']
-    search_fields = ['company_name', 'user__first_name', 'user__last_name', 'email']
+    filterset_fields = [
+        'industry', 'stage', 'location__country',
+        'funding_stage', 'company_size', 'is_active'
+    ]
+    search_fields = [
+        'company_name', 'description', 'investment_needs',
+        'user__first_name', 'user__last_name', 'email'
+    ]
 
     def perform_create(self, serializer):
         instance = serializer.save(user=self.request.user)
@@ -57,10 +62,6 @@ class StartupViewSet(viewsets.ModelViewSet):
 
 
 class StartupDocumentView(DocumentViewSet):
-    """
-    Elasticsearch-backed viewset for search.
-    Endpoint: /startups/search/
-    """
     document = StartupDocument
     serializer_class = StartupDocumentSerializer
     lookup_field = 'id'
@@ -74,8 +75,9 @@ class StartupDocumentView(DocumentViewSet):
     filter_fields = {
         'company_name': 'company_name.raw',
         'stage': 'stage',
+        'funding_stage': 'funding_stage',
         'location.country': 'location.country',
-        'industries.name': 'industries.name',
+        'industry.name': 'industry.name',
         'investment_needs': 'investment_needs',
         'company_size': 'company_size',
         'is_active': 'is_active',
@@ -84,6 +86,7 @@ class StartupDocumentView(DocumentViewSet):
     ordering_fields = {
         'company_name': 'company_name.raw',
         'stage': 'stage.raw',
+        'funding_stage': 'funding_stage.raw',
         'location.country': 'location.country.raw',
         'company_size': 'company_size',
         'created_at': 'created_at',
@@ -98,9 +101,6 @@ class StartupDocumentView(DocumentViewSet):
     )
 
     def list(self, request, *args, **kwargs):
-        """
-        Handles search requests with graceful fallback if Elasticsearch is unavailable.
-        """
         try:
             return super().list(request, *args, **kwargs)
         except (ConnectionError, TransportError):
@@ -108,3 +108,10 @@ class StartupDocumentView(DocumentViewSet):
                 {"detail": "Search service is temporarily unavailable. Please try again later."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
+
+
+class StartupDetailView(RetrieveAPIView):
+    queryset = Startup.objects.select_related('industry', 'location', 'user') \
+        .prefetch_related('projects')
+    serializer_class = StartupSerializer
+    permission_classes = [IsAuthenticated]
