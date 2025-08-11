@@ -108,13 +108,28 @@ SIMPLE_JWT = {
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
-    'SEND_ACTIVATION_EMAIL': False,
+    'SEND_ACTIVATION_EMAIL': True,
+    'SEND_CONFIRMATION_EMAIL': True,
+    'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
+    'USERNAME_CHANGED_EMAIL_CONFIRMATION': True,
+    'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
+    'USERNAME_RESET_CONFIRM_URL': 'email/reset/confirm/{uid}/{token}',
+    'ACTIVATION_URL': 'activate/{uid}/{token}',
     'SERIALIZERS': {
         'user_create': 'users.serializers.CustomUserCreateSerializer',
         'user': 'users.serializers.CustomUserSerializer',
         'current_user': 'users.serializers.CustomUserSerializer',
+        'activation': 'djoser.serializers.ActivationSerializer',
     },
+    'EMAIL': {
+        'activation': 'djoser.email.ActivationEmail',
+        'confirmation': 'djoser.email.ConfirmationEmail',
+    },
+    'USER_ID_FIELD': 'user_id',
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 
 MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware", #OAuth
@@ -137,6 +152,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
