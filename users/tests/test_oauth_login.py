@@ -17,7 +17,6 @@ class OAuthTokenObtainPairViewTests(TestCase):
     def setUp(self):
         """Initialize test data and client"""
         self.client = APIClient()
-        # self.auth_url = '/users/oauth/login/'
         self.auth_url = reverse('oauth_login')
         self.role = UserRole.objects.get(role="user")
         

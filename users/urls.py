@@ -18,9 +18,4 @@ urlpatterns = [
     # JWT Logout endpoint
     # ----------------------------------------
     path('auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
-
-    # ----------------------------------------
-    # Custom OAuth endpoints
-    # ----------------------------------------
-    path('oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),
 ]
