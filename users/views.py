@@ -1,20 +1,18 @@
 import logging
 import secrets
 from datetime import timedelta
-from django.utils import timezone
+
 from django.conf import settings
 from django.core.mail import send_mail
-from django.template.loader import render_to_string
 from django.shortcuts import reverse
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from rest_framework.throttling import AnonRateThrottle
-from rest_framework_simplejwt.views import TokenObtainPairView
-from django.contrib.auth import authenticate
-from rest_framework.response import Response
+from django.template.loader import render_to_string
+from django.utils import timezone
 from rest_framework import status
-
-logger = logging.getLogger(__name__)
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
+from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import User
 from .serializers import CustomTokenObtainPairSerializer, CustomUserCreateSerializer
@@ -34,17 +32,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     """
     serializer_class = CustomTokenObtainPairSerializer
 
-def login_view(request):
-    email = request.data.get("email")
-    password = request.data.get("password")
-
-    if not email or not password:
-        return Response({"detail": "Email and password required"}, status=status.HTTP_400_BAD_REQUEST)
-
-    user = authenticate(username=email, password=password)
-
-    if user is None:
-        return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 class UserRegistrationView(APIView):
     """
@@ -146,6 +133,7 @@ class VerifyEmailView(APIView):
                 email_verification_token=token
             )
 
+            # Check if token is expired (24 hours)
             token_expired = (
                     user.email_verification_sent_at is None or
                     (timezone.now() - user.email_verification_sent_at) > timedelta(hours=24)

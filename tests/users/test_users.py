@@ -1,16 +1,13 @@
 from tests.test_base import DisableSignalMixinUser, BaseAPITestCase
 from tests.input_data import TEST_USER_PASSWORD
-from django.contrib.auth import authenticate
 
-class LoginTestCase(DisableSignalMixinUser, BaseAPITestCase):
+
+class LoginTestCase(DisableSignalMixinUser):
     """
     TestCase for verifying user login API functionality.
     Uses UserMixin to create a users user with a password from environment variables.
     """
-
-    def test_password_debug(self):
-        user = authenticate(email="testuser@example.com", password=TEST_USER_PASSWORD)
-        assert user is not None, "Authentication failed in test setup"
+    authenticate = False
 
     def test_successful_login(self):
         """

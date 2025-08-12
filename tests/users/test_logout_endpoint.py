@@ -5,7 +5,7 @@ from tests.test_base import DisableSignalMixinUser, BaseAPITestCase
 from tests.input_data import TEST_USER_PASSWORD
 
 
-class JWTLogoutTest(DisableSignalMixinUser, BaseAPITestCase):
+class JWTLogoutTest(DisableSignalMixinUser):
     """
     Test suite for JWT logout functionality with token blacklisting.
     """

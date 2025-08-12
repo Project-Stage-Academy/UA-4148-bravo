@@ -5,6 +5,7 @@ from investors.models import Investor
 from startups.models import Startup
 from startups.signals import update_startup_document, delete_startup_document
 from tests.input_data import TestDataMixin
+from tests.test_base_user import BaseUserTestCase
 from users.models import User
 
 
@@ -45,7 +46,7 @@ class DisableSignalMixinUser(DisableSignalMixin):
     sender = User
 
 
-class BaseAPITestCase(TestDataMixin, TestCase):
+class BaseAPITestCase(TestDataMixin, BaseUserTestCase):
     """Generic base users case with automatic signal disabling."""
 
     @classmethod
