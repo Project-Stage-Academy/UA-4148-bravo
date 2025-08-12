@@ -14,23 +14,43 @@ Authorization: Bearer <your_access_token>
 
 ---
 
+### 🔐 JWT Logout
+
+The `POST /api/users/auth/jwt/logout/` endpoint logs out a user by **blacklisting the refresh token**.
+
+### ✅ Requirements
+
+- The **refresh token must be included** in the request body.
+- The **client must delete both access and refresh tokens** from local storage (or other storage) after a successful logout.
+
+### 📤 Example Request
+
+```http
+POST /api/users/auth/jwt/logout/
+Content-Type: application/json
+
+{
+  "refresh": "<your_refresh_token>"
+}
+```
+
 ## Startup API
 
 ### Endpoints
 
-- `GET /api/profiles/startups/` — Retrieve a list of all startup profiles  
-- `POST /api/profiles/startups/` — Create a new startup profile  
-- `GET /api/profiles/startups/{id}/` — Retrieve details of a specific startup profile  
-- `PATCH /api/profiles/startups/{id}/` — Update an existing startup profile  
-- `DELETE /api/profiles/startups/{id}/` — Delete a startup profile  
+- `GET /api/profiles/startups/` — Retrieve a list of all startup profiles
+- `POST /api/profiles/startups/` — Create a new startup profile
+- `GET /api/profiles/startups/{id}/` — Retrieve details of a specific startup profile
+- `PATCH /api/profiles/startups/{id}/` — Update an existing startup profile
+- `DELETE /api/profiles/startups/{id}/` — Delete a startup profile
 
 ## Investor API
 
 ### Endpoints
 
-- `GET /api/profiles/investors/` — Retrieve a list of all investors  
+- `GET /api/profiles/investors/` — Retrieve a list of all investors
 - `POST /api/profiles/investors/` — Create a new investor  
-...
+  ...
 
 ### Request Example: Create Startup Profile
 
@@ -64,11 +84,11 @@ Authorization: Bearer <your_access_token>
 
 ### Endpoints
 
-- `GET /api/projects/` — Retrieve a list of all projects  
-- `POST /api/projects/` — Create a new project  
-- `GET /api/projects/{id}/` — Retrieve details of a specific project  
-- `PATCH /api/projects/{id}/` — Update an existing project  
-- `DELETE /api/projects/{id}/` — Delete a project  
+- `GET /api/projects/` — Retrieve a list of all projects
+- `POST /api/projects/` — Create a new project
+- `GET /api/projects/{id}/` — Retrieve details of a specific project
+- `PATCH /api/projects/{id}/` — Update an existing project
+- `DELETE /api/projects/{id}/` — Delete a project
 
 ---
 
@@ -119,19 +139,19 @@ Authorization: Bearer <your_access_token>
 
 ### Startup Profile
 
-- company_name: required, unique  
-- description: required  
-- website: optional  
-- startup_logo: optional  
+- company_name: required, unique
+- description: required
+- website: optional
+- startup_logo: optional
 
 ### Project
 
-- startup: required (must reference existing profile)  
-- title: required  
-- funding_goal: required if is_participant is true  
-- current_funding: must not exceed funding_goal  
-- business_plan: required if status is completed  
-- email: required, must be valid  
+- startup: required (must reference existing profile)
+- title: required
+- funding_goal: required if is_participant is true
+- current_funding: must not exceed funding_goal
+- business_plan: required if status is completed
+- email: required, must be valid
 
 ---
 
@@ -147,3 +167,46 @@ Use `/api/token/refresh/` to obtain a new access token.
   "access": "<your_new_access_token>"
 }
 ```
+
+# OAuth Authentication (Google & GitHub)
+
+## Overview
+
+Use this endpoint to authenticate users via Google or GitHub OAuth. Frontend sends the OAuth token from the provider, and the backend returns access tokens and user info.
+
+---
+
+## Endpoint
+
+`POST /users/oauth/login/`
+
+---
+
+## Request
+
+- **Headers:**  
+  `Content-Type: application/json`
+
+- **Body:**
+  ```json
+  {
+    "provider": "google" | "github",
+    "token": "<OAuth token>"
+  }
+  ```
+  - **Response**
+  ```json
+  {
+    "refresh": "<refresh_token>",
+    "access": "<access_token>",
+    "user": {
+      "id": "...",
+      "email": "...",
+      "username": "...",
+      "first_name": "...",
+      "last_name": "...",
+      "user_phone": "...",
+      "title": "...",
+      "role": "...",
+      }}
+  ```

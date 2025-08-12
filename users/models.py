@@ -54,6 +54,7 @@ class CustomUserManager(BaseUserManager):
         validate_email_custom(email)
         
         email = self.normalize_email(email)
+        other_fields.setdefault('is_active', False)
         user = self.model(email=email, **other_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -111,11 +112,23 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     created_at = models.DateTimeField(default=timezone.now, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
 
     objects = CustomUserManager()
+    all_objects = models.Manager() 
     active_users = ActiveUserManager()
+    email_verification_token = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="Token for email verification"
+    )
+    email_verification_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the verification email was sent"
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name', 'role']
@@ -354,6 +367,10 @@ class User(AbstractBaseUser, PermissionsMixin):
             QuerySet: QuerySet of all users.
         """
         return cls.active_users.all()
+    
+    @property
+    def id(self):
+        return self.user_id
 
 
 class UserRole(models.Model):
