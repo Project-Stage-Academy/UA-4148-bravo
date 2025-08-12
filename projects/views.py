@@ -1,7 +1,6 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
 from rest_framework.generics import CreateAPIView
-from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
 from django.db import transaction
@@ -28,42 +27,40 @@ logger = logging.getLogger(__name__)
 class SubscriptionCreateView(CreateAPIView):
     """
     API endpoint to handle the creation of new investment subscriptions.
-
-    This view uses the SubscriptionCreateSerializer to validate the
-    investment request and atomically update the project's funding.
-    It requires the user to be both authenticated and identified as an investor.
+    Uses transaction management and F() expressions for safe concurrent updates.
     """
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionCreateSerializer
-    permission_classes = [IsAuthenticated, IsInvestor]
+    permission_classes = [IsInvestor]
 
     def create(self, request, *args, **kwargs):
-        """
-        Customizes the create method to handle subscription creation
-        and return a structured response.
-        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         try:
-            self.perform_create(serializer)
-            subscription = serializer.instance
-            project = subscription.project
+            with transaction.atomic():
+                subscription = serializer.save()
+                project_id = subscription.project_id
 
-            project.refresh_from_db()
+                Project.objects.filter(id=project_id).update(
+                    current_funding=F('current_funding') + subscription.amount
+                )
 
-            remaining_funding = project.funding_goal - project.current_funding
-            project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
+                project = Project.objects.select_related('startup', 'category').get(id=project_id)
+                remaining_funding = project.funding_goal - project.current_funding
+                project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
 
-            logger.info(f"Subscription created successfully for project {project.id} by user {request.user.id}")
+                logger.info(f"Subscription {subscription.id} created successfully for project {project.id} by user {request.user.id}")
 
-            return Response(
-                {
-                    "message": "Subscription created successfully.",
-                    "remaining_funding": remaining_funding,
-                    "project_status": project_status
-                },
-                status=status.HTTP_201_CREATED
-            )
+                return Response(
+                    {
+                        "message": "Subscription created successfully.",
+                        "remaining_funding": remaining_funding,
+                        "project_status": project_status
+                    },
+                    status=status.HTTP_201_CREATED
+                )
+
         except Exception as e:
             logger.error(f"Failed to create subscription for user {request.user.id}: {e}")
             return Response(
@@ -75,12 +72,11 @@ class SubscriptionCreateView(CreateAPIView):
 class ProjectViewSet(viewsets.ModelViewSet):
     """
     API endpoint for viewing and editing projects.
-    Optimized to avoid N+1 queries by using select_related.
-    Includes filtering, searching, and ordering.
+    Optimized to avoid N+1 queries with select_related.
     """
     queryset = Project.objects.select_related('startup', 'category').all()
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsInvestor]
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['status', 'category', 'startup']
@@ -92,6 +88,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 class ProjectDocumentView(DocumentViewSet):
     """
     API endpoint for searching projects using Elasticsearch.
+    Handles ES downtime gracefully.
     """
     document = ProjectDocument
     serializer_class = ProjectDocumentSerializer
@@ -120,9 +117,6 @@ class ProjectDocumentView(DocumentViewSet):
     )
 
     def list(self, request, *args, **kwargs):
-        """
-        Handles Elasticsearch connection errors gracefully.
-        """
         try:
             return super().list(request, *args, **kwargs)
         except (ConnectionError, TransportError) as e:

@@ -45,6 +45,18 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+        env:
+          discovery.type: single-node
+          ES_JAVA_OPTS: -Xms512m -Xmx512m
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd="curl -f http://localhost:9200/_cat/health?h=status" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=5
 
     steps:
       - name: Checkout code
