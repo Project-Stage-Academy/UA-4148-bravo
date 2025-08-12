@@ -9,7 +9,6 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-
     max-width: calc(1512px - 104px * 2);
     margin: 0 auto;
 }
