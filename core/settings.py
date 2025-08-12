@@ -19,8 +19,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    'django_elasticsearch_dsl',
-    'django_elasticsearch_dsl_drf',
     'users',
     'investors',
     'projects',
@@ -37,6 +35,7 @@ INSTALLED_APPS = [
     
     # Elasticsearch
     'django_elasticsearch_dsl',
+    'django_elasticsearch_dsl_drf',
     
     # OAuth
     'allauth',

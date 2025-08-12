@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from django_countries.fields import CountryField
+from django.db.models import UniqueConstraint, F
 
 from common.company import Company
 from common.enums import Stage
@@ -12,9 +13,10 @@ from validation.validate_social_links import validate_social_links_dict
 class Location(models.Model):
     country = CountryField()
     region = models.CharField(max_length=100, blank=True, null=True)
-    city = models.CharField(max_length=100, blank=True, null=True)
+    city = models.CharField(max_length=100)
     address_line = models.CharField(max_length=254, blank=True, null=True)
     postal_code = models.CharField(max_length=20, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -67,21 +69,28 @@ class Location(models.Model):
             raise ValidationError(errors)
 
     def __str__(self):
-        values = [
-            self.address_line,
-            self.city,
-            self.region,
-            str(self.country) if self.country else None
-        ]
-        return ", ".join(s for s in values if s)
+        city_str = self.city if self.city else 'Unknown City'
+        country_str = self.country if self.country else 'Unknown Country'
+
+        if self.state:
+            return f"{city_str}, {self.state}, {country_str}"
+        return f"{city_str}, {country_str}"
 
     class Meta:
         db_table = "locations"
         ordering = ["country"]
         verbose_name = "Location"
         verbose_name_plural = "Locations"
+        constraints = [
+            UniqueConstraint(
+                F('city'),
+                F('state'),
+                F('country'),
+                name='unique_location',
+                violation_error_message='This location already exists.'
+            )
+        ]
 
-from django.db.models import UniqueConstraint, F
 
 class Industry(models.Model):
     name = models.CharField(
@@ -103,30 +112,6 @@ class Industry(models.Model):
 
     def __str__(self):
         return self.name
-
-class Location(models.Model):
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100, blank=True, null=True)
-    country = models.CharField(max_length=100)
-
-    class Meta:
-        constraints = [
-            UniqueConstraint(
-                F('city'),
-                F('state'),
-                F('country'),
-                name='unique_location',
-                violation_error_message='This location already exists.'
-            )
-        ]
-
-    def __str__(self):
-        city_str = self.city if self.city else 'Unknown City'
-        country_str = self.country if self.country else 'Unknown Country'
-
-        if self.state:
-            return f"{city_str}, {self.state}, {country_str}"
-        return f"{city_str}, {country_str}"
 
 class Startup(models.Model):
     company_name = models.CharField(max_length=255)
