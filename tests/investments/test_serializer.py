@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from investments.serializers.subscription_create import SubscriptionCreateSerializer
 from investments.serializers.subscription_update import SubscriptionUpdateSerializer
-from tests.test_generic_case import BaseAPITestCase, DisableSignalMixinStartup
+from tests.test_base import BaseAPITestCase, DisableSignalMixinStartup
 
 
 class SubscriptionSerializerValidDataTests(DisableSignalMixinStartup, BaseAPITestCase):

@@ -3,7 +3,7 @@ from rest_framework import status
 
 from common.enums import Stage
 from investors.models import Investor
-from tests.test_generic_case import DisableSignalMixinInvestor, BaseAPITestCase
+from tests.test_base import DisableSignalMixinInvestor, BaseAPITestCase
 
 
 class InvestorAPITests(DisableSignalMixinInvestor, BaseAPITestCase):

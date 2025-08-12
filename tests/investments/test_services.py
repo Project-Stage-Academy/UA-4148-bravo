@@ -5,7 +5,7 @@ from django.test.utils import override_settings
 
 from investments.models import Subscription
 from investments.services.investment_share_service import recalculate_investment_shares
-from tests.test_generic_case import BaseAPITestCase, DisableSignalMixinStartup
+from tests.test_base import BaseAPITestCase, DisableSignalMixinStartup
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)

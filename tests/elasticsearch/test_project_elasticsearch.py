@@ -1,15 +1,16 @@
 import time
+
 from django.conf import settings
 from django.urls import reverse
 from elasticsearch_dsl import Index
 from elasticsearch_dsl.connections import connections
 from rest_framework import status
-from rest_framework.test import APITestCase
-from mixins.project_elasticsearch_mixin import ProjectTestSetupMixin
+
 from projects.documents import ProjectDocument
+from tests.test_base import BaseAPITestCase, DisableSignalMixinStartup
 
 
-class ProjectElasticsearchTests(ProjectTestSetupMixin, APITestCase):
+class ProjectElasticsearchTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Test suite for Project Elasticsearch integration and API behavior,
     using factory-based setup from ProjectTestSetupMixin.

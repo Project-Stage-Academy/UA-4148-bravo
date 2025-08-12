@@ -1,9 +1,8 @@
 from rest_framework import status
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
-
-from mixins.user_mixin import TEST_USER_PASSWORD
-from tests.test_generic_case import DisableSignalMixinUser, BaseAPITestCase
+from tests.test_base import DisableSignalMixinUser, BaseAPITestCase
+from tests.input_data import TEST_USER_PASSWORD
 
 
 class JWTLogoutTest(DisableSignalMixinUser, BaseAPITestCase):
@@ -15,7 +14,7 @@ class JWTLogoutTest(DisableSignalMixinUser, BaseAPITestCase):
     @classmethod
     def setUpTestData(cls):
         """
-        Create test user once for the whole test case.
+        Create users user once for the whole users case.
         """
         super().setUpTestData()
         cls.login_url = '/api/v1/users/login/'
@@ -24,7 +23,7 @@ class JWTLogoutTest(DisableSignalMixinUser, BaseAPITestCase):
 
     def setUp(self):
         """
-        Log in before each test to obtain fresh tokens.
+        Log in before each users to obtain fresh tokens.
         """
         login_response = self.client.post(self.login_url, {
             'email': self.user.email,

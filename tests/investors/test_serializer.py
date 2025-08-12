@@ -1,6 +1,6 @@
 import datetime
 from investors.serializers import InvestorSerializer
-from tests.test_generic_case import DisableSignalMixinInvestor, BaseAPITestCase
+from tests.test_base import DisableSignalMixinInvestor, BaseAPITestCase
 from ddt import ddt, data, unpack
 
 

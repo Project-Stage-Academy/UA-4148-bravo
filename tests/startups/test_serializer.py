@@ -1,5 +1,5 @@
 from startups.serializers.startup_full import StartupSerializer
-from tests.test_generic_case import DisableSignalMixinStartup, BaseAPITestCase
+from tests.test_base import DisableSignalMixinStartup, BaseAPITestCase
 
 
 class StartupSerializerTests(DisableSignalMixinStartup, BaseAPITestCase):

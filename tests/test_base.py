@@ -2,18 +2,14 @@ from django.db.models.signals import post_save
 from django.test import TestCase
 from rest_framework.test import APIClient
 from investors.models import Investor
-from mixins.investor_mixin import InvestorMixin
-from mixins.project_mixin import ProjectMixin
-from mixins.startup_mixin import StartupMixin
-from mixins.subscription_mixin import SubscriptionMixin
-from mixins.user_mixin import UserMixin
 from startups.models import Startup
 from startups.signals import update_startup_document
+from tests.input_data import TestDataMixin
 from users.models import User
 
 
 class DisableSignalMixin(TestCase):
-    """Mixin to disable signals during tests."""
+    """Mixin to disable signals during users."""
     sender = None
 
     @classmethod
@@ -47,19 +43,15 @@ class DisableSignalMixinUser(DisableSignalMixin):
     sender = User
 
 
-class BaseAPITestCase(StartupMixin, UserMixin, InvestorMixin, ProjectMixin, SubscriptionMixin, TestCase):
-    """Generic base test case with automatic signal disabling."""
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.setup_all()
+class BaseAPITestCase(TestDataMixin, TestCase):
+    """Generic base users case with automatic signal disabling."""
 
     def setUp(self):
+        self.tear_down()
+        self.setup_all()
+
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
-    @classmethod
-    def tearDownClass(cls):
-        if hasattr(cls, "tear_down"):
-            cls.tear_down()
-        super().tearDownClass()
+    def tearDown(self):
+        self.tear_down()

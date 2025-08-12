@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 
 from investors.models import Investor
-from tests.test_generic_case import DisableSignalMixinInvestor, BaseAPITestCase
+from tests.test_base import DisableSignalMixinInvestor, BaseAPITestCase
 
 
 class InvestorModelCleanTests(DisableSignalMixinInvestor, BaseAPITestCase):

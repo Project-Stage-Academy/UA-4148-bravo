@@ -3,7 +3,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 
 from projects.serializers import ProjectWriteSerializer
-from tests.test_generic_case import DisableSignalMixinStartup, BaseAPITestCase
+from tests.test_base import DisableSignalMixinStartup, BaseAPITestCase
 
 
 class ProjectSerializerBaseTests(DisableSignalMixinStartup, BaseAPITestCase):

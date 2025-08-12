@@ -1,11 +1,11 @@
-from mixins.user_mixin import TEST_USER_PASSWORD
-from tests.test_generic_case import DisableSignalMixinUser, BaseAPITestCase
+from tests.test_base import DisableSignalMixinUser, BaseAPITestCase
+from tests.input_data import TEST_USER_PASSWORD
 
 
 class LoginTestCase(DisableSignalMixinUser, BaseAPITestCase):
     """
     TestCase for verifying user login API functionality.
-    Uses UserMixin to create a test user with a password from environment variables.
+    Uses UserMixin to create a users user with a password from environment variables.
     """
     authenticate = False
 

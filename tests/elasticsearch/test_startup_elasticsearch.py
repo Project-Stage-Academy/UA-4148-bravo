@@ -4,14 +4,12 @@ from django.urls import reverse
 from elasticsearch_dsl import Index
 from elasticsearch_dsl.connections import connections
 from rest_framework import status
-from rest_framework.test import APITestCase
-
 from common.enums import Stage
 from startups.documents import StartupDocument
-from tests.elasticsearch.factories import UserFactory, LocationFactory, IndustryFactory, StartupFactory
+from tests.test_base import DisableSignalMixinStartup, BaseAPITestCase
 
 
-class StartupElasticsearchTests(APITestCase):
+class StartupElasticsearchTests(DisableSignalMixinStartup, BaseAPITestCase):
     """
     Integration tests for the Startup API with an Elasticsearch backend.
 

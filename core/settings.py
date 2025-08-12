@@ -198,7 +198,7 @@ ELASTICSEARCH_DSL = {
 }
 
 # Override Elasticsearch index names for testing
-if 'test' in sys.argv:
+if 'users' in sys.argv:
     ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
 
 # File validation settings
@@ -366,13 +366,10 @@ LOGGING = {
     },
 }
 
-# Tests
-TEST_RUNNER = 'django.test.runner.DiscoverRunner'
-
 # Celery
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = 'rpc://'
 
-if 'test' in sys.argv:
+if 'users' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
