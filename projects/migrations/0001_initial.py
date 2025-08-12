@@ -13,7 +13,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('startups', '0001_initial'),
     ]
 
     operations = [
@@ -52,15 +51,12 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('category', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='projects.category')),
-                ('startup', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='projects', to='startups.startup')),
             ],
             options={
                 'verbose_name': 'Project',
                 'verbose_name_plural': 'Projects',
                 'db_table': 'projects',
                 'ordering': ['-created_at'],
-                'indexes': [models.Index(fields=['status'], name='project_status_idx'), models.Index(fields=['created_at'], name='project_created_at_idx'), models.Index(fields=['startup'], name='project_startup_idx')],
-                'constraints': [models.UniqueConstraint(fields=('title', 'startup'), name='unique_startup_project_title')],
             },
         ),
     ]

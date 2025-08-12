@@ -4,7 +4,7 @@ from django.db.models import F
 from rest_framework import serializers
 
 from projects.models import Project, Category
-from profiles.models import Startup
+from startups.models import Startup
 from common.enums import ProjectStatus
 
 from django_elasticsearch_dsl_drf.serializers import DocumentSerializer
@@ -16,6 +16,7 @@ class CategorySerializer(serializers.ModelSerializer):
     """
     Read-only serializer for displaying category details.
     """
+
     class Meta:
         model = Category
         fields = ['id', 'name', 'description']
@@ -24,6 +25,7 @@ class StartupSerializer(serializers.ModelSerializer):
     """
     Read-only serializer for displaying startup details.
     """
+
     class Meta:
         model = Startup
         fields = ['id', 'company_name', 'stage', 'website']
@@ -99,6 +101,21 @@ class ProjectSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.startup.logo.url)
         return None
 
+    def get_startup_name(self, obj):
+        """
+        Returns the name of the associated startup, or None if no startup is linked.
+        """
+        return obj.startup.company_name if obj.startup else None
+
+    def get_startup_logo(self, obj):
+        """
+        Returns the URL of the startup's logo, or None if no logo or startup exists.
+        """
+        request = self.context.get('request')
+        if obj.startup and obj.startup.logo:
+            return request.build_absolute_uri(obj.startup.logo.url)
+        return None
+
     def validate(self, data):
         """
         Cross-field validation logic based on business rules:
@@ -124,6 +141,9 @@ class ProjectSerializer(serializers.ModelSerializer):
 
         if funding_goal is not None and Decimal(str(current_funding)) > Decimal(str(funding_goal)):
             errors['current_funding'] = 'Current funding cannot exceed funding goal.'
+
+        if funding_goal is not None and current_funding >= funding_goal and not business_plan:
+            errors['business_plan'] = 'Business plan is required when funding goal is reached.'
 
         if status in [ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED] and not business_plan:
             errors['business_plan'] = 'Business plan is required for projects in progress or completed.'

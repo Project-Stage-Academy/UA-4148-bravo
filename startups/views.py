@@ -1,15 +1,58 @@
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework import status
-from elasticsearch.exceptions import ConnectionError, TransportError
-from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
+import logging
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django_elasticsearch_dsl_drf.filter_backends import (
     FilteringFilterBackend,
     OrderingFilterBackend,
     SearchFilterBackend,
 )
+from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
+from django_filters.rest_framework import DjangoFilterBackend
+from elasticsearch.exceptions import ConnectionError, TransportError
+from rest_framework import status
+from rest_framework import viewsets
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.filters import SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from .documents import StartupDocument
-from .serializers import StartupDocumentSerializer
+from .models import Startup
+from .serializers import StartupSerializer, StartupDocumentSerializer
+
+logger = logging.getLogger(__name__)
+
+
+class StartupViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Startup profiles.
+    Optimized to avoid N+1 queries when accessing projects.
+    """
+    queryset = Startup.objects.select_related('user', 'industry', 'location') \
+        .prefetch_related('projects')
+    serializer_class = StartupSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['industry', 'stage', 'location__country']
+    search_fields = ['company_name', 'user__first_name', 'user__last_name', 'email']
+
+    def perform_create(self, serializer):
+        instance = serializer.save(user=self.request.user)
+        try:
+            instance.clean()
+        except DjangoValidationError as e:
+            logger.warning(f"Validation error during creation: {e}")
+            raise DRFValidationError(e.message_dict)
+        logger.info(f"Startup created: {instance}")
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        try:
+            instance.clean()
+        except DjangoValidationError as e:
+            logger.warning(f"Validation error during update: {e}")
+            raise DRFValidationError(e.message_dict)
+        serializer.save()
+        logger.info(f"Startup updated: {instance}")
 
 
 class StartupDocumentView(DocumentViewSet):
@@ -25,24 +68,24 @@ class StartupDocumentView(DocumentViewSet):
 
     filter_fields = {
         'company_name': 'company_name.raw',
-        'funding_stage': 'funding_stage',
+        'stage': 'stage',
         'location.country': 'location.country',
         'industries.name': 'industries.name',
     }
 
     ordering_fields = {
         'company_name': 'company_name.raw',
-        'funding_stage': 'funding_stage.raw',
+        'stage': 'stage.raw',
         'location.country': 'location.country.raw',
     }
-    
-    ordering = ('-funding_stage',)
+
+    ordering = ('-stage',)
 
     search_fields = (
         'company_name',
         'description',
     )
-    
+
     def list(self, request, *args, **kwargs):
         try:
             return super().list(request, *args, **kwargs)
