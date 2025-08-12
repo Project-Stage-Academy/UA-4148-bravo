@@ -1,11 +1,10 @@
+from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer, UserSerializer
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.validators import validate_email, RegexValidator
-from djoser.serializers import UserSerializer
-from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
-from users.models import UserRole
+from rest_framework import serializers
+from django.core.validators import validate_email, RegexValidator
+from django.core.exceptions import ValidationError as DjangoValidationError
+from users.models import UserRole 
 
 User = get_user_model()
 
@@ -16,6 +15,7 @@ class CustomUserSerializer(UserSerializer):
         fields = ('id', 'username', 'email')
 
 
+# Custom serializer for obtaining JWT with additional fields
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Custom serializer for obtaining JWT tokens.
@@ -35,7 +35,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         """
         token = super().get_token(user)
         token['email'] = user.email
-        token['user_id'] = user.id
+        token['user_id'] = user.user_id
         return token
 
     def validate(self, attrs):
@@ -51,6 +51,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError('User account is disabled.')
 
         data['user_id'] = self.user.user_id
+        data['email'] = self.user.email
         return data
 
 class CustomUserCreateSerializer(serializers.ModelSerializer):
@@ -97,7 +98,7 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
             
         try:
             validate_email(data.get('email'))
-        except DjangoValidationError:
+        except ValidationError:
             raise serializers.ValidationError({"email": "Enter a valid email address."})
             
         return data

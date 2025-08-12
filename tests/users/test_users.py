@@ -1,24 +1,39 @@
-from tests.test_base import DisableSignalMixinUser, BaseAPITestCase
-from tests.input_data import TEST_USER_PASSWORD
+from django.test import Client
+from django.test import TestCase
+from users.models import UserRole, User
 
 
-class LoginTestCase(DisableSignalMixinUser):
+class LoginTestCase(TestCase):
     """
-    TestCase for verifying user login API functionality.
-    Uses UserMixin to create a users user with a password from environment variables.
+    TestCase to verify user login functionality.
+    Covers successful login, login with wrong credentials,
+    login attempts for nonexistent users, and requests with missing fields.
     """
-    authenticate = False
+
+    def setUp(self):
+        """
+        Setup test environment by creating a user role and a test user.
+        """
+        self.client = Client()
+        self.role, _ = UserRole.objects.get_or_create(role="user")
+        self.user = User.objects.create_user(
+            email="testuser@example.com",
+            password="testpass",
+            first_name="Test",
+            last_name="User",
+            role=self.role,
+            is_active=True
+        )
 
     def test_successful_login(self):
         """
-        Test successful login with valid credentials.
-        Checks that the response status is 200,
-        and that the access and refresh tokens are included in the response,
-        along with correct user_id and email.
+        Test that a user can successfully log in with valid credentials.
+        Verifies that the response status is 200 and tokens are returned,
+        along with correct user data.
         """
         response = self.client.post("/api/v1/users/login/", {
             "email": "testuser@example.com",
-            "password": TEST_USER_PASSWORD
+            "password": "testpass"
         }, content_type="application/json")
 
         self.assertEqual(response.status_code, 200)
@@ -30,8 +45,8 @@ class LoginTestCase(DisableSignalMixinUser):
 
     def test_login_wrong_password(self):
         """
-        Test login attempt with an incorrect password.
-        Expects a 401 Unauthorized response.
+        Test login attempt with a wrong password.
+        Verifies that the response status is 401 Unauthorized.
         """
         response = self.client.post("/api/v1/users/login/", {
             "email": "testuser@example.com",
@@ -42,8 +57,8 @@ class LoginTestCase(DisableSignalMixinUser):
 
     def test_login_nonexistent_user(self):
         """
-        Test login attempt with a non-existent user.
-        Expects a 401 Unauthorized response.
+        Test login attempt with an email not registered in the system.
+        Verifies that the response status is 401 Unauthorized.
         """
         response = self.client.post("/api/v1/users/login/", {
             "email": "ghost@example.com",
@@ -54,8 +69,8 @@ class LoginTestCase(DisableSignalMixinUser):
 
     def test_login_missing_fields(self):
         """
-        Test login attempt with missing required fields.
-        Expects a 400 Bad Request response.
+        Test login request missing required fields (e.g., missing password).
+        Verifies that the response status is 400 Bad Request.
         """
         response = self.client.post("/api/v1/users/login/", {
             "email": "testuser@example.com"

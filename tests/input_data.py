@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 from common.enums import Stage, ProjectStatus
 from investors.models import Investor
@@ -20,22 +21,22 @@ class TestDataMixin:
 
     @classmethod
     def get_or_create_user(cls, email, first_name, last_name):
-        role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                "first_name": first_name,
-                "last_name": last_name,
-                "role": role_user
-            }
-        )
-        user.set_password(TEST_USER_PASSWORD)
-        user.save()
+        user = User.objects.filter(email=email).first()
+        if not user:
+            role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
+            user = User.objects.create_user(
+                email=email,
+                password=TEST_USER_PASSWORD,
+                first_name=first_name,
+                last_name=last_name,
+                role=role_user,
+                is_active=True
+            )
         return user
 
     @classmethod
     def setup_users(cls):
-        cls.user = cls.get_or_create_user("testuser@example.com", "Test", "User")
+        cls.user = cls.get_or_create_user("user1@example.com", "Investor", "One")
         cls.user2 = cls.get_or_create_user("user2@example.com", "Investor", "Two")
         cls.investor_user = cls.get_or_create_user("maxinvestor@example.com", "Success", "Investor")
         cls.investor_user2 = cls.get_or_create_user("maxinvestor2@example.com", "Win", "Investor")
@@ -82,12 +83,13 @@ class TestDataMixin:
 
     @classmethod
     def get_or_create_startup(cls, user, industry, company_name, location):
+        email = f"startup_{uuid.uuid4().hex[:6]}@example.com"
         startup, _ = Startup.objects.get_or_create(
             user=user,
             industry=industry,
             company_name=company_name,
             location=location,
-            email="startup@example.com",
+            email=email,
             founded_year=2020,
             team_size=15,
             stage=Stage.MVP

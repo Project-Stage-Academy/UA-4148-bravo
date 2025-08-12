@@ -1,54 +1,64 @@
+import json
+from django.test import TestCase
 from rest_framework import status
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
-from tests.test_base import DisableSignalMixinUser, BaseAPITestCase
-from tests.input_data import TEST_USER_PASSWORD
+from users.models import UserRole, User
 
 
-class JWTLogoutTest(DisableSignalMixinUser):
+class JWTLogoutTest(TestCase):
     """
-    Test suite for JWT logout functionality with token blacklisting.
+    Test suite for verifying JWT logout functionality with token blacklisting.
+    Ensures that refresh tokens are blacklisted on logout and cannot be reused.
     """
-    authenticate = False
-
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Create users user once for the whole users case.
-        """
-        super().setUpTestData()
-        cls.login_url = '/api/v1/users/login/'
-        cls.logout_url = '/api/v1/users/auth/jwt/logout/'
-        cls.refresh_url = '/api/v1/users/auth/jwt/refresh/'
 
     def setUp(self):
         """
-        Log in before each users to obtain fresh tokens.
+        Create a test user, log in to obtain access and refresh tokens,
+        and prepare URLs for login, logout, and refresh endpoints.
         """
-        login_response = self.client.post(self.login_url, {
-            'email': self.user.email,
-            'password': TEST_USER_PASSWORD
-        })
-        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        role = UserRole.objects.get(role=UserRole.Role.USER)
+        self.user = User.objects.create_user(
+            email='test_user@example.com',
+            password='test_password123',
+            first_name='Api',
+            last_name='Startup',
+            role=role,
+            is_active=True
+        )
+        self.login_url = '/api/v1/users/login/'
+        self.logout_url = '/api/v1/users/auth/jwt/logout/'
+        self.refresh_url = '/api/v1/users/auth/jwt/refresh/'
 
-        self.refresh_token = login_response.data['refresh']
-        self.access_token = login_response.data['access']
+        response = self.client.post(
+            self.login_url,
+            data=json.dumps({
+                'email': 'test_user@example.com',
+                'password': 'test_password123'
+            }),
+            content_type='application/json'
+        )
+        self.refresh_token = response.data['refresh']
+        self.access_token = response.data['access']
 
     def test_logout_blacklists_refresh_token(self):
         """
-        Logging out should blacklist the provided refresh token.
+        Ensure that logging out blacklists the refresh token.
+        The blacklisted token should appear in the BlacklistedToken table.
         """
         refresh = RefreshToken(self.refresh_token)
         jti = refresh['jti']
-        token_obj = OutstandingToken.objects.get(jti=jti)
+        token = OutstandingToken.objects.get(jti=jti)
 
         response = self.client.post(self.logout_url, {'refresh': self.refresh_token}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(BlacklistedToken.objects.filter(token=token_obj).exists())
+
+        self.assertTrue(BlacklistedToken.objects.filter(token=token).exists())
 
     def test_blacklisted_token_cannot_be_used(self):
         """
-        A blacklisted refresh token should not be able to refresh access tokens.
+        Ensure that a blacklisted refresh token cannot be used to get a new access token.
+        The refresh endpoint should return a 401 Unauthorized response.
         """
         self.client.post(self.logout_url, {'refresh': self.refresh_token}, format='json')
 
@@ -56,5 +66,5 @@ class JWTLogoutTest(DisableSignalMixinUser):
             'refresh': self.refresh_token
         }, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, 401)
         self.assertIn('token is blacklisted', str(response.data).lower())

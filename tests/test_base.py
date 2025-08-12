@@ -1,12 +1,9 @@
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save
 from django.test import TestCase
 from rest_framework.test import APIClient
-from investors.models import Investor
 from startups.models import Startup
-from startups.signals import update_startup_document, delete_startup_document
+from startups.signals import update_startup_document
 from tests.input_data import TestDataMixin
-from tests.test_base_user import BaseUserTestCase
-from users.models import User
 
 
 class DisableSignalMixin(TestCase):
@@ -15,13 +12,11 @@ class DisableSignalMixin(TestCase):
 
     @classmethod
     def disable_signal(cls):
-        post_save.disconnect(update_startup_document, sender=cls.sender)
-        post_delete.disconnect(delete_startup_document, sender=cls.sender)
+        post_save.disconnect(update_startup_document, sender=Startup)
 
     @classmethod
     def enable_signal(cls):
-        post_save.connect(update_startup_document, sender=cls.sender)
-        post_delete.connect(delete_startup_document, sender=cls.sender)
+        post_save.connect(update_startup_document, sender=Startup)
 
     @classmethod
     def setUpClass(cls):
@@ -34,31 +29,17 @@ class DisableSignalMixin(TestCase):
         cls.enable_signal()
 
 
-class DisableSignalMixinStartup(DisableSignalMixin):
-    sender = Startup
-
-
-class DisableSignalMixinInvestor(DisableSignalMixin):
-    sender = Investor
-
-
-class DisableSignalMixinUser(DisableSignalMixin):
-    sender = User
-
-
-class BaseAPITestCase(TestDataMixin, BaseUserTestCase):
+class BaseAPITestCase(TestDataMixin, DisableSignalMixin):
     """Generic base users case with automatic signal disabling."""
 
     @classmethod
     def setUpTestData(cls):
-        super().tear_down()
         cls.setup_all()
 
     def setUp(self):
         self.client = APIClient()
-        if getattr(self, "authenticate", True):
-            self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.user)
 
     @classmethod
     def tearDownClass(cls):
-        super().tear_down()
+        super().tearDownClass()
