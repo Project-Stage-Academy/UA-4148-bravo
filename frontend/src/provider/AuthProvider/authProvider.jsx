@@ -38,23 +38,27 @@ function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
 
     /**
-     * Sign up: POST /api/v1/auth/register/
-     *
-     * Body: { email, password, first_name, last_name } --> 201 {id,email}
+     * Register
+     * URL: /api/v1/auth/register/
+     * Req: { email, first_name, last_name, password, password2 }
+     * Res: 201 { status, message, user_id, email }
      *
      * @param {string} email
-     * @param {string} password
      * @param {string | null} first_name
      * @param {string | null} last_name
+     * @param {string} password
+     * @param {string} confirmPassword
      */
-    async function signUp(email, password, first_name, last_name) {
-        await api.post("/api/v1/auth/register/", { email, password, first_name, last_name });
+    async function signUp(email, first_name, last_name, password, confirmPassword) {
+        await api.post("/api/v1/auth/register/", { email: email, first_name: first_name, last_name: last_name, password: password, password2: confirmPassword });
+        await login(email, password);
     }
 
     /**
-     * Log in (SimpleJWT): POST /api/v1/auth/jwt/create/
-     *
-     * Body: { email, password } → 200 { access, refresh }
+     * Create
+     * URL: /api/v1/auth/jwt/create/
+     * Req: { email, password }
+     * Res: 200 { access, refresh }
      *
      * @param {string} email
      * @param {string} password
@@ -68,9 +72,10 @@ function AuthProvider({ children }) {
     }
 
     /**
-     * Me: GET /api/v1/auth/me/
-     *
-     * (optional but recommended) → 200 { id, email, role, ... }
+     * Me
+     * URL: /api/v1/auth/me/
+     * Req: {}
+     * Res: 200 { id, email, role, ... }
      *
      * @returns {Promise<void>}
      */
@@ -82,9 +87,10 @@ function AuthProvider({ children }) {
     }
 
     /**
-     * Log out: client-side (drop tokens).
-     *
-     * If BE supports blacklist: POST /api/v1/auth/jwt/blacklist/ { refresh } → 205
+     * Blacklist
+     * URL: /api/v1/auth/password/reset/
+     * Req: { refresh }
+     * Res: 205
      */
     function logout() {
         const refresh = localStorage.getItem("refresh_token");
@@ -95,9 +101,10 @@ function AuthProvider({ children }) {
     }
 
     /**
-     * Password reset request: POST /api/v1/auth/password/reset/
-     *
-     * Body: { email } → 200
+     * Password reset
+     * URL: /api/v1/auth/password/reset/
+     * Req: { email }
+     * Res: 200
      *
      * @param {string} email
      * @returns {Promise<void>}
@@ -107,9 +114,10 @@ function AuthProvider({ children }) {
     }
 
     /**
-     * Password reset confirm: POST /api/v1/auth/password/reset/confirm/
-     *
-     * Body: { uid, token, new_password } → 200
+     * Password reset confirm
+     * URL: /api/v1/auth/password/reset/confirm/
+     * Req: { uid, token, new_password }
+     * Res: 200
      *
      * @param {string} uid
      * @param {string} token
@@ -121,21 +129,29 @@ function AuthProvider({ children }) {
     }
 
     /**
-     * Refresh: POST /api/v1/auth/jwt/refresh/
-     *
-     * Body: { refresh } → 200 { access }
+     * Refresh
+     * URL: /api/v1/auth/jwt/refresh/
+     * Req: { refresh }
+     * Res: 200 { access }
+     */
+    async function refresh() {
+        const refresh = localStorage.getItem("refresh_token");
+        if (!refresh) return;
+        try {
+            const { data } = await api.post("/api/v1/auth/jwt/refresh/", { refresh });
+            setAccessToken(data.access);
+            await loadUser();
+        } catch {
+            logout();
+        }
+    }
+
+    /**
+     * Try to restore session on mount
      */
     useEffect(() => {
         (async () => {
-            const refresh = localStorage.getItem("refresh_token");
-            if (!refresh) return;
-            try {
-                const { data } = await api.post("/api/v1/auth/jwt/refresh/", { refresh });
-                setAccessToken(data.access);
-                await loadUser();
-            } catch {
-                logout();
-            }
+            await refresh();
         })();
     }, []);
 

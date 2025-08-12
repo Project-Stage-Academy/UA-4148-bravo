@@ -21,19 +21,59 @@ api_urlpatterns = [
     path('users/', include('users.urls')),
 
     # API endpoints
-    path('api/register/', UserRegistrationView.as_view(), name='user_register'),
-    path('api/login/', CustomTokenObtainPairView.as_view(), name='custom_login'),
+    #
+    # Register
+    # URL: /api/v1/auth/register/
+    # Req: { email, first_name, last_name, password, password2 }
+    # Res: 201 { status, message, user_id, email }
+    #
+    # Me
+    # URL: /api/v1/auth/me/
+    # Req: {}
+    # Res: 200 { id, email, role, ... }
+    #
+    # Password reset
+    # URL: /api/v1/auth/password/reset/
+    # Req: { email }
+    # Res: 200
+    #
+    # Password reset confirm
+    # URL: /api/v1/auth/password/reset/confirm/
+    # Req: { uid, token, new_password }
+    # Res: 200
+
+    path('auth/register/', UserRegistrationView.as_view(), name='user_register'),
+    path('auth/me/', CustomTokenObtainPairView.as_view(), name='custom_login'),
+    #path('auth/password/reset/', , name='password_reset'),
+    #path('auth/password/reset/confirm/', , name='password_reset_confirm'),
 
     # Djoser authentication endpoints
-    path('api/auth/', include('djoser.urls')),
-    path('api/auth/', include('djoser.urls.jwt')),
+    path('auth/', include('djoser.urls')),
+    path('auth/', include('djoser.urls.jwt')),
 
     # Custom JWT endpoints
-    path('api/auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
-    path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
+    #
+    # Create
+    # URL: /api/v1/auth/jwt/create/
+    # Req: { email, password }
+    # Res: 200 { access, refresh }
+    #
+    # Refresh
+    # URL: /api/v1/auth/jwt/refresh/
+    # Req: { refresh }
+    # Res: 200 { access }
+    #
+    # Blacklist
+    # URL: /api/v1/auth/password/reset/
+    # Req: { refresh }
+    # Res: 205
+
+    path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
+    path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
+    #path('auth/jwt/blacklist/', , name='jwt-blacklist'),
 
     # Email verification
-    path('api/auth/verify-email/<int:user_id>/<str:token>/', 
+    path('auth/verify-email/<int:user_id>/<str:token>/',
         VerifyEmailView.as_view(), 
         name='verify-email'),
 
@@ -47,7 +87,7 @@ api_urlpatterns = [
     path('investors/', include('investors.urls')),
   
     # OAuth endpoints
-    path('api/accounts/', include('allauth.urls')),
+    path('accounts/', include('allauth.urls')),
 ]
 
 urlpatterns = [

@@ -291,6 +291,7 @@ LOGGING = {
             'backupCount': 7,
             'formatter': 'verbose',
             'encoding': 'utf8',
+            'delay': True,
         },
         'file_apps': {
             'level': 'DEBUG',
@@ -300,6 +301,7 @@ LOGGING = {
             'backupCount': 7,
             'formatter': 'verbose',
             'encoding': 'utf8',
+            'delay': True,
         },
         'file_errors': {
             'level': 'ERROR',
@@ -309,6 +311,7 @@ LOGGING = {
             'backupCount': 7,
             'formatter': 'verbose',
             'encoding': 'utf8',
+            'delay': True,
         },
         'db_file': {
             'level': 'INFO',
@@ -318,6 +321,7 @@ LOGGING = {
             'backupCount': 7,
             'formatter': 'verbose',
             'encoding': 'utf8',
+            'delay': True,
         },
         'file_json': {
             'class': 'logging.handlers.TimedRotatingFileHandler',
@@ -327,6 +331,7 @@ LOGGING = {
             'formatter': 'json',
             'level': 'INFO',
             'encoding': 'utf8',
+            'delay': True,
         },
     },
     'loggers': {
