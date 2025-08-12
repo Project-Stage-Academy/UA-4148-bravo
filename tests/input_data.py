@@ -1,5 +1,5 @@
 from decimal import Decimal
-from common.enums import Stage
+from common.enums import Stage, ProjectStatus
 from investors.models import Investor
 from projects.models import Project, Category
 from investments.models import Subscription
@@ -20,21 +20,22 @@ class TestDataMixin:
 
     @classmethod
     def get_or_create_user(cls, email, first_name, last_name):
-        user = User.objects.filter(email=email).first()
-        if not user:
-            role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
-            user = User.objects.create_user(
-                email=email,
-                password=TEST_USER_PASSWORD,
-                first_name=first_name,
-                last_name=last_name,
-                role=role_user
-            )
+        role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                "first_name": first_name,
+                "last_name": last_name,
+                "role": role_user
+            }
+        )
+        user.set_password(TEST_USER_PASSWORD)
+        user.save()
         return user
 
     @classmethod
     def setup_users(cls):
-        cls.user = cls.get_or_create_user("user1@example.com", "Investor", "One")
+        cls.user = cls.get_or_create_user("testuser@example.com", "Test", "User")
         cls.user2 = cls.get_or_create_user("user2@example.com", "Investor", "Two")
         cls.investor_user = cls.get_or_create_user("maxinvestor@example.com", "Success", "Investor")
         cls.investor_user2 = cls.get_or_create_user("maxinvestor2@example.com", "Win", "Investor")
@@ -116,10 +117,15 @@ class TestDataMixin:
         project, _ = Project.objects.get_or_create(
             startup=cls.startup,
             title="Test Project",
-            funding_goal=1000000.00,
-            current_funding=0.00,
-            category=cls.category,
-            email="testproject@example.com"
+            defaults={
+                "funding_goal": Decimal("1000000.00"),
+                "current_funding": Decimal("0.00"),
+                "category": cls.category,
+                "email": "testproject@example.com",
+                "description": "",
+                "duration": 1,
+                "status": ProjectStatus.DRAFT,
+            }
         )
         return project
 

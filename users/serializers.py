@@ -12,7 +12,6 @@ class CustomUserSerializer(UserSerializer):
         fields = ('id', 'username', 'email')
 
 
-# Custom serializer for obtaining JWT with additional fields
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Custom serializer for obtaining JWT tokens.
@@ -49,3 +48,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         data['user_id'] = self.user.user_id
         return data
+
+
+class CustomUserCreateSerializer:
+    pass
