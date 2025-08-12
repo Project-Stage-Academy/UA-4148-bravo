@@ -1,35 +1,41 @@
 from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
-from startups.models import Startup, Industry, Location
+
+from startups.models import Startup  # Global import only for model reference
 
 
+# Elasticsearch document for indexing Startup model
 @registry.register_document
 class StartupDocument(Document):
-    # Define nested Industry fields for indexing
+    # Local imports used only for related_models and indexing logic
+    from startups.models import Industry, Location
+
+    # Nested industry fields
     industry = fields.ObjectField(properties={
         'id': fields.IntegerField(),
         'name': fields.KeywordField(),
     })
 
-    # Define nested Location fields for indexing
+    # Nested location fields
     location = fields.ObjectField(properties={
         'id': fields.IntegerField(),
-        'country': fields.KeywordField(),  # Store as string, not Country object
+        'country': fields.KeywordField(),
         'region': fields.KeywordField(),
         'city': fields.KeywordField(),
         'address_line': fields.TextField(),
         'postal_code': fields.KeywordField(),
     })
 
+    # Main startup fields
     company_name = fields.TextField(fields={
-        'raw': fields.KeywordField()  # for sorting
+        'raw': fields.KeywordField()  # For sorting
     })
-
     funding_stage = fields.KeywordField()
     investment_needs = fields.TextField()
     company_size = fields.KeywordField()
     is_active = fields.BooleanField()
 
+    # Elasticsearch index settings
     class Index:
         name = 'startups'
         settings = {
@@ -37,6 +43,7 @@ class StartupDocument(Document):
             'number_of_replicas': 0
         }
 
+    # Django model and related configuration
     class Django:
         model = Startup
         fields = [
@@ -51,18 +58,15 @@ class StartupDocument(Document):
         ]
         related_models = [Industry, Location]
 
+    # Return affected startups when related models change
     def get_instances_from_related(self, related_instance):
-        """Ensure related model changes update the index."""
-        if isinstance(related_instance, Industry):
+        if isinstance(related_instance, self.Industry):
             return related_instance.startups.all()
-        elif isinstance(related_instance, Location):
+        elif isinstance(related_instance, self.Location):
             return related_instance.startups.all()
 
+    # Format location data for indexing
     def prepare_location(self, instance):
-        """Prepare the location field for Elasticsearch indexing.
-
-        Convert 'country' field from Country object to string code.
-        """
         location = instance.location
         if not location:
             return {}
