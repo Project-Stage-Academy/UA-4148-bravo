@@ -175,7 +175,8 @@ class VerifyEmailView(APIView):
 
 
 User = get_user_model()
-role = UserRole.objects.get(role="user")
+def get_default_role():
+    return UserRole.objects.get(role="user")
 
 class OAuthTokenObtainPairView(TokenObtainPairView):
     """
@@ -296,7 +297,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 "password": "",
                 "user_phone": "",
                 "title": "",
-                "role": role
+                "role": get_default_role()
             }
         )
 
@@ -372,7 +373,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                     "password": "",
                     "user_phone": "",
                     "title": "",
-                    "role": role
+                    "role": get_default_role()
                 }
             )
 
@@ -443,6 +444,6 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 "last_name": user.last_name,
                 "user_phone": user.user_phone,
                 "title": user.title,
-                "role": str(user.role) if user.role else None
+                "role": str(get_default_role())
             }
         })        
