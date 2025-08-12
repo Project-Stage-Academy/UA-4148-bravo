@@ -49,9 +49,21 @@ function AuthProvider({ children }) {
      * @param {string} password
      * @param {string} confirmPassword
      */
-    async function signUp(email, first_name, last_name, password, confirmPassword) {
+    async function register(email, first_name, last_name, password, confirmPassword) {
         await api.post("/api/v1/auth/register/", { email: email, first_name: first_name, last_name: last_name, password: password, password2: confirmPassword });
-        await login(email, password);
+    }
+
+    /**
+     * Resend register email
+     * URL: /api/v1/auth/register/resend/
+     * Req: { email, userId }
+     * Res: 201 { status, message, user_id, email }
+     *
+     * @param {string} email
+     * @param {number} userId
+     */
+    async function resendRegisterEmail(email, userId) {
+        await api.post("/api/v1/auth/register/resend/", { email: email, user_id: userId });
     }
 
     /**
@@ -88,7 +100,7 @@ function AuthProvider({ children }) {
 
     /**
      * Blacklist
-     * URL: /api/v1/auth/password/reset/
+     * URL: /api/v1/auth/jwt/blacklist/
      * Req: { refresh }
      * Res: 205
      */
@@ -156,7 +168,7 @@ function AuthProvider({ children }) {
     }, []);
 
     return (
-        <AuthCtx.Provider value={{ user, login, register: signUp, logout, requestReset, confirmReset }}>
+        <AuthCtx.Provider value={{ user, login, register, resendRegisterEmail, logout, requestReset, confirmReset }}>
             {children}
         </AuthCtx.Provider>
     );

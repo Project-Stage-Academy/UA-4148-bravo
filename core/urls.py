@@ -27,6 +27,11 @@ api_urlpatterns = [
     # Req: { email, first_name, last_name, password, password2 }
     # Res: 201 { status, message, user_id, email }
     #
+    # Resend register email
+    # URL: /api/v1/auth/register/resend/
+    # Req: { email, userId }
+    # Res: 201 { status, message, user_id, email }
+    #
     # Me
     # URL: /api/v1/auth/me/
     # Req: {}
@@ -43,6 +48,7 @@ api_urlpatterns = [
     # Res: 200
 
     path('auth/register/', UserRegistrationView.as_view(), name='user_register'),
+    #path('auth/register/resend', , name='user_register'),
     path('auth/me/', CustomTokenObtainPairView.as_view(), name='custom_login'),
     #path('auth/password/reset/', , name='password_reset'),
     #path('auth/password/reset/confirm/', , name='password_reset_confirm'),
@@ -64,13 +70,13 @@ api_urlpatterns = [
     # Res: 200 { access }
     #
     # Blacklist
-    # URL: /api/v1/auth/password/reset/
+    # URL: /api/v1/auth/jwt/blacklist/
     # Req: { refresh }
     # Res: 205
 
     path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
     path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
-    #path('auth/jwt/blacklist/', , name='jwt-blacklist'),
+    path('auth/jwt/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
 
     # Email verification
     path('auth/verify-email/<int:user_id>/<str:token>/',
