@@ -18,7 +18,7 @@ ALLOWED_HOSTS = config(
 
 # Application definition
 
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+# FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -106,7 +106,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'user': '5/minute',
         'anon': '2/minute',
-        'resend_email': '5/min',
+        'resend_email': '5/minute',
         
     },
 }
