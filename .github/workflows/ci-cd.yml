@@ -33,6 +33,7 @@ jobs:
       GITHUB_CLIENT_ID: ${{ secrets.GIT_CLIENT_ID }}
       GITHUB_CLIENT_SECRET: ${{ secrets.GIT_CLIENT_SECRET }}
       
+      EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
       EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
 
 
