@@ -9,6 +9,7 @@ urlpatterns = [
     # ----------------------------------------
     path('reset_password/', CustomPasswordResetView.as_view(), name="custom_reset_password"),
     path('reset_password_confirm/', CustomPasswordResetConfirmView.as_view(), name="custom_reset_password_confirm"),
+
     # ----------------------------------------
     # Custom authentication endpoint
     # ----------------------------------------
