@@ -147,7 +147,7 @@ class VerifyEmailView(APIView):
             
             if user.is_active:
                 return Response(
-                    {'status': 'success', 'message': 'Email is already verified.'},
+                    {'status': 'success', 'message': 'Email is already verified.Email is already verified. No confirmation email was sent.'},
                     status=status.HTTP_200_OK
                 )
             
