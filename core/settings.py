@@ -11,6 +11,8 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost',
                        cast=lambda v: [s.strip() for s in v.split(',')])
 
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -89,6 +91,14 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '50/min',
+        'resend_email': '5/min',
+    },
 }
 
 SIMPLE_JWT = {
@@ -128,8 +138,17 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
-DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = config('EMAIL_HOST')
+    EMAIL_PORT = config('EMAIL_PORT', cast=int)
+    EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+    EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
+    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware", #OAuth

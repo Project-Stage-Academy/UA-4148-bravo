@@ -13,6 +13,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.permissions import AllowAny
+from rest_framework.throttling import ScopedRateThrottle
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from .serializers import ResendEmailSerializer
+from .tokens import email_verification_token
 
 from .models import User, UserRole
 from .serializers import CustomTokenObtainPairSerializer, CustomUserCreateSerializer
@@ -129,6 +135,12 @@ class VerifyEmailView(APIView):
                 email_verification_token=token
             )
             
+            if user.is_active:
+                return Response(
+                    {'status': 'success', 'message': 'Email is already verified.'},
+                    status=status.HTTP_200_OK
+                )
+            
             # Check if token is expired (24 hours)
             token_expired = (
                 user.email_verification_sent_at is None or
@@ -141,6 +153,10 @@ class VerifyEmailView(APIView):
                     {'status': 'error', 'message': 'Verification link has expired.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            
+            if user.pending_email:
+                user.email = user.pending_email
+                user.pending_email = None
             
             user.is_active = True
             user.email_verification_token = None
@@ -165,3 +181,105 @@ class VerifyEmailView(APIView):
                 {'status': 'error', 'message': 'An error occurred during verification.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class ResendEmailView(APIView):
+    """
+    API view to resend the email verification link.
+
+    This view allows users to request a new verification email to be sent to their
+    registered or pending email address. It supports optional updating of the pending email
+    and token generation. The response does not disclose whether the user exists
+    for security reasons.
+
+    Attributes:
+        permission_classes (list): List of permission classes allowing unrestricted access.
+        throttle_scope (str): Named scope for rate limiting resend email requests.
+        throttle_classes (list): List of throttling classes applied to the view.
+    """
+    permission_classes = [AllowAny]
+    throttle_scope = "resend_email"
+    throttle_classes = [ScopedRateThrottle]
+
+    def post(self, request):
+        """
+        Handle POST request to resend the email verification link.
+
+        Validates the input data, retrieves the user by user_id, updates the pending email if provided,
+        generates a new token if not supplied, constructs the verification URL, renders
+        email templates (HTML and plain text), sends the email, and returns a generic
+        success response regardless of whether the user exists.
+
+        Args:
+            request (Request): DRF request object containing user_id (required), 
+                optional email (new pending email), and optional token.
+
+        Returns:
+            Response: DRF Response object with HTTP 202 Accepted status and a message
+                indicating that if the account exists, a verification email has been sent.
+        """
+        serializer = ResendEmailSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user_id = serializer.validated_data["user_id"]
+        email = serializer.validated_data.get("email")
+        token = serializer.validated_data.get("token")
+
+        try:
+            user = User.objects.get(user_id=user_id)
+            if user.is_active:
+                return Response(
+                    {"detail": "If the account exists, a verification email has been sent."},
+                    status=status.HTTP_202_ACCEPTED,
+                )
+
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "If the account exists, a verification email has been sent."},
+                status=status.HTTP_202_ACCEPTED,
+            )
+
+        if email:
+            user.pending_email = email
+            user.save(update_fields=["pending_email"])
+        else:
+            email = user.pending_email or user.email
+
+        if not token:
+            token = email_verification_token.make_token(user)
+
+        verification_relative_url = reverse(
+            'verify-email', kwargs={'user_id': user.user_id, 'token': token}
+        )
+        verify_url = f"{settings.FRONTEND_URL}{verification_relative_url}?email={email}"
+
+        context = {
+            'user': user,
+            'verification_url': verify_url,
+            'user_display_name': user.first_name or user.email,
+            'support_text': "If you didn't request this, please ignore this email.",
+        }
+
+        subject = "Confirm your email"
+        html_message = render_to_string('email/activation.html', context)
+        plain_message = (
+            f"Hello {context['user_display_name']},\n\n"
+            f"Please verify your email by clicking the link below:\n{verify_url}\n\n"
+            f"{context['support_text']}"
+        )
+
+        try:
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send verification email to {email}: {str(e)}")
+
+        return Response(
+            {"detail": "If the account exists, a verification email has been sent."},
+            status=status.HTTP_202_ACCEPTED,
+        )

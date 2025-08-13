@@ -13,7 +13,7 @@ from django.conf.urls.static import static
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
-from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView
+from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView, ResendEmailView
 
 # API endpoints grouped by app
 api_urlpatterns = [
@@ -23,6 +23,7 @@ api_urlpatterns = [
     # API endpoints
     path('api/register/', UserRegistrationView.as_view(), name='user_register'),
     path('api/login/', CustomTokenObtainPairView.as_view(), name='custom_login'),
+    path('auth/resend-email/', ResendEmailView.as_view(), name='resend-email'),
 
     # Djoser authentication endpoints
     path('api/auth/', include('djoser.urls')),
