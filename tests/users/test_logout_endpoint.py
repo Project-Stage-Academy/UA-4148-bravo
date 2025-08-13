@@ -26,9 +26,9 @@ class JWTLogoutTest(TestCase):
             role=role,
             is_active=True
         )
-        self.login_url = '/api/v1/users/login/'
-        self.logout_url = '/api/v1/users/auth/jwt/logout/'
-        self.refresh_url = '/api/v1/users/auth/jwt/refresh/'
+        self.login_url = '/api/v1/auth/jwt/create/'
+        self.logout_url = '/api/v1/auth/jwt/logout/'
+        self.refresh_url = '/api/v1/auth/jwt/refresh/'
 
         response = self.client.post(
             self.login_url,
