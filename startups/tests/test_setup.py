@@ -11,13 +11,21 @@ class BaseStartupTestCase(TestCase):
 
     def setUp(self):
         # Create a test user
+        # This user will be used in all inherited test cases
         self.user = get_user_model().objects.create_user(
             email='testuser@example.com',
             password='password123'
         )
 
         # Create an industry instance
+        # The "name" field exists in Industry model
         self.industry = Industry.objects.create(name='Technology')
 
         # Create a location instance
-        self.location = Location.objects.create(name='Kyiv', country='UA')
+        # IMPORTANT: Adjusted to match the actual Location model fields
+        # In our case, there is no "name" field, but there is "city" and "country"
+        self.location = Location.objects.create(
+            country='UA',
+            city='Kyiv'
+        )
+

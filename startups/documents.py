@@ -1,22 +1,25 @@
 from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 
-from startups.models import Startup  # Global import only for model reference
+# Import all models used in this document at the module level
+# so they are available both inside the class and in Django's inner classes
+from startups.models import Startup, Industry, Location
 
 
-# Elasticsearch document for indexing Startup model
 @registry.register_document
 class StartupDocument(Document):
-    # Local imports used only for related_models and indexing logic
-    from startups.models import Industry, Location
+    """
+    Elasticsearch document for indexing Startup model.
+    Includes nested fields for Industry and Location.
+    """
 
-    # Nested industry fields
+    # Nested industry fields for indexing related Industry model data
     industry = fields.ObjectField(properties={
         'id': fields.IntegerField(),
         'name': fields.KeywordField(),
     })
 
-    # Nested location fields
+    # Nested location fields for indexing related Location model data
     location = fields.ObjectField(properties={
         'id': fields.IntegerField(),
         'country': fields.KeywordField(),
@@ -28,23 +31,28 @@ class StartupDocument(Document):
 
     # Main startup fields
     company_name = fields.TextField(fields={
-        'raw': fields.KeywordField()  # For sorting
+        'raw': fields.KeywordField()  # Keyword field for sorting by exact value
     })
     funding_stage = fields.KeywordField()
     investment_needs = fields.TextField()
     company_size = fields.KeywordField()
     is_active = fields.BooleanField()
 
-    # Elasticsearch index settings
     class Index:
-        name = 'startups'
+        """
+        Elasticsearch index configuration.
+        """
+        name = 'startups'  # Index name in Elasticsearch
         settings = {
-            'number_of_shards': 1,
-            'number_of_replicas': 0
+            'number_of_shards': 1,      # Single shard for small datasets
+            'number_of_replicas': 0     # No replicas for development
         }
 
-    # Django model and related configuration
     class Django:
+        """
+        Django integration configuration.
+        Defines which model to index and related models that should trigger reindexing.
+        """
         model = Startup
         fields = [
             'id',
@@ -56,17 +64,23 @@ class StartupDocument(Document):
             'created_at',
             'updated_at',
         ]
-        related_models = [Industry, Location]
+        related_models = [Industry, Location]  # Trigger reindexing when these models change
 
-    # Return affected startups when related models change
     def get_instances_from_related(self, related_instance):
-        if isinstance(related_instance, self.Industry):
+        """
+        Return related Startup instances when Industry or Location instances are updated.
+        This is used by django-elasticsearch-dsl to know which documents to update.
+        """
+        if isinstance(related_instance, Industry):
             return related_instance.startups.all()
-        elif isinstance(related_instance, self.Location):
+        elif isinstance(related_instance, Location):
             return related_instance.startups.all()
 
-    # Format location data for indexing
     def prepare_location(self, instance):
+        """
+        Prepare location data for indexing in Elasticsearch.
+        Returns a dictionary with the location fields.
+        """
         location = instance.location
         if not location:
             return {}

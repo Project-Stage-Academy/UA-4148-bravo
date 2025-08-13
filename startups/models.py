@@ -10,6 +10,10 @@ from validation.validate_social_links import validate_social_links_dict
 
 
 class Location(models.Model):
+    """
+    Represents a physical location associated with a startup.
+    Includes country, region, city, address line, and postal code.
+    """
     country = CountryField()
     region = models.CharField(max_length=100, blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
@@ -19,7 +23,11 @@ class Location(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
+        """
+        Validates location fields for proper formatting.
+        """
         errors = {}
+
         if self.postal_code:
             postal = self.postal_code.strip()
             if len(postal) < 3:
@@ -72,6 +80,9 @@ class Location(models.Model):
 
 
 class Industry(models.Model):
+    """
+    Represents an industry category for startups.
+    """
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -91,6 +102,10 @@ class Industry(models.Model):
 
 
 class Startup(Company):
+    """
+    Represents a startup profile.
+    Inherits common company fields and adds startup-specific attributes.
+    """
     user = models.OneToOneField(
         'users.User',
         on_delete=models.CASCADE,
@@ -103,7 +118,6 @@ class Startup(Company):
     )
     social_links = models.JSONField(blank=True, default=dict)
 
-    # Added fields
     industry = models.ForeignKey(
         Industry,
         on_delete=models.SET_NULL,
@@ -146,6 +160,9 @@ class Startup(Company):
     is_active = models.BooleanField(default=True)
 
     def clean(self):
+        """
+        Validates startup fields and ensures social links are correct.
+        """
         super().clean()
         if not self.stage:
             self.stage = Stage.IDEA

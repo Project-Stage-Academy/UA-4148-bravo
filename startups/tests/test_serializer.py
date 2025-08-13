@@ -49,7 +49,6 @@ class StartupSerializerTests(BaseStartupTestCase):
         }
         serializer = StartupSerializer(data=data)
         self.assertFalse(serializer.is_valid())
-        # Changed check from non_field_errors to email field errors
         self.assertIn('email', serializer.errors)
 
     def test_team_size_too_small_should_fail(self):
@@ -74,6 +73,7 @@ class StartupSerializerTests(BaseStartupTestCase):
             'industry': self.industry.pk,
             'location': self.location.pk,
             'founded_year': 2020,
+            'email': 'valid@example.com',
             'social_links': {
                 'linkedin': 'https://notlinkedin.com/profile',
                 'unknown': 'https://example.com'
@@ -82,14 +82,9 @@ class StartupSerializerTests(BaseStartupTestCase):
         serializer = StartupSerializer(data=data)
         self.assertFalse(serializer.is_valid())
 
-        # Print errors to check actual message structure
-        print(serializer.errors)
+        # Check errors specifically related to 'social_links'
+        self.assertIn('social_links', serializer.errors)
+        self.assertIn('unknown', serializer.errors['social_links'])
 
-        errors = serializer.errors.get('social_links', {})
 
-        # Adjust assertion to check substrings in error messages for robustness
-        self.assertTrue(
-            any("Invalid domain" in msg for msg in errors.get('linkedin', [])) or
-            any("Platform" in msg for msg in errors.get('unknown', []))
-        )
 

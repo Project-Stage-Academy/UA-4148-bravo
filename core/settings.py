@@ -133,12 +133,12 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Email Configuration (for development)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 
 # Middleware
 MIDDLEWARE = [
-    "allauth.account.middleware.AccountMiddleware",  # OAuth middleware
+    "allauth.account.middleware.AccountMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -218,16 +218,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Elasticsearch DSL Configuration
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
-    },
-}
-
-# Override Elasticsearch index names for testing
+# Elasticsearch DSL Configuration (test mode uses dummy host)
 if 'test' in sys.argv:
-    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
+    ELASTICSEARCH_DSL = {
+        'default': {
+            'hosts': 'http://localhost:9999'  # unreachable to prevent ES calls
+        }
+    }
+else:
+    ELASTICSEARCH_DSL = {
+        'default': {
+            'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
+        }
+    }
 
 # File validation settings
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
@@ -404,13 +407,6 @@ CELERY_RESULT_BACKEND = 'rpc://'
 if 'test' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
-
-# Elasticsearch
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': 'http://elasticsearch:9200'
-    }
-}
 
 # SQLite for test environments
 if os.environ.get("USE_SQLITE_FOR_TESTS") == "1":
