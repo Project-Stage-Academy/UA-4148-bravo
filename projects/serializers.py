@@ -19,7 +19,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class ProjectReadSerializer(serializers.ModelSerializer):
     """Serializer for reading Project with nested related objects."""
-
+    id = serializers.IntegerField(read_only=True)
     category = CategorySerializer(read_only=True)
     startup = StartupProjectSerializer(read_only=True)
     status_display = serializers.SerializerMethodField()
@@ -39,19 +39,24 @@ class ProjectReadSerializer(serializers.ModelSerializer):
 
 
 class ProjectWriteSerializer(serializers.ModelSerializer):
-    """Serializer for creating/updating Project with validation."""
-
-    category_id = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(),
-        source='category'
-    )
+    """
+    Serializer for creating/updating Project with validation.
+    Ensures required fields match the model and cross-field rules are enforced.
+    """
+    id = serializers.IntegerField(read_only=True)
     startup_id = serializers.PrimaryKeyRelatedField(
         queryset=Startup.objects.all(),
         source='startup'
     )
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        source='category'
+    )
+
     funding_goal = serializers.DecimalField(
         max_digits=20,
-        decimal_places=2
+        decimal_places=2,
+        required=True
     )
     current_funding = serializers.DecimalField(
         max_digits=20,
@@ -63,25 +68,32 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = [
-            'startup_id', 'title', 'description', 'business_plan',
+            'id', 'startup_id', 'title', 'description', 'business_plan',
             'media_files', 'status', 'duration',
             'funding_goal', 'current_funding', 'category_id', 'website',
             'email', 'has_patents', 'is_participant', 'is_active'
         ]
 
+    def validate_funding_goal(self, value):
+        """
+        Ensure funding_goal is a positive decimal with at most 20 digits.
+        """
+        if len(str(value).replace('.', '').replace('-', '')) > 20:
+            raise serializers.ValidationError('Funding goal is too large.')
+        if value <= 0:
+            raise serializers.ValidationError('Funding goal must be greater than 0.')
+        return value
+
     def validate(self, data):
         """
-        Cross-field validation logic based on business rules:
-        - current_funding must not exceed funding_goal
-        - business_plan required for in_progress or completed
-        - funding_goal required if is_participant is True
+        Cross-field validation for Project.
         """
+        getattr(self, 'instance', None)
         funding_goal = get_field_value(self, data, 'funding_goal')
         current_funding = get_field_value(self, data, 'current_funding') or Decimal('0.00')
-        status = get_field_value(self, data, 'status')
         business_plan = get_field_value(self, data, 'business_plan')
-        is_participant = get_field_value(self, data, 'is_participant')
-
+        status = get_field_value(self, data, 'status')
+        is_participant = get_field_value(self, data, 'is_participant') or False
         errors = {}
 
         if funding_goal is not None and current_funding > funding_goal:
@@ -93,7 +105,7 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
         if status in [ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED] and not business_plan:
             errors['business_plan'] = 'Business plan is required for projects in progress or completed.'
 
-        if is_participant and not funding_goal:
+        if is_participant and funding_goal is None:
             errors['funding_goal'] = 'Funding goal is required for participant projects.'
 
         if errors:

@@ -13,7 +13,7 @@ from django_elasticsearch_dsl_drf.filter_backends import (
 )
 from .documents import ProjectDocument
 from .permissions import IsOwnerOrReadOnly
-from .serializers import ProjectDocumentSerializer, ProjectReadSerializer
+from .serializers import ProjectDocumentSerializer, ProjectReadSerializer, ProjectWriteSerializer
 from rest_framework.permissions import IsAuthenticated
 import logging
 
@@ -23,12 +23,24 @@ logger = logging.getLogger(__name__)
 class ProjectViewSet(viewsets.ModelViewSet):
     """
     API endpoint for viewing and editing projects.
-    Optimized to avoid N+1 queries by using select_related.
-    Supports filtering by status, category, startup; searching by title, description, email;
-    and ordering by created_at, funding_goal, and current_funding.
+
+    This ViewSet supports both read and write operations for projects.
+    It optimizes database access by using `select_related` for related fields
+    (`startup` and `category`) to avoid N+1 query issues.
+
+    Features:
+        - Read operations: list and retrieve project details.
+        - Write operations: create, update, partially update, and delete projects.
+        - Filtering: by `status`, `category`, and `startup`.
+        - Searching: by `title`, `description`, and `email`.
+        - Ordering: by `created_at`, `funding_goal`, and `current_funding`.
+        - Default ordering: newest projects first (`-created_at`).
+
+    Permissions:
+        - Authenticated users can view all projects.
+        - Only the owner can modify or delete their projects.
     """
     queryset = Project.objects.select_related('startup', 'category').all()
-    serializer_class = ProjectReadSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
@@ -36,6 +48,29 @@ class ProjectViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'description', 'email']
     ordering_fields = ['created_at', 'funding_goal', 'current_funding']
     ordering = ['-created_at']
+
+    def get_serializer_class(self):
+        """
+        Return the appropriate serializer class depending on the action.
+
+        - For read actions (`list`, `retrieve`), use `ProjectReadSerializer`
+          to include detailed, read-only fields.
+        - For write actions (`create`, `update`, `partial_update`, `destroy`),
+          use `ProjectWriteSerializer` to handle validation and input data.
+        """
+        if self.action in ['list', 'retrieve']:
+            return ProjectReadSerializer
+        return ProjectWriteSerializer
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Handle PATCH requests for partially updating a project.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ProjectDocumentView(DocumentViewSet):

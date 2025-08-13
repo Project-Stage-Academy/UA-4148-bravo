@@ -116,18 +116,39 @@ class TestDataMixin:
         cls.category = cls.get_or_create_category()
 
     @classmethod
-    def get_or_create_project(cls):
-        project, _ = Project.objects.get_or_create(
-            startup=cls.startup,
+    def get_or_create_project(
+            cls,
             title="Test Project",
+            email=None,
+            funding_goal=Decimal("1000000.00"),
+            current_funding=Decimal("0.00"),
+            startup=None,
+            category=None,
+            status=ProjectStatus.DRAFT,
+            **kwargs
+    ):
+        """
+        Create or get a project with optional custom fields.
+        """
+        if startup is None:
+            startup = cls.startup
+        if category is None:
+            category = cls.category
+        if email is None:
+            email = f"project_{uuid.uuid4().hex[:6]}@example.com"
+
+        project, created = Project.objects.get_or_create(
+            startup=startup,
+            title=title,
             defaults={
-                "funding_goal": Decimal("1000000.00"),
-                "current_funding": Decimal("0.00"),
-                "category": cls.category,
-                "email": "testproject@example.com",
+                "funding_goal": funding_goal,
+                "current_funding": current_funding,
+                "category": category,
+                "email": email,
                 "description": "",
                 "duration": 1,
-                "status": ProjectStatus.DRAFT,
+                "status": status,
+                **kwargs
             }
         )
         return project
