@@ -171,6 +171,28 @@ class TestDataMixin:
         subscription, _ = Subscription.objects.get_or_create(**data)
         return subscription
 
+    @staticmethod
+    def get_subscription_data(investor, project, amount) -> dict:
+        """
+        Prepare a dictionary payload representing a subscription, useful for API testing.
+
+        Args:
+            investor (Investor or None): Investor instance or None.
+            project (Project or None): Project instance or None.
+            amount (float): Amount invested.
+
+        Returns:
+            dict: Dictionary containing subscription data with IDs for investor and project.
+        """
+        data = {
+            "amount": str(amount)
+        }
+        if investor is not None:
+            data["investor"] = investor.pk
+        if project is not None:
+            data["project"] = project.pk
+        return data
+
     @classmethod
     def setup_all(cls):
         cls.setup_users()

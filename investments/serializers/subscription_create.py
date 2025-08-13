@@ -12,7 +12,7 @@ from ..services.investment_share_service import calculate_investment_share
 from ..services.subscription_validation_service import validate_subscription_business_rules
 
 
-class SubscriptionCreateSerializer():
+class SubscriptionCreateSerializer(serializers.ModelSerializer):
     amount = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=Decimal("0.01"))
 
     class Meta:
@@ -21,15 +21,16 @@ class SubscriptionCreateSerializer():
         read_only_fields = ['investment_share', 'created_at']
 
     def validate(self, data):
-        project = get_field_value(data, 'project')
-        investor = get_field_value(data, 'investor')
-        amount = get_field_value(data, 'amount')
+        project = get_field_value(self, data, 'project')
+        investor = get_field_value(self, data, 'investor')
+        amount = get_field_value(self, data, 'amount')
         exclude_amount = Decimal('0.00')
 
         validate_subscription_business_rules(investor, project, amount, exclude_amount)
         return data
 
-    def create(self, validated_data):
+
+def create(self, validated_data):
         project = validated_data['project']
         amount = validated_data['amount']
 

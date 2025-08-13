@@ -40,10 +40,11 @@ def validate_project_funding_limit(project: Project, amount, current_subscriptio
         })
 
 
-def compute_investment_share(amount, funding_goal) -> Decimal:
+def calculate_investment_share(amount, funding_goal) -> Decimal:
     """
     Return the investment share as a percentage of the funding goal.
     """
-    amount = to_decimal(amount)
-    funding_goal = to_decimal(funding_goal)
-    return (amount / funding_goal) * 100
+    if funding_goal == 0:
+        return Decimal("0.00")
+    share = (amount / funding_goal) * 100
+    return share.quantize(Decimal('0.01'))

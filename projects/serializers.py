@@ -71,7 +71,7 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
             'id', 'startup_id', 'title', 'description', 'business_plan',
             'media_files', 'status', 'duration',
             'funding_goal', 'current_funding', 'category_id', 'website',
-            'email', 'has_patents', 'is_participant', 'is_active'
+            'email', 'has_patents', 'is_participant', 'is_active', 'created_at', 'updated_at'
         ]
 
     def validate_funding_goal(self, value):

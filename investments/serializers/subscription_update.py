@@ -1,16 +1,21 @@
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-
 from projects.models import Project
+from ..models import Subscription
 from ..services.investment_share_service import calculate_investment_share
 from ..services.subscription_validation_service import validate_subscription_business_rules
 
 
-class SubscriptionUpdateSerializer():
+class SubscriptionUpdateSerializer(serializers.ModelSerializer):
     """
     Handles subscription updates, ensuring rules are respected.
     """
+
+    class Meta:
+        model = Subscription
+        fields = ['investor', 'project', 'amount', 'investment_share', 'created_at']
+        read_only_fields = ['investor', 'project', 'investment_share', 'created_at']
 
     def update(self, instance, validated_data):
         new_amount = validated_data.get('amount', instance.amount)

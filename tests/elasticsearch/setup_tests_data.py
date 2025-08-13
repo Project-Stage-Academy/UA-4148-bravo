@@ -1,10 +1,12 @@
 from tests.elasticsearch.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, \
     CategoryFactory, ProjectFactory
+from rest_framework.test import APITestCase
 
 
-class ProjectTestSetupMixin:
+class ProjectTestSetupMixin(APITestCase):
     @classmethod
-    def setup(cls):
+    def setUpClass(cls):
+        super().setUpClass()
         cls.user1 = UserFactory()
         cls.user2 = UserFactory()
         cls.industry1 = IndustryFactory(name="Fintech")
@@ -19,3 +21,6 @@ class ProjectTestSetupMixin:
         cls.category2 = CategoryFactory(name="Finance")
         cls.project1 = ProjectFactory(startup=cls.startup1, category=cls.category1, title="First Test Project")
         cls.project2 = ProjectFactory(startup=cls.startup2, category=cls.category2, title="Second Test Project")
+
+    def setUp(self):
+        self.client.force_authenticate(user=self.user1)

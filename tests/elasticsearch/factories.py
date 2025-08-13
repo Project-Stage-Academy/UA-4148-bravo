@@ -8,21 +8,25 @@ from users.models import UserRole
 
 User = get_user_model()
 
+
 class UserRoleFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = UserRole
+        django_get_or_create = ('role',)  # <- ключ для get_or_create
 
     role = UserRole.Role.USER
+
 
 class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = User
 
-    role = factory.SubFactory(UserRoleFactory)
+    role = factory.SubFactory(UserRoleFactory)  # завжди отримає існуючий або створить один раз
     first_name = "John"
     last_name = "Doe"
     email = factory.Sequence(lambda n: f"user{n}@example.com")
     password = factory.PostGenerationMethodCall('set_password', 'password123')
+
 
 class IndustryFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -30,11 +34,13 @@ class IndustryFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: f'Industry{n}')
 
+
 class LocationFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Location
 
     country = "US"
+
 
 class StartupFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -50,11 +56,13 @@ class StartupFactory(factory.django.DjangoModelFactory):
     team_size = 10
     stage = Stage.IDEA
 
+
 class CategoryFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Category
 
     name = factory.Sequence(lambda n: f'Category{n}')
+
 
 class ProjectFactory(factory.django.DjangoModelFactory):
     class Meta:
