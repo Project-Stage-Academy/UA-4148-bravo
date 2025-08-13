@@ -27,7 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'users',
-    'profiles',
+    'investors',
     'projects',
     'startups',
     'communications',
@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
 
+    # Elasticsearch
+    'django_elasticsearch_dsl',
+    
     # OAuth
     'allauth',
     'allauth.account',
@@ -115,8 +118,10 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': (
         'rest_framework_simplejwt.tokens.AccessToken',
-        'rest_framework.simplejwt.tokens.RefreshToken',
+        'rest_framework_simplejwt.tokens.RefreshToken',
     ),
+    'USER_ID_FIELD': 'user_id',
+    'USER_ID_CLAIM': 'user_id',
 }
 
 # Backend for password recovery system
@@ -132,16 +137,33 @@ DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
-    'PASSWORD_RESET_CONFIRM_URL': 'users/reset_password_confirm/{uid}/{token}',  # link for front-end developer
-    'SEND_ACTIVATION_EMAIL': False,
+
+    'CUSTOM_PASSWORD_RESET_CONFIRM_URL': 'users/reset_password_confirm/{uid}/{token}',  # link for front-end developer
     'PASSWORD_RESET_TIMEOUT': 3600,
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
+
+    'SEND_ACTIVATION_EMAIL': True,
+    'SEND_CONFIRMATION_EMAIL': True,
+    'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
+    'USERNAME_CHANGED_EMAIL_CONFIRMATION': True,
+    'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
+    'USERNAME_RESET_CONFIRM_URL': 'email/reset/confirm/{uid}/{token}',
+    'ACTIVATION_URL': 'activate/{uid}/{token}',
     'SERIALIZERS': {
         'user_create': 'users.serializers.CustomUserCreateSerializer',
         'user': 'users.serializers.CustomUserSerializer',
         'current_user': 'users.serializers.CustomUserSerializer',
+        'activation': 'djoser.serializers.ActivationSerializer',
     },
+    'EMAIL': {
+        'activation': 'djoser.email.ActivationEmail',
+        'confirmation': 'djoser.email.ConfirmationEmail',
+    },
+    'USER_ID_FIELD': 'user_id',
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 
 MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware", #OAuth
@@ -164,6 +186,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -226,6 +249,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Elasticsearch DSL Configuration
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
+    },
+}
+
+# Override Elasticsearch index names for testing
+if 'test' in sys.argv:
+    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
+
 # File validation settings
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
 ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png"]
@@ -236,7 +270,7 @@ MAX_IMAGE_DIMENSIONS = (5000, 5000)
 
 ALLOWED_DOCUMENT_EXTENSIONS = [
     "pdf", "doc", "docx", "txt", "odt", "rtf",
-    "xls", "xlsx", "ppt",
+    "xls", "xlsx", "ppt", "pptx", "zip", "rar"
 ]
 
 ALLOWED_DOCUMENT_MIME_TYPES = [
@@ -244,7 +278,14 @@ ALLOWED_DOCUMENT_MIME_TYPES = [
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/plain",
-    "application/vnd.oasis.opendocument.text"
+    "application/vnd.oasis.opendocument.text",
+    "application/rtf",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+    "application/x-rar-compressed",
 ]
 
 # Social platform validation settings
@@ -352,7 +393,12 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
-        'profiles': {
+        'startups': {
+            'handlers': ['console', 'file_apps'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'investors': {
             'handlers': ['console', 'file_apps'],
             'level': 'DEBUG',
             'propagate': False,

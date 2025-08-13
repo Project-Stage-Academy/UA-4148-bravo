@@ -26,11 +26,15 @@ jobs:
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_HOST: localhost
+      ELASTICSEARCH_HOST: http://localhost:9200
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+
       GITHUB_CLIENT_ID: ${{ secrets.GIT_CLIENT_ID }}
       GITHUB_CLIENT_SECRET: ${{ secrets.GIT_CLIENT_SECRET }}
+      
       EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+
 
     services:
       db:
@@ -47,6 +51,20 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+      elasticsearch:
+        image: elasticsearch:8.13.4
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+          ES_JAVA_OPTS: -Xms512m -Xmx512m
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd="curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -54,13 +72,19 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
           cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Wait for Elasticsearch
+        run: |
+          echo "Waiting for Elasticsearch to be ready..."
+          timeout 60 bash -c 'until curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s > /dev/null; do sleep 2; done'
+          echo "Elasticsearch is ready!"
 
       - name: Run Migrations
         run: |
@@ -110,4 +134,4 @@ jobs:
     steps:
       - name: Deploy to Production
         run: |
-          echo " Deployment triggered! Production code is going live.
+          echo " Deployment triggered! Production code is going live."

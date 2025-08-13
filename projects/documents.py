@@ -2,6 +2,7 @@ from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 from projects.models import Project
 
+
 @registry.register_document
 class ProjectDocument(Document):
     category = fields.ObjectField(properties={
@@ -12,7 +13,7 @@ class ProjectDocument(Document):
         'id': fields.IntegerField(),
         'company_name': fields.KeywordField(),
     })
-    
+
     class Index:
         name = 'projects'
         settings = {
