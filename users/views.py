@@ -1,40 +1,37 @@
 import logging
-from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
-from rest_framework import status, serializers
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from djoser.email import PasswordResetEmail
-from django.conf import settings
-from django.core.exceptions import ValidationError as DjangoValidationError
-from .serializers import PasswordResetSerializer, PasswordResetConfirmSerializer
-
 import secrets
 from datetime import timedelta
 
-from django.utils import timezone
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import send_mail
-from django.template.loader import render_to_string
 from django.shortcuts import render, reverse
-from rest_framework import status
-from rest_framework.views import APIView
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+
+from rest_framework import serializers, status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
+from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.permissions import AllowAny
-from rest_framework.throttling import ScopedRateThrottle
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from .serializers import ResendEmailSerializer
-from .tokens import email_verification_token
+
+from djoser.email import PasswordResetEmail
 
 from .models import User, UserRole
-from .serializers import CustomTokenObtainPairSerializer, CustomUserCreateSerializer
+from .serializers import (
+    CustomTokenObtainPairSerializer,
+    CustomUserCreateSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetSerializer,
+    ResendEmailSerializer,
+)
+from .tokens import email_verification_token
 
 logger = logging.getLogger(__name__)
 
