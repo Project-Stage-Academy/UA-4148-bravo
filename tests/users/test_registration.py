@@ -16,7 +16,7 @@ class UserRegistrationTests(APITestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        self.register_url = reverse('user_register')
+        self.register_url = '/api/v1/auth/register/'
         self.valid_payload = {
             'email': 'test@example.com',
             'first_name': 'Test',

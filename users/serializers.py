@@ -60,6 +60,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if not self.user.is_active:
             raise serializers.ValidationError('User account is disabled.')
 
+        refresh = self.get_token(self.user)
+        
+        data['refresh'] = str(refresh)
+        data['access'] = str(refresh.access_token)
         data['user_id'] = self.user.user_id
         data['email'] = self.user.email
         return data

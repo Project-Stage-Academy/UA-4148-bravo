@@ -23,6 +23,8 @@ class LoginTestCase(TestCase):
             last_name="User",
             role=self.role,
             is_active=True
+            role=self.role,
+            is_active=True
         )
 
     def test_successful_login(self):
@@ -31,7 +33,7 @@ class LoginTestCase(TestCase):
         Verifies that the response status is 200 and tokens are returned,
         along with correct user data.
         """
-        response = self.client.post("/api/v1/users/login/", {
+        response = self.client.post("/api/v1/auth/jwt/create/", {
             "email": "testuser@example.com",
             "password": "testpass"
         }, content_type="application/json")
@@ -48,7 +50,7 @@ class LoginTestCase(TestCase):
         Test login attempt with a wrong password.
         Verifies that the response status is 401 Unauthorized.
         """
-        response = self.client.post("/api/v1/users/login/", {
+        response = self.client.post("/api/v1/auth/jwt/create/", {
             "email": "testuser@example.com",
             "password": "wrongpass"
         }, content_type="application/json")
@@ -60,7 +62,7 @@ class LoginTestCase(TestCase):
         Test login attempt with an email not registered in the system.
         Verifies that the response status is 401 Unauthorized.
         """
-        response = self.client.post("/api/v1/users/login/", {
+        response = self.client.post("/api/v1/auth/jwt/create/", {
             "email": "ghost@example.com",
             "password": "nopass"
         }, content_type="application/json")
@@ -72,7 +74,7 @@ class LoginTestCase(TestCase):
         Test login request missing required fields (e.g., missing password).
         Verifies that the response status is 400 Bad Request.
         """
-        response = self.client.post("/api/v1/users/login/", {
+        response = self.client.post("/api/v1/auth/jwt/create/", {
             "email": "testuser@example.com"
         }, content_type="application/json")
 
