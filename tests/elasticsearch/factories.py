@@ -54,7 +54,7 @@ class StartupFactory(factory.django.DjangoModelFactory):
     email = factory.Sequence(lambda n: f'company{n}@example.com')
     founded_year = 2020
     team_size = 10
-    stage = Stage.IDEA
+    stage = Stage.MVP
 
 
 class CategoryFactory(factory.django.DjangoModelFactory):
