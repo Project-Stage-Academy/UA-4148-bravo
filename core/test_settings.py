@@ -17,23 +17,15 @@ PASSWORD_HASHERS = [
 # Use in-memory email backend
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
-# Disable Elasticsearch during tests
-ELASTICSEARCH_DSL_AUTOSYNC = False
-ELASTICSEARCH_DSL_AUTO_REFRESH = False
-
-# Disable signals that might trigger Elasticsearch indexing
-SIGNAL_PROCESSOR = "django_elasticsearch_dsl.signals.RealTimeSignalProcessor"
-if "test" in sys.argv:
-    SIGNAL_PROCESSOR = "django_elasticsearch_dsl.signals.DummySignalProcessor"
-
 REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_CLASSES": [],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.AllowAny",
     ],
+    "TEST_REQUEST_DEFAULT_FORMAT": "json"
 }
 
 CELERY_TASK_ALWAYS_EAGER = True

@@ -22,9 +22,7 @@ class LoginTestCase(TestCase):
             first_name="Test",
             last_name="User",
             role=self.role,
-            is_active=True
-            role=self.role,
-            is_active=True
+            is_active=True,
         )
 
     def test_successful_login(self):

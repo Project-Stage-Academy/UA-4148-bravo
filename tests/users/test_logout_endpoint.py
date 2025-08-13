@@ -25,7 +25,6 @@ class JWTLogoutTest(TestCase):
             last_name='Startup',
             role=role,
             is_active=True
-            is_active=True
         )
         self.login_url = '/api/v1/auth/jwt/create/'
         self.logout_url = '/api/v1/auth/jwt/logout/'

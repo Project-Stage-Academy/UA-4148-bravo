@@ -31,7 +31,7 @@ def test_successful_login(api_client, test_user):
     data = response.json()
     assert "access" in data
     assert "refresh" in data
-    assert data["user_id"] == test_user.id
+    assert data["user_id"] == test_user.pk
     assert data["email"] == test_user.email
 
 @pytest.mark.django_db
