@@ -166,17 +166,17 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
-    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = config('EMAIL_HOST')
-    EMAIL_PORT = config('EMAIL_PORT', cast=int)
-    EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-    EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
-    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+# if DEBUG:
+#     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+#     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+# else:
+#     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+#     EMAIL_HOST = config('EMAIL_HOST')
+#     EMAIL_PORT = config('EMAIL_PORT', cast=int)
+#     EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+#     EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+#     EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
+#     DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware", #OAuth
