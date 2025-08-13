@@ -1,5 +1,6 @@
 import os
 import sys
+
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
@@ -8,8 +9,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost',
-                       cast=lambda v: [s.strip() for s in v.split(',')])
+
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS', 
+    default='127.0.0.1, localhost, 0.0.0.0',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
+
+# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -87,8 +94,20 @@ AUTH_USER_MODEL = 'users.User'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '5/minute',
+        'anon': '2/minute',
+    },
 }
+
+if 'test' in sys.argv:
+    REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
@@ -104,9 +123,24 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
+# Backend for password recovery system
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'apikey'
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
+
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
+    # Pass recovery
+    'CUSTOM_PASSWORD_RESET_CONFIRM_URL': 'users/reset_password_confirm/{uid}/{token}',  # link for front-end developer
+    'PASSWORD_RESET_TIMEOUT': 3600,
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
+
     'SEND_ACTIVATION_EMAIL': True,
     'SEND_CONFIRMATION_EMAIL': True,
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
@@ -173,21 +207,30 @@ DATABASES = {
     }
 }
 
-if DEBUG:
-    AUTH_PASSWORD_VALIDATORS = []
-else:
-    AUTH_PASSWORD_VALIDATORS = [
-        {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-        {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-        {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-        {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-    ]
-
-PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
-    'django.contrib.auth.hashers.Argon2PasswordHasher',
-    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+#if DEBUG:
+#    AUTH_PASSWORD_VALIDATORS = []
+#else:
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8}
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    {
+        'NAME': 'users.validators.CustomPasswordValidator',
+    },
 ]
+
+# Internationalization
+# https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='UTC')
