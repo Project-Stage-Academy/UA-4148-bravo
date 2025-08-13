@@ -18,7 +18,7 @@ ALLOWED_HOSTS = config(
 
 # Application definition
 
-# FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -130,13 +130,13 @@ SIMPLE_JWT = {
 
 # Backend for password recovery system
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.sendgrid.net'
-EMAIL_PORT = 587
-EMAIL_HOST_USER = 'apikey'
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.sendgrid.net'
+# EMAIL_PORT = 587
+# EMAIL_HOST_USER = 'apikey'
+# EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+# EMAIL_USE_TLS = True
+# DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
@@ -166,17 +166,17 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
-# if DEBUG:
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
-DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
-# else:
-#     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-#     EMAIL_HOST = config('EMAIL_HOST')
-#     EMAIL_PORT = config('EMAIL_PORT', cast=int)
-#     EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-#     EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-#     EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
-#     DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+    DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.sendgrid.net'
+    EMAIL_PORT = 587
+    EMAIL_HOST_USER = 'apikey'
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+    EMAIL_USE_TLS = True
+    DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
 
 MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware", #OAuth
