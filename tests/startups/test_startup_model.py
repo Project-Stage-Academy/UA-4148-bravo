@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from common.enums import Stage
 from startups.models import Startup
-from tests.test_base import BaseAPITestCase
+from tests.test_base_case import BaseAPITestCase
 
 
 class StartupModelCleanTests(BaseAPITestCase):

@@ -63,12 +63,13 @@ class TestDataMixin:
 
     @classmethod
     def get_or_create_investor(cls, user, company_name, stage, fund_size):
+        email = f"investor_{uuid.uuid4().hex[:6]}@example.com"
         investor, _ = Investor.objects.get_or_create(
             user=user,
             industry=cls.industry,
             location=cls.location,
             company_name=company_name,
-            email=user.email,
+            email=email,
             founded_year=2010,
             team_size=5,
             stage=stage,

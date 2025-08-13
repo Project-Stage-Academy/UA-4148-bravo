@@ -1,5 +1,5 @@
 from startups.serializers.startup_full import StartupSerializer
-from tests.test_base import BaseAPITestCase
+from tests.test_base_case import BaseAPITestCase
 
 
 class StartupSerializerTests(BaseAPITestCase):

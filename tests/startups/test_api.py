@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework import status
 from startups.models import Startup
-from tests.test_base import BaseAPITestCase
+from tests.test_base_case import BaseAPITestCase
 from unittest.mock import patch
 from rest_framework.test import APIClient
 from django.core.exceptions import ValidationError as DjangoValidationError

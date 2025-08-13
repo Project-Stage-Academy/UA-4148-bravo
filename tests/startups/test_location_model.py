@@ -1,6 +1,6 @@
 from django.core.exceptions import ValidationError
 from startups.models import Location
-from tests.test_base import BaseAPITestCase
+from tests.test_base_case import BaseAPITestCase
 
 
 class LocationModelCleanTests(BaseAPITestCase):
