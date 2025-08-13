@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     # Elasticsearch
     'django_elasticsearch_dsl',
     'django_elasticsearch_dsl_drf',
-    
+
     # OAuth
     'allauth',
     'allauth.account',
@@ -55,11 +55,10 @@ INSTALLED_APPS = [
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
-
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
-
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -68,12 +67,12 @@ SOCIALACCOUNT_PROVIDERS = {
             'secret': config('GOOGLE_CLIENT_SECRET'),
             'key': '',
         },
-        'SCOPE': ['profile', 'email'], 
+        'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {
             'access_type': 'online',
-            'prompt': 'select_account', 
+            'prompt': 'select_account',
         },
-        'FETCH_USERINFO': True,  
+        'FETCH_USERINFO': True,
     },
 
     'github': {
@@ -88,7 +87,7 @@ SOCIALACCOUNT_PROVIDERS = {
 
 # Ensure email is saved and verified
 SOCIALACCOUNT_EMAIL_REQUIRED = True
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory' 
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 AUTH_USER_MODEL = 'users.User'
@@ -173,7 +172,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configu
 DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 
 MIDDLEWARE = [
-    "allauth.account.middleware.AccountMiddleware", #OAuth
+    "allauth.account.middleware.AccountMiddleware",  # OAuth
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -264,7 +263,7 @@ ELASTICSEARCH_DSL = {
 }
 
 # Override Elasticsearch index names for testing
-if 'test' in sys.argv:
+if 'users' in sys.argv:
     ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
 
 # File validation settings
@@ -315,7 +314,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'json': {
-            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            '()': 'pythonjsonlogger.json.JsonFormatter',
             'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
         },
         'verbose': {
@@ -432,13 +431,10 @@ LOGGING = {
     },
 }
 
-# Tests
-TEST_RUNNER = 'django.test.runner.DiscoverRunner'
-
 # Celery
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = 'rpc://'
 
-if 'test' in sys.argv:
+if 'users' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True

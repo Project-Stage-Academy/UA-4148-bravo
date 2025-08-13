@@ -5,8 +5,9 @@ from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
 from elasticsearch_dsl import Q
-from .models import Project
-from .serializers import ProjectSerializer
+
+from projects.models import Project
+from projects.serializers import ProjectSerializer
 
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 from django_elasticsearch_dsl_drf.filter_backends import (
@@ -16,7 +17,7 @@ from django_elasticsearch_dsl_drf.filter_backends import (
 )
 from .documents import ProjectDocument
 from .permissions import IsOwnerOrReadOnly
-from .serializers import ProjectDocumentSerializer
+from .serializers import ProjectDocumentSerializer, ProjectReadSerializer, ProjectWriteSerializer
 from rest_framework.permissions import IsAuthenticated
 import logging
 
@@ -26,10 +27,24 @@ logger = logging.getLogger(__name__)
 class ProjectViewSet(viewsets.ModelViewSet):
     """
     API endpoint for viewing and editing projects.
-    Optimized to avoid N+1 queries with select_related.
+
+    This ViewSet supports both read and write operations for projects.
+    It optimizes database access by using `select_related` for related fields
+    (`startup` and `category`) to avoid N+1 query issues.
+
+    Features:
+        - Read operations: list and retrieve project details.
+        - Write operations: create, update, partially update, and delete projects.
+        - Filtering: by `status`, `category`, and `startup`.
+        - Searching: by `title`, `description`, and `email`.
+        - Ordering: by `created_at`, `funding_goal`, and `current_funding`.
+        - Default ordering: newest projects first (`-created_at`).
+
+    Permissions:
+        - Authenticated users can view all projects.
+        - Only the owner can modify or delete their projects.
     """
     queryset = Project.objects.select_related('startup', 'category').all()
-    serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
@@ -38,11 +53,34 @@ class ProjectViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'funding_goal', 'current_funding']
     ordering = ['-created_at']
 
+    def get_serializer_class(self):
+        """
+        Return the appropriate serializer class depending on the action.
+
+        - For read actions (`list`, `retrieve`), use `ProjectReadSerializer`
+          to include detailed, read-only fields.
+        - For write actions (`create`, `update`, `partial_update`, `destroy`),
+          use `ProjectWriteSerializer` to handle validation and input data.
+        """
+        if self.action in ['list', 'retrieve']:
+            return ProjectReadSerializer
+        return ProjectWriteSerializer
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Handle PATCH requests for partially updating a project.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class ProjectDocumentView(DocumentViewSet):
     """
-    API endpoint for searching projects using Elasticsearch.
-    Handles ES downtime gracefully.
+    Elasticsearch-backed viewset for Project documents.
+    Supports filtering, ordering, and full-text search with robust error handling.
     """
     document = ProjectDocument
     serializer_class = ProjectDocumentSerializer
@@ -70,17 +108,42 @@ class ProjectDocumentView(DocumentViewSet):
     )
 
     def filter_queryset(self, queryset):
+        """
+        Filters the queryset based on query parameters.
+        Supports multiple values per filter field and partial matches for text fields.
+        Raises ValidationError if invalid filter parameters are provided.
+        """
         params = self.request.query_params
         allowed_params = set(self.filter_fields.keys()) | {'search'}
 
-        for param in params.keys():
-            if param not in allowed_params:
-                raise ValidationError({'error': f'Invalid filter field: {param}'})
+        invalid_params = set(params.keys()) - allowed_params
+        if invalid_params:
+            allowed = ', '.join(sorted(allowed_params))
+            logger.warning(f"Invalid filter field(s) attempted: {sorted(invalid_params)}. Allowed fields: {allowed}")
+            raise ValidationError({
+                'error': f'Invalid filter field(s): {", ".join(sorted(invalid_params))}. Allowed fields: {allowed}'
+            })
 
         must_queries = []
+
         for field, es_field in self.filter_fields.items():
             if field in params:
-                must_queries.append(Q('term', **{es_field: params[field]}))
+                values = params.getlist(field)
+                if field in ['title', 'description']:
+                    for val in values:
+                        must_queries.append(Q('wildcard', **{es_field: f'*{val}*'}))
+                else:
+                    for val in values:
+                        must_queries.append(Q('term', **{es_field: val}))
+
+        search_terms = params.getlist('search')
+        if search_terms:
+            should_queries = []
+            for term in search_terms:
+                should_queries.append(Q('match', title=term))
+                should_queries.append(Q('match', description=term))
+            if should_queries:
+                must_queries.append(Q('bool', should=should_queries, minimum_should_match=1))
 
         if must_queries:
             queryset = queryset.query(Q('bool', must=must_queries))
@@ -88,15 +151,16 @@ class ProjectDocumentView(DocumentViewSet):
         return super().filter_queryset(queryset)
 
     def list(self, request, *args, **kwargs):
-        allowed_fields = set(self.filter_fields.keys()) | {'search'}
-        for param in request.query_params.keys():
-            if param not in allowed_fields:
-                return Response(
-                    {'error': f'Invalid filter field: {param}'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        """
+        Overrides the list action.
+        Relies on filter_queryset to validate query params and filter the queryset.
+        Handles Elasticsearch connection errors gracefully with HTTP 503 response.
+        """
         try:
             return super().list(request, *args, **kwargs)
+        except ValidationError as ve:
+            logger.warning(f"Validation error on filter params: {ve.detail}")
+            return Response(ve.detail, status=status.HTTP_400_BAD_REQUEST)
         except (ConnectionError, TransportError) as e:
             logger.error("Elasticsearch connection error: %s", e)
             return Response(
