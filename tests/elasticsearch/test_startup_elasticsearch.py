@@ -1,9 +1,10 @@
 import time
+
 from django.conf import settings
 from django.urls import reverse
-from elasticsearch_dsl import Index
 from elasticsearch_dsl.connections import connections
 from rest_framework import status
+
 from common.enums import Stage
 from startups.documents import StartupDocument
 from tests.elasticsearch.setup_tests_data import BaseElasticsearchAPITestCase
@@ -32,13 +33,7 @@ class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
     def setUp(self):
         """ Create the Elasticsearch index and allow ES to index the documents. """
         super().setUp()
-        self.index = Index('startups')
-        try:
-            self.index.delete()
-        except Exception:
-            pass
-        self.index.create()
-        StartupDocument._doc_type.mapping.save('startups')
+        StartupDocument._index.refresh()
         time.sleep(1)
 
     def tearDown(self):

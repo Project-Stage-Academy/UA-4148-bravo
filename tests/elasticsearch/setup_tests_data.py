@@ -1,9 +1,9 @@
-from common.enums import Stage
-from startups.documents import StartupDocument
-from tests.elasticsearch.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, \
-    CategoryFactory, ProjectFactory
 from django.test import TestCase
 from rest_framework.test import APIClient
+
+from common.enums import Stage
+from tests.elasticsearch.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, \
+    CategoryFactory, ProjectFactory
 
 
 class BaseElasticsearchAPITestCase(TestCase):
@@ -31,9 +31,16 @@ class BaseElasticsearchAPITestCase(TestCase):
         )
         cls.category1 = CategoryFactory.create(name="Tech")
         cls.category2 = CategoryFactory.create(name="Finance")
-        cls.project1 = ProjectFactory.create(startup=cls.startup1, category=cls.category1, title="First Test Project")
-        cls.project2 = ProjectFactory.create(startup=cls.startup2, category=cls.category2, title="Second Test Project")
-        StartupDocument._index.refresh()
+        cls.project1 = ProjectFactory.create(
+            startup=cls.startup1,
+            category=cls.category1,
+            title="First Test Project"
+        )
+        cls.project2 = ProjectFactory.create(
+            startup=cls.startup2,
+            category=cls.category2,
+            title="Second Test Project"
+        )
 
     def setUp(self):
         self.client = APIClient()

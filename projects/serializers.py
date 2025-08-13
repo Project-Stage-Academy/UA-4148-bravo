@@ -45,8 +45,8 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
     """
     id = serializers.IntegerField(read_only=True)
     startup_id = serializers.PrimaryKeyRelatedField(
-        queryset=Startup.objects.all(),
-        source='startup'
+        source='startup',
+        read_only=True
     )
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
@@ -73,6 +73,7 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
             'funding_goal', 'current_funding', 'category_id', 'website',
             'email', 'has_patents', 'is_participant', 'is_active', 'created_at', 'updated_at'
         ]
+        read_only_fields = ('startup_id',)
 
     def validate_funding_goal(self, value):
         """
