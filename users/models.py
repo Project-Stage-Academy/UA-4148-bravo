@@ -7,6 +7,7 @@ from django.forms.models import model_to_dict
 from validation.validate_email import validate_email_custom
 from validation.validate_string_fields import validate_max_length
 from validation.validate_role import validate_role_exists
+from django.db import transaction
 
 
 class ActiveUserManager(models.Manager):
@@ -116,6 +117,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     pending_email = models.EmailField(null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True,
+        help_text="Timestamp when the user's email was verified"
+    )
 
     objects = CustomUserManager()
     all_objects = models.Manager() 
@@ -388,14 +392,18 @@ class User(AbstractBaseUser, PermissionsMixin):
         """
         if not self.pending_email:
             raise ValidationError("No pending email to confirm.")
+        
+        normalized_email = self.pending_email.strip().lower()
 
-        if User.objects.filter(email__iexact=self.pending_email).exclude(pk=self.pk).exists():
+        if User.objects.filter(email__iexact=normalized_email).exclude(pk=self.pk).exists():
             raise ValidationError("This email is already in use by another user.")
-
-        self.email = self.pending_email
-        self.pending_email = None
-        self.email_verification_sent_at = None
-        self.save(update_fields=['email', 'pending_email', 'email_verification_sent_at'])
+        
+        with transaction.atomic():
+            self.email = normalized_email
+            self.pending_email = None
+            self.email_verification_sent_at = None
+            self.verified_at = None
+        self.save(update_fields=['email', 'pending_email', 'email_verification_sent_at', 'verified_at'])
         
     def update_email_verification_sent_at(self):
         """
