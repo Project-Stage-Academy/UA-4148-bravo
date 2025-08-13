@@ -9,5 +9,7 @@ def update_startup_document(sender, instance, **kwargs):
 
 @receiver(post_delete, sender=Startup)
 def delete_startup_document(sender, instance, **kwargs):
-    StartupDocument().delete(instance)
-
+    try:
+        StartupDocument(meta={"id": instance.id}).delete()
+    except Exception as e:
+        print(f"Error deleting startup from Elasticsearch: {e}")

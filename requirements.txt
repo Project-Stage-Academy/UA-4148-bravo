@@ -18,6 +18,7 @@ charset-normalizer==3.4.2
 click==8.1.8
 colorama==0.4.6
 cryptography==45.0.5
+ddt==1.7.2
 decorator==5.2.1
 defusedxml==0.7.1
 Django==5.2.4
@@ -32,6 +33,7 @@ drf-spectacular==0.28.0
 drf_yasg==1.21.10
 djoser==2.3.3
 elasticsearch==7.17.12
+factory_boy==3.3.3
 fastapi==0.116.1
 filetype==1.2.0
 Flask==3.1.0

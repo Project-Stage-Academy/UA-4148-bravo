@@ -39,8 +39,9 @@ def validate_social_links_dict(social_links, allowed_platforms, raise_serializer
 
         try:
             sld = get_sld(netloc)
-        except Exception:
-            sld = ""
+        except ValueError:
+            errors[platform] = f"Could not parse domain for platform '{platform}': {netloc}"
+            continue
 
         allowed_domains = allowed_platforms.get(platform_lc, [])
         if isinstance(allowed_domains, str):
