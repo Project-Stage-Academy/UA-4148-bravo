@@ -1,3 +1,4 @@
+import logging
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.core.exceptions import ValidationError
@@ -9,6 +10,7 @@ from validation.validate_string_fields import validate_max_length
 from validation.validate_role import validate_role_exists
 from django.db import transaction
 
+logger = logging.getLogger(__name__)
 
 class ActiveUserManager(models.Manager):
     """Manager that returns only active users."""
@@ -404,6 +406,8 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.email_verification_sent_at = None
             self.verified_at = None
         self.save(update_fields=['email', 'pending_email', 'email_verification_sent_at', 'verified_at'])
+        
+        logger.info(f"User {self.user_id} confirmed pending email. New email: {self.email}")
         
     def update_email_verification_sent_at(self):
         """
