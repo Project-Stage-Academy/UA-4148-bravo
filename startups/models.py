@@ -1,7 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import UniqueConstraint, F
 from django_countries.fields import CountryField
 from typing import cast
+
 from common.company import Company
 from common.enums import Stage
 from core import settings
@@ -53,7 +55,7 @@ class Location(models.Model):
         """
         Validates the Location instance.
 
-        - Postal code must be at least 3 characters and contain only Latin letters, spaces, hyphens, or apostrophes.
+        - Postal code must be at least 3 characters and contain only Latin characters.
         - City, region, and address line must not be empty or contain only spaces and must be Latin characters only.
         - Enforces logical dependencies: address_line requires city and region, city requires region.
 
@@ -98,19 +100,27 @@ class Location(models.Model):
             raise ValidationError(errors)
 
     def __str__(self):
-        values = [
-            self.address_line,
-            self.city,
-            self.region,
-            str(self.country) if self.country else None
-        ]
-        return ", ".join(s for s in values if s)
+        city_str = self.city if self.city else 'Unknown City'
+        country_str = self.country if self.country else 'Unknown Country'
+
+        if self.region:
+            return f"{city_str}, {self.region}, {country_str}"
+        return f"{city_str}, {country_str}"
 
     class Meta:
         db_table = "locations"
         ordering = ["country"]
         verbose_name = "Location"
         verbose_name_plural = "Locations"
+        constraints = [
+            UniqueConstraint(
+                F('city'),
+                F('region'),
+                F('country'),
+                name='unique_location',
+                violation_error_message='This location already exists.'
+            )
+        ]
         indexes = [
             models.Index(fields=['country']),
             models.Index(fields=['city']),

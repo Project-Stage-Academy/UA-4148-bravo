@@ -5,6 +5,7 @@ import django.db.models.deletion
 import django_countries.fields
 import validation.validate_email
 import validation.validate_image
+import validation.validate_social_links
 from django.db import migrations, models
 
 
@@ -65,13 +66,36 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('stage', models.CharField(choices=[('idea', 'Idea'), ('mvp', 'MVP'), ('launch', 'Launch'), ('scale', 'Scale'), ('exit', 'Exit')], default='idea', max_length=20)),
                 ('social_links', models.JSONField(blank=True, default=dict)),
-                ('industry', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='startups.industry')),
-                ('location', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='startups.location')),
             ],
             options={
                 'verbose_name': 'Startup',
                 'verbose_name_plural': 'Startups',
                 'db_table': 'startups',
+                'ordering': ['company_name'],
+            },
+            bases=(validation.validate_social_links.SocialLinksValidationMixin, models.Model),
+        ),
+        migrations.CreateModel(
+            name='Investor',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('company_name', models.CharField(max_length=254, unique=True)),
+                ('logo', models.ImageField(blank=True, null=True, upload_to='company/logos/', validators=[validation.validate_image.validate_image_file])),
+                ('description', models.TextField(blank=True, default='')),
+                ('website', models.URLField(blank=True, default='')),
+                ('email', models.EmailField(max_length=254, unique=True, validators=[validation.validate_email.validate_email_custom])),
+                ('founded_year', models.IntegerField(validators=[django.core.validators.MinValueValidator(1900), django.core.validators.MaxValueValidator(2025)])),
+                ('team_size', models.PositiveIntegerField(blank=True, default=1, validators=[django.core.validators.MinValueValidator(1)])),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('stage', models.CharField(choices=[('idea', 'Idea'), ('mvp', 'MVP'), ('launch', 'Launch'), ('scale', 'Scale'), ('exit', 'Exit')], default='mvp', max_length=20)),
+                ('fund_size', models.DecimalField(blank=True, decimal_places=2, default=0, max_digits=20, validators=[django.core.validators.MinValueValidator(0)])),
+                ('industry', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='profiles.industry')),
+            ],
+            options={
+                'verbose_name': 'Investor',
+                'verbose_name_plural': 'Investors',
+                'db_table': 'investors',
                 'ordering': ['company_name'],
             },
         ),
