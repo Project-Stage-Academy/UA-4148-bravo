@@ -1,7 +1,7 @@
 import re
 from django.core.exceptions import ValidationError
 
-LATIN_REGEX = re.compile(r"^[A-Za-z\s\-']+$")
+LATIN_REGEX = re.compile(r"^[A-Za-z0-9\s\-']+$")
 FORBIDDEN_NAMES = {name.lower() for name in {"other", "none", "misc", "default"}}
 
 

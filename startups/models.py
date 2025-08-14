@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from django_countries.fields import CountryField
-
+from typing import cast
 from common.company import Company
 from common.enums import Stage
 from core import settings
@@ -10,24 +10,55 @@ from validation.validate_social_links import validate_social_links_dict
 
 
 class Location(models.Model):
-    country = CountryField()
-    region = models.CharField(max_length=100, blank=True, null=True)
-    city = models.CharField(max_length=100, blank=True, null=True)
-    address_line = models.CharField(max_length=254, blank=True, null=True)
-    postal_code = models.CharField(max_length=20, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    """
+    Represents a physical location with country, region, city, address line, and postal code.
+    Includes validation to ensure fields follow expected formats and logical consistency.
+    """
+    country = CountryField(
+        verbose_name="Country",
+        help_text="Country of the location"
+    )
+    region = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Region",
+        help_text="Region or state of the location"
+    )
+    city = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="City",
+        help_text="City of the location"
+    )
+    address_line = models.CharField(
+        max_length=254,
+        blank=True,
+        null=True,
+        verbose_name="Address Line",
+        help_text="Street address or detailed address line"
+    )
+    postal_code = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name="Postal Code",
+        help_text="Postal or ZIP code"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
     def clean(self):
         """
         Validates the Location instance.
 
-        - Ensures postal code is at least 3 characters and contains only Latin characters.
-        - Validates city, region, and address_line for non-empty and Latin-only content.
-        - Enforces logical dependencies between address_line, city, and region.
+        - Postal code must be at least 3 characters and contain only Latin letters, spaces, hyphens, or apostrophes.
+        - City, region, and address line must not be empty or contain only spaces and must be Latin characters only.
+        - Enforces logical dependencies: address_line requires city and region, city requires region.
 
         Raises:
-            ValidationError: A dictionary of field-specific error messages.
+            ValidationError: If any validation rules fail.
         """
         errors = {}
 
@@ -80,22 +111,38 @@ class Location(models.Model):
         ordering = ["country"]
         verbose_name = "Location"
         verbose_name_plural = "Locations"
+        indexes = [
+            models.Index(fields=['country']),
+            models.Index(fields=['city']),
+            models.Index(fields=['region']),
+        ]
 
 
 class Industry(models.Model):
+    """
+    Represents an industry category, which can be linked to other entities like startups.
+    Enforces uniqueness of the industry name and validates against forbidden names.
+    """
     name = models.CharField(
         max_length=100,
-        unique=True
+        unique=True,
+        verbose_name="Industry Name",
+        help_text="Name of the industry (unique)"
     )
-    description = models.TextField(blank=True, default="")
-    created_at = models.DateTimeField(auto_now_add=True)
+    description = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Description",
+        help_text="Optional detailed description of the industry"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
 
     def clean(self):
         """
-        Validates the Industry name against forbidden terms.
+        Validates the Industry name to ensure it does not contain forbidden terms.
 
         Raises:
-            ValidationError: If the name contains forbidden content.
+            ValidationError: If forbidden names are detected.
         """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")
@@ -108,37 +155,51 @@ class Industry(models.Model):
         ordering = ["name"]
         verbose_name = "Industry"
         verbose_name_plural = "Industries"
+        indexes = [
+            models.Index(fields=['name']),
+        ]
 
 
 class Startup(Company):
+    """
+    Represents a startup company linked to a user.
+    Includes stage of development and social links validation.
+    """
     user = models.OneToOneField(
         'users.User',
         on_delete=models.CASCADE,
-        related_name='startup'
+        related_name='startup',
+        verbose_name="User",
+        help_text="User who owns this startup"
     )
     stage = models.CharField(
         max_length=20,
         choices=Stage.choices,
-        default=Stage.IDEA
+        default=Stage.IDEA,
+        verbose_name="Development Stage",
+        help_text="Current development stage of the startup"
     )
-    social_links = models.JSONField(blank=True, default=dict)
+    social_links = models.JSONField(
+        blank=True,
+        default=dict,
+        verbose_name="Social Links",
+        help_text="Social media links as a JSON object"
+    )
 
     def clean(self):
         """
         Validates the Startup instance.
 
-        - Ensures social_links contain only supported platforms.
-        - Validates that each URL has a domain matching the expected domains for the platform.
+        - Ensures social_links only contain allowed platforms.
+        - Validates URLs for the platforms.
 
         Raises:
-            ValidationError: A dictionary of field-specific error messages.
+            ValidationError: If social_links are invalid.
         """
         super().clean()
-        if not self.stage:
-            self.stage = Stage.IDEA
-
+        social_links = cast(dict, self.social_links)
         validate_social_links_dict(
-            social_links=self.social_links,
+            social_links=social_links,
             allowed_platforms=settings.ALLOWED_SOCIAL_PLATFORMS,
             raise_serializer=False
         )
@@ -151,3 +212,7 @@ class Startup(Company):
         ordering = ["company_name"]
         verbose_name = "Startup"
         verbose_name_plural = "Startups"
+        indexes = [
+            models.Index(fields=['company_name']),
+            models.Index(fields=['stage']),
+        ]

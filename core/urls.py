@@ -17,25 +17,18 @@ from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyE
 
 # API endpoints grouped by app
 api_urlpatterns = [
-     # User authentication endpoints
-    path('users/', include('users.urls')),
-
-    # API endpoints
-    path('api/register/', UserRegistrationView.as_view(), name='user_register'),
-    path('api/login/', CustomTokenObtainPairView.as_view(), name='custom_login'),
-
-    # Djoser authentication endpoints
-    path('api/auth/', include('djoser.urls')),
-    path('api/auth/', include('djoser.urls.jwt')),
-
-    # Custom JWT endpoints
-    path('api/auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
-    path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
-
-    # Email verification
-    path('api/auth/verify-email/<int:user_id>/<str:token>/', 
+    # User authentication endpoints
+    path('users/', include('users.urls')),  # User-specific endpoints
+    
+    # Authentication endpoints
+    path('auth/register/', UserRegistrationView.as_view(), name='user_register'),
+    path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
+    path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
+    path('auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
+    path('auth/verify-email/<int:user_id>/<str:token>/', 
         VerifyEmailView.as_view(), 
         name='verify-email'),
+    
 
     # Project-related endpoints
     path('projects/', include('projects.urls')),
@@ -47,7 +40,7 @@ api_urlpatterns = [
     path('investors/', include('investors.urls')),
   
     # OAuth endpoints
-    path('api/accounts/', include('allauth.urls')),
+    path('accounts/', include('allauth.urls')),
 ]
 
 urlpatterns = [
@@ -57,6 +50,7 @@ urlpatterns = [
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('health/elasticsearch/', elasticsearch_healthcheck),
+    path('accounts/', include('allauth.urls')),
 ]
 
 if settings.DEBUG:
