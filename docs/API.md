@@ -168,19 +168,17 @@ Use `/api/token/refresh/` to obtain a new access token.
 }
 ```
 
-# OAuth Authentication (Google & GitHub)
+# OAuth Authentication API Documentation
 
 ## Overview
-
-Use this endpoint to authenticate users via Google or GitHub OAuth. Frontend sends the OAuth token from the provider, and the backend returns access tokens and user info.
-
----
-
-## Endpoint
-
-`POST /users/oauth/login/`
+This document describes the OAuth authentication endpoints for Google and GitHub integration.
 
 ---
+
+## POST /users/oauth/login/
+
+### Description
+Authenticate users using Google or GitHub OAuth providers. The endpoint exchanges OAuth provider tokens for application JWT tokens and returns user information.
 
 ## Request
 
@@ -197,16 +195,30 @@ Use this endpoint to authenticate users via Google or GitHub OAuth. Frontend sen
   - **Response**
   ```json
   {
-    "refresh": "<refresh_token>",
-    "access": "<access_token>",
+    "refresh": "jwt_refresh_token",
+    "access": "jwt_access_token",
     "user": {
-      "id": "...",
-      "email": "...",
-      "username": "...",
-      "first_name": "...",
-      "last_name": "...",
-      "user_phone": "...",
-      "title": "...",
-      "role": "...",
-      }}
+      "id": "user_123",
+      "email": "user@example.com",
+      "username": "username123",
+      "first_name": "John",
+      "last_name": "Doe",
+      "user_phone": "+1234567890",
+      "title": "Software Developer",
+      "role": "user"
+    }
+  }
   ```
+
+**Status codes:**
+
+| Status Code | Description |
+|-------------|-------------|
+| `400 Bad Request` | Invalid request parameters or malformed data |
+| `401 Unauthorized` | Authentication failed or invalid credentials |
+| `403 Forbidden` | Authenticated but insufficient permissions |
+| `404 Not Found` | Requested resource doesn't exist |
+| `408 Request Timeout` | Provider API timeout |
+| `429 Too Many Requests` | Rate limit exceeded |
+| `500 Internal Server Error` | Unexpected server error |
+| `502 Bad Gateway` | Provider API communication failed |
