@@ -41,7 +41,7 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
 
         pending_email = getattr(user, 'pending_email', None)
         if pending_email:
-            base += str(pending_email)
+            base = f"{base}:{pending_email}" if base else str(pending_email)
 
         return base
 
