@@ -167,8 +167,12 @@ class VerifyEmailView(APIView):
             try:
                 user.confirm_pending_email()
             except DjangoValidationError as e:
-                if getattr(e, "code", None) == "No pending email to confirm.":
+                if getattr(e, "code", None) == "no_pending_email":
                     logger.info(f"No pending email to confirm for {user.email}") 
+                    return Response(
+                        {'status': 'success', 'message': 'Email is already verified.'},
+                        status=status.HTTP_200_OK
+                    )
                 else:
                     logger.warning(f"Failed to confirm pending email for {user.email}: {e}")         
                     return Response(
