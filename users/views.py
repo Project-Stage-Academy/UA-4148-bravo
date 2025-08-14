@@ -24,6 +24,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from djoser.email import PasswordResetEmail
 
+from .constants import SUPPORT_TEXT
 from .models import User, UserRole
 from .serializers import (
     CustomTokenObtainPairSerializer,
@@ -292,7 +293,7 @@ class ResendEmailView(APIView):
             'user': user,
             'verification_url': verify_url,
             'user_display_name': user.first_name or user.email,
-            'support_text': "If you didn't request this, please ignore this email.",
+            'support_text': SUPPORT_TEXT,
         }
 
         subject = "Confirm your email"
