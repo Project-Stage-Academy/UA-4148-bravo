@@ -113,4 +113,6 @@ def check_token(user: User, token: str) -> bool:
     """
     if user is None:
         raise ValueError("Cannot check token: user must not be None.")
+    if not token:
+        raise ValueError("Cannot check token: token must not be None.")
     return EMAIL_VERIFICATION_TOKEN.check_token(user, token)
