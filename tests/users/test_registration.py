@@ -1,12 +1,11 @@
 import json
-from unittest.mock import patch
-
-from django.test import Client
+from unittest.mock import patch, MagicMock
+from django.test import TestCase, Client
 from django.urls import reverse
+from django.core import mail
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
-
 from users.models import User, UserRole
 
 
@@ -16,7 +15,7 @@ class UserRegistrationTests(APITestCase):
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        self.register_url = reverse('user_register')
+        self.register_url = '/api/v1/auth/register/'
         self.valid_payload = {
             'email': 'test@example.com',
             'first_name': 'Test',

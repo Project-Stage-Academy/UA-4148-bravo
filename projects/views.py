@@ -1,10 +1,13 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
 from elasticsearch_dsl import Q
+
 from projects.models import Project
-from rest_framework.exceptions import ValidationError
+
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 from django_elasticsearch_dsl_drf.filter_backends import (
     FilteringFilterBackend,
