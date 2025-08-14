@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError
 from django.core.mail import send_mail
 from django.shortcuts import render, reverse
 from django.template.loader import render_to_string
@@ -263,8 +264,14 @@ class ResendEmailView(APIView):
             )
 
         if new_email:
-            user.pending_email = new_email
-            user.save(update_fields=["pending_email"])
+            normalized_email = new_email.strip().lower()
+            user.pending_email = normalized_email
+            
+            try:
+                user.save(update_fields=["pending_email"])
+            except IntegrityError:
+                logger.warning(f"Failed to update pending_email for user {user.user_id}: email already exists")
+                
         email_to_send = user.pending_email or user.email
 
         if not token:
