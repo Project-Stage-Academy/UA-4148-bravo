@@ -25,7 +25,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from djoser.email import PasswordResetEmail
 
-from .constants import ACTIVATION_EMAIL_TEMPLATE, SUPPORT_TEXT
+from .constants import ACTIVATION_EMAIL_TEMPLATE, SUPPORT_TEXT, EMAIL_VERIFICATION_TOKEN
 from .models import User, UserRole
 from .serializers import (
     CustomTokenObtainPairSerializer,
@@ -34,7 +34,6 @@ from .serializers import (
     PasswordResetSerializer,
     ResendEmailSerializer,
 )
-from .tokens import email_verification_token
 
 logger = logging.getLogger(__name__)
 
@@ -283,7 +282,7 @@ class ResendEmailView(APIView):
             )
 
         if not token:
-            token = email_verification_token.make_token(user)
+            token = EMAIL_VERIFICATION_TOKEN.make_token(user)
 
         verification_relative_url = reverse(
             'verify-email', kwargs={'user_id': user.user_id, 'token': token}
