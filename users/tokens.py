@@ -95,6 +95,8 @@ def make_token(user: User) -> str:
     Returns:
         str: Token string.
     """
+    if user is None:
+        raise ValueError("Cannot generate token: user must not be None.")
     return EMAIL_VERIFICATION_TOKEN.make_token(user)
 
 
@@ -109,4 +111,6 @@ def check_token(user: User, token: str) -> bool:
     Returns:
         bool: True if valid, False otherwise.
     """
+    if user is None:
+        raise ValueError("Cannot check token: user must not be None.")
     return EMAIL_VERIFICATION_TOKEN.check_token(user, token)
