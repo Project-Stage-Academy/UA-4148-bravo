@@ -130,6 +130,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="When the verification email was sent"
     )
 
+    EMAIL_FIELD = 'email'
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name', 'role']
 
