@@ -12,6 +12,7 @@ from unittest.mock import Mock
 
 User = get_user_model()
 
+@patch('users.views.OAuthTokenObtainPairView.throttle_classes', [])
 class OAuthTokenObtainPairViewTests(TestCase):
     """
     Test suite for the extended OAuthTokenObtainPairView that handles both
