@@ -314,7 +314,10 @@ class ResendEmailView(APIView):
                 fail_silently=False,
             )
         except Exception as e:
-            logger.error(f"Failed to send verification email to {email_to_send}: {str(e)}")
+            logger.critical(
+                f"Verification email send failed to {email_to_send}",
+                exc_info=True
+            )
 
         return Response(
             {"detail": "If the account exists, a verification email has been sent."},
