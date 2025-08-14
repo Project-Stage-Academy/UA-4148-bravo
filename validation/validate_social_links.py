@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 from django.core.validators import URLValidator
-from publicsuffix2 import get_sld
+# from publicsuffix2 import get_sld
 
 
 def validate_social_links_dict(social_links, allowed_platforms, raise_serializer=False):
