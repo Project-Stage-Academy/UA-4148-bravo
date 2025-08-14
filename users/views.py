@@ -1,12 +1,13 @@
 import logging
 import secrets
 from datetime import timedelta
+from smtplib import SMTPException
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError, ImproperlyConfigured
 from django.db import IntegrityError
 from django.core.mail import send_mail
 from django.shortcuts import render, reverse
@@ -313,11 +314,24 @@ class ResendEmailView(APIView):
                 html_message=html_message,
                 fail_silently=False,
             )
-        except Exception as e:
+        except (ImproperlyConfigured, SMTPException) as e:
             logger.critical(
                 f"Verification email send failed to {email_to_send}",
                 exc_info=True
             )
+            return Response(
+                {"detail": "Internal server configuration error."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception as e:
+            logger.error(
+                f"Verification email send failed to {email_to_send}: {e}",
+                exc_info=True
+            )
+            return Response(
+                {"detail": "If the account exists, a verification email has been sent."},
+                status=status.HTTP_202_ACCEPTED,
+            )      
 
         return Response(
             {"detail": "If the account exists, a verification email has been sent."},
