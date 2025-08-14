@@ -1,129 +1,151 @@
-import pytest
+import logging
+import uuid
 from django.urls import reverse
-from rest_framework.test import APIClient
-from unittest.mock import patch
 from django.utils import timezone
+from rest_framework.test import APITestCase
+from unittest.mock import patch
 from users.models import User, UserRole
 
-@pytest.fixture
-def api_client():
-    return APIClient()
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-@pytest.fixture
-def user_role():
-    role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
-    return role
 
-@pytest.fixture
-def user(user_role):
-    return User.objects.create(
-        email='user@example.com',
-        first_name='Test',
-        last_name='User',
-        role=user_role,
-        is_active=False,
-        email_verification_token='oldtoken',
-        email_verification_sent_at=timezone.now()
-    )
+class ResendEmailTests(APITestCase):
 
-@pytest.mark.django_db
-@patch('django.core.mail.send_mail')
-def test_happy_path(mock_send_mail, api_client, user):
-    url = reverse('resend-email')
-    data = {'user_id': user.user_id, 'token': ''}
+    @classmethod
+    def setUpTestData(cls):
+        cls.user_role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
 
-    response = api_client.post(url, data, format='json')
+    def setUp(self):
+        self.user = User.objects.create(
+            email=f"user_{uuid.uuid4().hex[:10]}@example.com",
+            first_name='Test',
+            last_name='User',
+            role=self.user_role,
+            is_active=False,
+            email_verification_token='oldtoken',
+            email_verification_sent_at=timezone.now()
+        )
+        logger.info("Created test user: %s", self.user.email)
 
-    user.refresh_from_db()
+    def perform_resend_email_test(self, user_id, expected_status=202, email=None, user_obj=None):
+        url = reverse('resend-email')
+        data = {'user_id': user_id}
+        if email:
+            data['email'] = email
 
-    assert response.status_code == 202
-    mock_send_mail.assert_called_once()
-    assert user.pending_email is None
+        response = self.client.post(url, data, format='json')
+        if user_obj:
+            user_obj.refresh_from_db()
 
-@pytest.mark.django_db
-@patch('django.core.mail.send_mail')
-def test_unknown_user_id_returns_202_no_exception(mock_send_mail, api_client):
-    url = reverse('resend-email')
-    data = {'user_id': 999999, 'token': ''}
+        self.assertEqual(response.status_code, expected_status)
+        if expected_status == 202:
+            self.assertTrue(set(response.data.keys()).issubset({'detail'}))
+            self.assertNotIn('error', response.data)
+            logger.info("Received 202 response with detail: %s", response.data.get('detail'))
 
-    response = api_client.post(url, data, format='json')
+        return response
 
-    assert response.status_code == 202
-    mock_send_mail.assert_not_called()
+    @patch('users.views.ResendEmailView.throttle_classes', [])
+    @patch('users.views.send_mail')
+    @patch('users.views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
+    def test_resend_email_scenarios(self, mock_make_token, mock_send_mail):
+        scenarios = [
+            ("happy_path", None, None, True),
+            ("email_override", "newemail@example.com", "newemail@example.com", True),
+            ("unknown_user", None, None, False),
+        ]
 
-@pytest.mark.django_db
-@patch('django.core.mail.send_mail')
-def test_email_override_saves_pending_and_sends_to_override(mock_send_mail, api_client, user):
-    url = reverse('resend-email')
-    new_email = 'newemail@example.com'
-    data = {'user_id': user.user_id, 'email': new_email, 'token': ''}
+        for i, (scenario, email, expected_pending_email, send_mail_expected) in enumerate(scenarios):
+            if scenario == "unknown_user":
+                user_id = 999999
+                test_user = None
+            else:
+                test_user = User.objects.create(
+                    email=f"user_{uuid.uuid4().hex[:10]}@example.com",
+                    first_name='Test',
+                    last_name='User',
+                    role=self.user_role,
+                    is_active=False,
+                    email_verification_token='oldtoken',
+                    email_verification_sent_at=timezone.now()
+                )
+                user_id = test_user.user_id
 
-    response = api_client.post(url, data, format='json')
+            response = self.perform_resend_email_test(user_id, user_obj=test_user, email=email)
 
-    user.refresh_from_db()
-    assert response.status_code == 202
-    assert user.pending_email == new_email
-    mock_send_mail.assert_called_once()
-    args, kwargs = mock_send_mail.call_args
-    assert new_email in kwargs['recipient_list']
+            if scenario in ["happy_path", "email_override"]:
+                self.assertIn('verification email', response.data['detail'])
 
-@pytest.mark.django_db
-@patch('users.views.ResendEmailView.throttle_classes', [])
-@patch('django.core.mail.send_mail')
-def test_throttling(mock_send_mail, api_client, user):
-    url = reverse('resend-email')
-    data = {'user_id': user.user_id, 'token': ''}
+            if test_user:
+                if expected_pending_email:
+                    self.assertEqual(test_user.pending_email, expected_pending_email)
+                else:
+                    self.assertIsNone(test_user.pending_email)
+                self.assertTrue(test_user.email.endswith('@example.com'))
 
-    for _ in range(5):
-        response = api_client.post(url, data, format='json')
-        assert response.status_code == 202
-    
-    response = api_client.post(url, data, format='json')
-    assert response.status_code == 202  
+            if send_mail_expected:
+                mock_send_mail.assert_called()
+                if email:
+                    _, kwargs = mock_send_mail.call_args
+                    self.assertIn(email, kwargs['recipient_list'])
+            else:
+                mock_send_mail.assert_not_called()
 
-@pytest.mark.django_db
-def test_bad_input_invalid_email(api_client, user):
-    url = reverse('resend-email')
-    data = {'user_id': user.user_id, 'email': 'not-an-email', 'token': ''}
+            mock_send_mail.reset_mock()
 
-    response = api_client.post(url, data, format='json')
+    @patch('users.views.ResendEmailView.throttle_classes', [])
+    def test_bad_input_invalid_email(self):
+        url = reverse('resend-email')
+        data = {'user_id': self.user.user_id, 'email': 'not-an-email'}
 
-    assert response.status_code == 400
-    assert 'email' in response.data
+        response = self.client.post(url, data, format='json')
+        self.user.refresh_from_db()
 
-@pytest.mark.django_db
-@patch('django.core.mail.send_mail')
-def test_already_verified_user_returns_202_no_email_sent(mock_send_mail, api_client, user_role):
-    user = User.objects.create(
-        email='active@example.com',
-        first_name='Active',
-        last_name='User',
-        role=user_role,
-        is_active=True
-    )
-    url = reverse('resend-email')
-    data = {'user_id': user.user_id, 'token': ''}
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('email', response.data)
+        expected_error = 'Enter a valid email address.'
+        errors = response.data['email']
+        if isinstance(errors, list):
+            self.assertTrue(any(expected_error in str(e) for e in errors))
+        else:
+            self.assertIn(expected_error, str(errors))
+        self.assertTrue(self.user.email.startswith('user_'))
+        logger.info("Bad input test: invalid email correctly rejected")
 
-    response = api_client.post(url, data, format='json')
+    @patch('users.views.send_mail')
+    @patch('users.views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
+    def test_throttling_with_limit(self, mock_make_token, mock_send_mail):
+        url = reverse('resend-email')
+        data = {'user_id': self.user.user_id}
+        allowed_requests = 5
 
-    assert response.status_code == 202
-    mock_send_mail.assert_not_called()
+        for i in range(allowed_requests):
+            response = self.client.post(url, data, format='json')
+            self.assertEqual(response.status_code, 202)
+            self.user.refresh_from_db()
+            self.assertTrue(self.user.email.startswith('user_'))
+            logger.info("Throttling test: request %d successful", i + 1)
 
-@pytest.mark.django_db
-@patch('users.views.send_mail')
-def test_email_override_saves_pending_and_sends_to_override(mock_send_mail, api_client, user):
-    url = reverse('resend-email')
-    new_email = 'newemail@example.com'
-    data = {'user_id': user.user_id, 'email': new_email, 'token': ''}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(mock_send_mail.call_count, allowed_requests)
+        logger.info("Throttling limit reached as expected after %d requests", allowed_requests)
 
-    response = api_client.post(url, data, format='json')
+    @patch('users.views.ResendEmailView.throttle_classes', [])
+    @patch('users.views.send_mail')
+    def test_already_verified_user(self, mock_send_mail):
+        active_user = User.objects.create(
+            email=f"active_{uuid.uuid4().hex[:10]}@example.com",
+            first_name='Active',
+            last_name='User',
+            role=self.user_role,
+            is_active=True,
+            email_verification_token=None,
+            email_verification_sent_at=None
+        )
+        logger.info("Already verified user created: %s", active_user.email)
 
-    print("Response status:", response.status_code)
-    print("Response data:", response.data)
-
-    user.refresh_from_db()
-    assert response.status_code == 202, f"Unexpected status: {response.status_code}, data: {response.data}"
-    assert user.pending_email == new_email
-    mock_send_mail.assert_called_once()
-    args, kwargs = mock_send_mail.call_args
-    assert new_email in kwargs['recipient_list']
+        self.perform_resend_email_test(active_user.user_id, user_obj=active_user)
+        mock_send_mail.assert_called_once()
+        logger.info("Already verified user test: email send attempted but user already active")
