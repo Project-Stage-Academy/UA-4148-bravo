@@ -93,7 +93,7 @@ api_urlpatterns = [
     path('investors/', include('investors.urls')),
   
     # OAuth endpoints
-    path('accounts/', include('allauth.urls')),
+    path('api/accounts/', include('allauth.urls')),
 ]
 
 urlpatterns = [
