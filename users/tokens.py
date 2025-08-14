@@ -1,9 +1,11 @@
+import logging
 from typing import Optional
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from .models import User
 
+logger = logging.getLogger(__name__)
 
 class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
     """
@@ -78,7 +80,8 @@ def decode_uidb64(uidb64: str) -> Optional[int]:
         if decoded.isdigit():
             return int(decoded)
         return decoded 
-    except (TypeError, ValueError, OverflowError):
+    except (TypeError, ValueError, OverflowError) as e:
+        logger.error(f"Failed to decode uidb64 '{uidb64}': {e}", exc_info=True)
         return None
 
 
