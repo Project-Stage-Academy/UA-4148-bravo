@@ -164,13 +164,7 @@ class VerifyEmailView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            try:
-                user.confirm_pending_email()
-            except DjangoValidationError as e:
-                return Response(
-                    {"status": "error", "message": str(e)},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            user.confirm_pending_email()
             
             user.is_active = True
             user.email_verification_token = None

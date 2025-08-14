@@ -388,9 +388,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         Raises:
             ValidationError: If there is no pending email to confirm or
                 if the pending email is already used by another user.
-
-        Returns:
-            None
         """
         if not self.pending_email:
             raise ValidationError("No pending email to confirm.")
