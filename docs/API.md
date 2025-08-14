@@ -147,3 +147,76 @@ Use `/api/token/refresh/` to obtain a new access token.
   "access": "<your_new_access_token>"
 }
 ```
+
+# OAuth Authentication (Google & GitHub)
+
+## Overview
+
+Use this endpoint to authenticate users via Google or GitHub OAuth. Frontend sends the OAuth token from the provider, and the backend returns access tokens and user info.
+
+---
+
+## Endpoint
+
+`POST /users/oauth/login/`
+
+---
+
+## Request
+
+- **Headers:**  
+  `Content-Type: application/json`
+
+- **Body:**
+  ```json
+  {
+    "provider": "google" | "github",
+    "token": "<OAuth token>"
+  }
+  ```
+  - **Response**
+  ```json
+  {
+    "refresh": "<refresh_token>",
+    "access": "<access_token>",
+    "user": {
+      "id": "...",
+      "email": "...",
+      "username": "...",
+      "first_name": "...",
+      "last_name": "...",
+      "user_phone": "...",
+      "title": "...",
+      "role": "...",
+      }}
+  ```
+
+# OAuth Callback URLs Documentation
+
+## Callback URLs
+The OAuth callback URLs are configured to handle redirects after successful authentication with the OAuth provider. These URLs are used by the frontend to receive authorization codes or tokens.
+
+### Configured Callback URLs
+- **Production**: ----
+- **Development**: `http://127.0.0.1:8000/oauth/callback/`
+
+## Usage Instructions
+1. **Initiate OAuth Flow**:
+   - Redirect users to the OAuth provider's authorization endpoint (e.g., `https://provider.com/oauth/authorize`).
+   - Include the appropriate `redirect_uri` parameter matching one of the configured callback URLs
+
+2. **Handle Callback**:
+   - After authentication, the OAuth provider will redirect the user to the specified callback URL with an authorization code or token in the query parameters (e.g., `https://yourapp.com/auth/callback?code=abc123`).
+   - The frontend should extract the `code` from the URL query parameters using `URLSearchParams`.
+
+3. **Extracting Query Parameters**:
+   - Example of JavaScript to extract parameters from the callback URL:
+     ```javascript
+     const urlParams = new URLSearchParams(window.location.search);
+     const code = urlParams.get('code');
+     const state = urlParams.get('state');
+     const error = urlParams.get('error');
+     ```
+
+4. **ExchangeCode for Token**:
+  -Send the authorization code to your backend API `/users/oauth/login/` to exchange it for an access token.
