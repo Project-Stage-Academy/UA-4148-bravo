@@ -27,7 +27,7 @@ import clsx from 'clsx';
 function HomeSection({ color, className, children }) {
     return (
         <section className={`home--section__${color}`}>
-            <div className={clsx('container', 'home--container', className)}>
+            <div className={clsx('home--container', className)}>
                 { children }
             </div>
         </section>
