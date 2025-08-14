@@ -1,6 +1,8 @@
+from typing import Optional
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from .models import User
 
 
 class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
@@ -20,7 +22,7 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
       - The pending email changes (if used).
     """
 
-    def _make_hash_value(self, user, timestamp):
+    def _make_hash_value(self, user:User, timestamp: int) -> str:
         """
         Construct a unique hash value for token generation.
 
@@ -47,7 +49,7 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
 email_verification_token = EmailVerificationTokenGenerator()
 
 
-def make_uidb64(user_id):
+def make_uidb64(user_id: int) -> str:
     """
     Encode user_id to a URL-safe base64 string.
 
@@ -60,7 +62,7 @@ def make_uidb64(user_id):
     return urlsafe_base64_encode(force_bytes(user_id))
 
 
-def decode_uidb64(uidb64):
+def decode_uidb64(uidb64: str) -> Optional[int]:
     """
     Decode a base64 string back to user_id.
 
@@ -76,7 +78,7 @@ def decode_uidb64(uidb64):
         return None
 
 
-def make_token(user):
+def make_token(user: User) -> str:
     """
     Generate an email verification token for the user.
 
@@ -89,7 +91,7 @@ def make_token(user):
     return email_verification_token.make_token(user)
 
 
-def check_token(user, token):
+def check_token(user: User, token: str) -> bool:
     """
     Validate the token for the user.
 
