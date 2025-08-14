@@ -13,69 +13,70 @@ from django.conf.urls.static import static
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
-from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView
+from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView, CustomPasswordResetView, \
+    CustomPasswordResetConfirmView
 
 # API endpoints grouped by app
 api_urlpatterns = [
-     # User authentication endpoints
-    path('users/', include('users.urls')),
+    # User authentication endpoints
+    path('users/', include('users.urls')),  # User-specific endpoints
 
-    # API endpoints
-    #
     # Register
     # URL: /api/v1/auth/register/
     # Req: { email, first_name, last_name, password, password2 }
     # Res: 201 { status, message, user_id, email }
-    #
+
+    path('auth/register/', UserRegistrationView.as_view(), name='user_register'),
+
     # Resend register email
     # URL: /api/v1/auth/register/resend/
     # Req: { email, userId }
     # Res: 201 { status, message, user_id, email }
-    #
+
+    # path('auth/register/resend', , name='user_register'),
+
     # Me
     # URL: /api/v1/auth/me/
     # Req: {}
     # Res: 200 { id, email, role, ... }
-    #
+
+    # path('auth/me/', CustomTokenObtainPairView.as_view(), name='custom_login'),
+
     # Password reset
     # URL: /api/v1/auth/password/reset/
     # Req: { email }
     # Res: 200
-    #
+
+    path('auth/password/reset/', CustomPasswordResetView.as_view(), name='password_reset'),
+
     # Password reset confirm
     # URL: /api/v1/auth/password/reset/confirm/
     # Req: { uid, token, new_password }
     # Res: 200
 
-    path('auth/register/', UserRegistrationView.as_view(), name='user_register'),
-    #path('auth/register/resend', , name='user_register'),
-    path('auth/me/', CustomTokenObtainPairView.as_view(), name='custom_login'),
-    #path('auth/password/reset/', , name='password_reset'),
-    #path('auth/password/reset/confirm/', , name='password_reset_confirm'),
+    path('auth/password/reset/confirm/',
+         CustomPasswordResetConfirmView.as_view(),
+         name='password_reset_confirm'),
 
-    # Djoser authentication endpoints
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt')),
-
-    # Custom JWT endpoints
-    #
     # Create
     # URL: /api/v1/auth/jwt/create/
     # Req: { email, password }
     # Res: 200 { access, refresh }
-    #
+
+    path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
+
     # Refresh
     # URL: /api/v1/auth/jwt/refresh/
     # Req: { refresh }
     # Res: 200 { access }
-    #
+
+    path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
+
     # Blacklist
     # URL: /api/v1/auth/jwt/blacklist/
     # Req: { refresh }
     # Res: 205
 
-    path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
-    path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
     path('auth/jwt/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
 
     # Email verification
@@ -91,9 +92,9 @@ api_urlpatterns = [
 
     # Investor-related endpoints
     path('investors/', include('investors.urls')),
-  
+
     # OAuth endpoints
-    path('api/accounts/', include('allauth.urls')),
+    path('accounts/', include('allauth.urls')),
 ]
 
 urlpatterns = [
@@ -103,6 +104,7 @@ urlpatterns = [
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('health/elasticsearch/', elasticsearch_healthcheck),
+    path('accounts/', include('allauth.urls')),
 ]
 
 if settings.DEBUG:
