@@ -1,10 +1,6 @@
-import time
-
-from django.conf import settings
 from django.urls import reverse
-from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl import Index
 from rest_framework import status
-
 from common.enums import Stage
 from startups.documents import StartupDocument
 from tests.elasticsearch.setup_tests_data import BaseElasticsearchAPITestCase
@@ -20,21 +16,16 @@ class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
     - Data setup is performed using factory_boy factories for cleaner test code.
     """
 
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Configure Elasticsearch connection before any tests run.
-        """
-        super().setUpTestData()
-        es_config = getattr(settings, 'ELASTICSEARCH_DSL', {}).get('default', {})
-        hosts = es_config.get('hosts', 'http://localhost:9200')
-        connections.configure(default={'hosts': hosts})
-
     def setUp(self):
         """ Create the Elasticsearch index and allow ES to index the documents. """
         super().setUp()
-        StartupDocument._index.refresh()
-        time.sleep(1)
+        self.index = Index('startups')
+        try:
+            self.index.delete()
+        except:
+            pass
+        self.index.create()
+        StartupDocument._doc_type.mapping.save('startups')
 
     def tearDown(self):
         """

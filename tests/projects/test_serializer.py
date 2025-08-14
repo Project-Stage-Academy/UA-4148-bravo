@@ -178,7 +178,8 @@ class ProjectSerializerValidationTests(BaseAPITestCase):
         )
 
     @ddt.data(
-        ("0.00", True),
+        ("0.01", True),
+        ("0.00", False),
         ("-0.01", False),
         ("999999999999999999.99", True),
         ("10000000000000000000000.00", False),
@@ -188,8 +189,8 @@ class ProjectSerializerValidationTests(BaseAPITestCase):
         data = {
             "title": "Funding Edge",
             "email": "edge@example.com",
-            "funding_goal": funding_goal_value,
-            "current_funding": "0.00",
+            "funding_goal": Decimal(funding_goal_value),
+            "current_funding": Decimal("0.00"),
             "startup_id": self.startup.id,
             "category_id": self.category.id,
             "business_plan": self.get_dummy_file(),

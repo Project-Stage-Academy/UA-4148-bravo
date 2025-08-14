@@ -30,7 +30,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         return data
 
 
-def create(self, validated_data):
+    def create(self, validated_data):
         project = validated_data['project']
         amount = validated_data['amount']
 

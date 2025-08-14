@@ -45,8 +45,8 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
     """
     id = serializers.IntegerField(read_only=True)
     startup_id = serializers.PrimaryKeyRelatedField(
-        source='startup',
-        read_only=True
+        queryset=Startup.objects.all(),
+        source='startup'
     )
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),

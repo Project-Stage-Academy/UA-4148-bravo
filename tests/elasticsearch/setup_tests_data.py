@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.test import TestCase
+from elasticsearch_dsl.connections import connections
 from rest_framework.test import APIClient
 
 from common.enums import Stage
@@ -7,8 +9,12 @@ from tests.elasticsearch.factories import UserFactory, IndustryFactory, Location
 
 
 class BaseElasticsearchAPITestCase(TestCase):
+
     @classmethod
     def setUpTestData(cls):
+        """
+        Configure Elasticsearch connection before any tests run.
+        """
         cls.user1 = UserFactory.create()
         cls.user2 = UserFactory.create()
         cls.industry1 = IndustryFactory.create(name="Fintech")
@@ -41,6 +47,10 @@ class BaseElasticsearchAPITestCase(TestCase):
             category=cls.category2,
             title="Second Test Project"
         )
+
+        es_config = getattr(settings, 'ELASTICSEARCH_DSL', {}).get('default', {})
+        hosts = es_config.get('hosts', 'http://localhost:9200')
+        connections.configure(default={'hosts': hosts})
 
     def setUp(self):
         self.client = APIClient()

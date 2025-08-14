@@ -1,10 +1,6 @@
-import time
-
-from django.conf import settings
 from django.urls import reverse
-from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl import Index
 from rest_framework import status
-
 from projects.documents import ProjectDocument
 from tests.elasticsearch.setup_tests_data import BaseElasticsearchAPITestCase
 
@@ -16,26 +12,19 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
     Includes tests for search, filters, validation, permissions, and edge cases.
     """
 
-    @classmethod
-    def setUpTestData(cls):
-        """
-        Set up Elasticsearch connection before any tests run,
-        reading hosts from Django settings or defaulting to localhost.
-        """
-        super().setUpTestData()
-        es_config = getattr(settings, 'ELASTICSEARCH_DSL', {}).get('default', {})
-        hosts = es_config.get('hosts', 'http://localhost:9200')
-        connections.configure(default={'hosts': hosts})
-
     def setUp(self):
-        """
-        Create and configure Elasticsearch index before each test.
-        Authenticate the client as user1.
-        Adds a short delay to allow Elasticsearch to index data.
-        """
+        """ Create the Elasticsearch index and allow ES to index the documents. """
         super().setUp()
+        self.index = Index('projects')
+        try:
+            self.index.delete()
+        except:
+            pass
+        self.index.create()
+        ProjectDocument._doc_type.mapping.save('projects')
+        for project in [self.project1, self.project2]:
+            ProjectDocument().update(project)
         ProjectDocument._index.refresh()
-        time.sleep(1)
 
     def tearDown(self):
         """
@@ -45,6 +34,16 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
             self.index.delete()
         except:
             pass
+
+    def test_combined_filters_work_correctly(self):
+        url = reverse('project-document-list')
+        response = self.client.get(url, {
+            'category.name': 'Tech',
+            'startup.company_name': 'Fintech Solutions'
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['title'], "First Test Project")
 
     def test_empty_query_returns_all_projects(self):
         """
