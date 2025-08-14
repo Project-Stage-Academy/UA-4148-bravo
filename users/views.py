@@ -224,47 +224,48 @@ class ResendEmailView(APIView):
 
     def post(self, request):
         """
-        Handle POST request to resend the email verification link.
+        Resend the email verification link to a user's email address.
 
-        Validates the input data, retrieves the user by user_id, updates the pending email if provided,
-        generates a new token if not supplied, constructs the verification URL, renders
-        email templates (HTML and plain text), sends the email, and returns a generic
-        success response regardless of whether the user exists.
+        This view validates the input data, retrieves the user by `user_id`,
+        updates the `pending_email` if a new one is provided, generates a new
+        verification token if not supplied, constructs the verification URL,
+        renders HTML and plain text email templates, sends the email, and returns
+        a generic success response regardless of whether the user exists.
+
+        The email is sent to `pending_email` if it exists; otherwise, the user's
+        primary email is used. The response does not disclose whether the user
+        exists for security reasons.
 
         Args:
-            request (Request): DRF request object containing user_id (required), 
-                optional email (new pending email), and optional token.
+            request (rest_framework.request.Request): DRF request object containing:
+                - user_id (int): Required ID of the user.
+                - email (str, optional): New pending email to update.
+                - token (str, optional): Custom verification token to use.
 
         Returns:
-            Response: DRF Response object with HTTP 202 Accepted status and a message
-                indicating that if the account exists, a verification email has been sent.
+            rest_framework.response.Response: HTTP 202 Accepted with a generic
+            message indicating that if the account exists, a verification email
+            has been sent.
         """
         serializer = ResendEmailSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user_id = serializer.validated_data["user_id"]
-        email = serializer.validated_data.get("email")
+        new_email = serializer.validated_data.get("email")
         token = serializer.validated_data.get("token")
 
         try:
             user = User.objects.get(user_id=user_id)
-            if user.is_active:
-                return Response(
-                    {"detail": "If the account exists, a verification email has been sent."},
-                    status=status.HTTP_202_ACCEPTED,
-                )
-
         except User.DoesNotExist:
             return Response(
                 {"detail": "If the account exists, a verification email has been sent."},
                 status=status.HTTP_202_ACCEPTED,
             )
 
-        if email:
-            user.pending_email = email
+        if new_email:
+            user.pending_email = new_email
             user.save(update_fields=["pending_email"])
-        else:
-            email = user.pending_email or user.email
+        email_to_send = user.pending_email or user.email
 
         if not token:
             token = email_verification_token.make_token(user)
@@ -272,7 +273,7 @@ class ResendEmailView(APIView):
         verification_relative_url = reverse(
             'verify-email', kwargs={'user_id': user.user_id, 'token': token}
         )
-        verify_url = f"{settings.FRONTEND_URL}{verification_relative_url}?email={email}"
+        verify_url = f"{settings.FRONTEND_URL}{verification_relative_url}?email={email_to_send}"
 
         context = {
             'user': user,
@@ -294,12 +295,12 @@ class ResendEmailView(APIView):
                 subject=subject,
                 message=plain_message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
+                recipient_list=[email_to_send],
                 html_message=html_message,
                 fail_silently=False,
             )
         except Exception as e:
-            logger.error(f"Failed to send verification email to {email}: {str(e)}")
+            logger.error(f"Failed to send verification email to {email_to_send}: {str(e)}")
 
         return Response(
             {"detail": "If the account exists, a verification email has been sent."},
