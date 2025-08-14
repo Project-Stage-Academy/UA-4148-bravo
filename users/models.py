@@ -390,12 +390,12 @@ class User(AbstractBaseUser, PermissionsMixin):
                 if the pending email is already used by another user.
         """
         if not self.pending_email:
-            raise ValidationError("No pending email to confirm.", code="no_pending_email")
+            raise ValidationError({"pending_email": ["No pending email to confirm."]}, code="no_pending_email")
         
         normalized_email = self.pending_email.strip().lower()
 
         if User.objects.filter(email__iexact=normalized_email).exclude(pk=self.pk).exists():
-            raise ValidationError("This email is already in use by another user.")
+            raise ValidationError({"pending_email": ["This email is already in use by another user."]}, code="email_taken")
         
         with transaction.atomic():
             self.email = normalized_email
