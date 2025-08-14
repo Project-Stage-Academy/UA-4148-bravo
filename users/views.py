@@ -273,6 +273,12 @@ class ResendEmailView(APIView):
                 logger.warning(f"Failed to update pending_email for user {user.user_id}: email already exists")
                 
         email_to_send = user.pending_email or user.email
+        if not email_to_send:
+            logger.warning(f"User {user.user_id} has no valid email to send verification to.")
+            return Response(
+                {"detail": "Unable to send verification email due to missing email."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if not token:
             token = email_verification_token.make_token(user)
