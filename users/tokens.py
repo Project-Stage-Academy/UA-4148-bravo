@@ -33,20 +33,21 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
         Returns:
             str: String uniquely identifying the token for the user.
         """
-        base = f"{str(getattr(user, 'pk', ''))}{timestamp}{getattr(user, 'is_active', False)}"
-
-        rotation_token = getattr(user, 'email_verification_token', None)
-        if rotation_token:
-            base += str(rotation_token)
+        parts = [
+            str(getattr(user, 'pk', '')),
+            str(timestamp),
+            str(getattr(user, 'is_active', False)),
+            str(getattr(user, 'email_verification_token', '')),
+        ]
 
         pending_email = getattr(user, 'pending_email', None)
         if pending_email:
-            base = f"{base}:{pending_email}" if base else str(pending_email)
+            parts.append(str(pending_email))
 
-        return base
+        return ":".join(filter(None, parts))
 
 
-email_verification_token = EmailVerificationTokenGenerator()
+EMAIL_VERIFICATION_TOKEN = EmailVerificationTokenGenerator()
 
 
 def make_uidb64(user_id: int) -> str:
@@ -88,7 +89,7 @@ def make_token(user: User) -> str:
     Returns:
         str: Token string.
     """
-    return email_verification_token.make_token(user)
+    return EMAIL_VERIFICATION_TOKEN.make_token(user)
 
 
 def check_token(user: User, token: str) -> bool:
@@ -102,4 +103,4 @@ def check_token(user: User, token: str) -> bool:
     Returns:
         bool: True if valid, False otherwise.
     """
-    return email_verification_token.check_token(user, token)
+    return EMAIL_VERIFICATION_TOKEN.check_token(user, token)
