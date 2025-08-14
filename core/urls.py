@@ -12,24 +12,23 @@ from django.conf import settings
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView
-from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView
+from users.views import (
+    CustomTokenObtainPairView,
+    UserRegistrationView,
+    VerifyEmailView,
+    TokenBlacklistView,
+)
 
 # Grouped API endpoints under versioned path
 api_urlpatterns = [
-    # User authentication
+    # User-specific endpoints
     path('users/', include('users.urls')),
-    path('register/', UserRegistrationView.as_view(), name='user_register'),
-    path('login/', CustomTokenObtainPairView.as_view(), name='custom_login'),
 
-    # Djoser endpoints
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt')),
-
-    # Custom JWT endpoints
+    # Authentication endpoints
+    path('auth/register/', UserRegistrationView.as_view(), name='user_register'),
     path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
     path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
-
-    # Email verification
+    path('auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
     path('auth/verify-email/<int:user_id>/<str:token>/', VerifyEmailView.as_view(), name='verify-email'),
 
     # App-specific endpoints
@@ -37,7 +36,7 @@ api_urlpatterns = [
     path('startups/', include('startups.urls')),
     path('investors/', include('investors.urls')),
 
-    # OAuth
+    # OAuth endpoints
     path('accounts/', include('allauth.urls')),
 ]
 
@@ -52,6 +51,7 @@ urlpatterns = [
 
     # Healthcheck
     path('health/elasticsearch/', elasticsearch_healthcheck),
+    path('accounts/', include('allauth.urls')),
 ]
 
 # Serve static and media files only during local development.

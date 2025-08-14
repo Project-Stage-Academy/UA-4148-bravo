@@ -1,8 +1,10 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import StartupDocumentView, StartupViewSet, StartupDetailView
+from startups.views.startup_elasticsearch import StartupDocumentView
+from startups.views import StartupViewSet, StartupDetailView
 
 router = DefaultRouter()
+
 # Elasticsearch search endpoints
 router.register(r'search', StartupDocumentView, basename='startups-search')
 

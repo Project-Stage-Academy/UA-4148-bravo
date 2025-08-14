@@ -9,11 +9,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security and debug settings
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1, localhost',
-                       cast=lambda v: [s.strip() for s in v.split(',')])
+
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='127.0.0.1, localhost, 0.0.0.0',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
 
 # Installed apps
 INSTALLED_APPS = [
+    # Django built-in apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,9 +44,9 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'django_elasticsearch_dsl',
-    'drf_spectacular',
+    'drf_spectacular',  # API schema generator
 
-    # OAuth
+    # OAuth providers
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -53,6 +58,7 @@ SITE_ID = 1
 
 # Authentication backends
 AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
@@ -92,9 +98,21 @@ AUTH_USER_MODEL = 'users.User'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '5/minute',
+        'anon': '2/minute',
+    },
 }
+
+if 'test' in sys.argv:
+    REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
@@ -110,9 +128,22 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'apikey'
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
+
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
+    # Password recovery settings
+    'CUSTOM_PASSWORD_RESET_CONFIRM_URL': 'users/reset_password_confirm/{uid}/{token}',
+    'PASSWORD_RESET_TIMEOUT': 3600,
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
     'SEND_ACTIVATION_EMAIL': True,
     'SEND_CONFIRMATION_EMAIL': True,
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
@@ -138,7 +169,7 @@ DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 
 # Middleware
 MIDDLEWARE = [
-    "allauth.account.middleware.AccountMiddleware",
+    "allauth.account.middleware.AccountMiddleware",  # OAuth middleware
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -170,7 +201,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Database
+# Database configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -188,9 +219,10 @@ if DEBUG:
 else:
     AUTH_PASSWORD_VALIDATORS = [
         {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-        {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+        {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
         {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
         {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+        {'NAME': 'users.validators.CustomPasswordValidator'},
     ]
 
 PASSWORD_HASHERS = [
@@ -218,11 +250,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Elasticsearch DSL Configuration (test mode uses dummy host)
+# Elasticsearch DSL configuration
 if 'test' in sys.argv:
     ELASTICSEARCH_DSL = {
         'default': {
-            'hosts': 'http://localhost:9999'  # unreachable to prevent ES calls
+            'hosts': 'http://localhost:9999'  # Unreachable to prevent ES calls in tests
         }
     }
 else:
@@ -231,6 +263,9 @@ else:
             'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
         }
     }
+
+if 'users' in sys.argv and 'test' not in sys.argv:
+    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
 
 # File validation settings
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
@@ -280,7 +315,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'json': {
-            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            '()': 'pythonjsonlogger.json.JsonFormatter',
             'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
         },
         'verbose': {
@@ -397,14 +432,11 @@ LOGGING = {
     },
 }
 
-# Tests
-TEST_RUNNER = 'django.test.runner.DiscoverRunner'
-
-# Celery
+# Celery configuration
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = 'rpc://'
 
-if 'test' in sys.argv:
+if 'users' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
