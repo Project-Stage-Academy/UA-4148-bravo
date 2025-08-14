@@ -402,7 +402,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.pending_email = None
             self.email_verification_sent_at = None
             self.verified_at = None
-        self.save(update_fields=['email', 'pending_email', 'email_verification_sent_at', 'verified_at'])
+            self.save(update_fields=['email', 'pending_email', 'email_verification_sent_at', 'verified_at'])
         
         logger.info(f"User {self.user_id} confirmed pending email. New email: {self.email}")
         
