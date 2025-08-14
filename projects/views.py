@@ -7,7 +7,6 @@ from elasticsearch.exceptions import ConnectionError, TransportError
 from elasticsearch_dsl import Q
 
 from projects.models import Project
-from projects.serializers import ProjectSerializer
 
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 from django_elasticsearch_dsl_drf.filter_backends import (
