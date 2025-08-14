@@ -10,19 +10,19 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
     Token generator for email verification.
 
     Generates tokens based on:
-      - user.pk (primary key, universal)
+      - user.pk (primary key)
       - timestamp
       - user.is_active
-      - user.email_verification_token field (if present, for manual rotation)
+      - user.email_verification_token field (if present)
       - optionally, user.pending_email if implemented
 
-    This ensures tokens become invalid if:
+    Tokens become invalid if:
       - The user is deactivated.
       - The rotation token changes.
       - The pending email changes (if used).
     """
 
-    def _make_hash_value(self, user:User, timestamp: int) -> str:
+    def _make_hash_value(self, user: User, timestamp: int) -> str:
         """
         Construct a unique hash value for token generation.
 
@@ -33,7 +33,7 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
         Returns:
             str: String uniquely identifying the token for the user.
         """
-        base = f"{getattr(user, 'pk', '')}{timestamp}{getattr(user, 'is_active', False)}"
+        base = f"{str(getattr(user, 'pk', ''))}{timestamp}{getattr(user, 'is_active', False)}"
 
         rotation_token = getattr(user, 'email_verification_token', None)
         if rotation_token:
@@ -59,7 +59,7 @@ def make_uidb64(user_id: int) -> str:
     Returns:
         str: Base64 encoded user ID.
     """
-    return urlsafe_base64_encode(force_bytes(user_id))
+    return urlsafe_base64_encode(force_bytes(str(user_id)))
 
 
 def decode_uidb64(uidb64: str) -> Optional[int]:
@@ -70,7 +70,7 @@ def decode_uidb64(uidb64: str) -> Optional[int]:
         uidb64 (str): Base64 encoded user ID.
 
     Returns:
-        int or None: Decoded user ID, or None if decoding fails.
+        Optional[int]: Decoded user ID, or None if decoding fails.
     """
     try:
         return int(force_str(urlsafe_base64_decode(uidb64)))
