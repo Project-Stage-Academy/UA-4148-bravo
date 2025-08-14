@@ -22,6 +22,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='location',
-            constraint=models.UniqueConstraint(models.F('city'), models.F('state'), models.F('country'), name='unique_location', violation_error_message='This location already exists.'),
+            constraint=models.UniqueConstraint(models.F('city'), models.F('region'), models.F('country'), name='unique_location', violation_error_message='This location already exists.'),
         ),
     ]
