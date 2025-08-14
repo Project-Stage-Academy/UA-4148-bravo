@@ -24,7 +24,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from djoser.email import PasswordResetEmail
 
-from .constants import SUPPORT_TEXT
+from .constants import ACTIVATION_EMAIL_TEMPLATE, SUPPORT_TEXT
 from .models import User, UserRole
 from .serializers import (
     CustomTokenObtainPairSerializer,
@@ -297,7 +297,7 @@ class ResendEmailView(APIView):
         }
 
         subject = "Confirm your email"
-        html_message = render_to_string('email/activation.html', context)
+        html_message = render_to_string(ACTIVATION_EMAIL_TEMPLATE, context)
         plain_message = (
             f"Hello {context['user_display_name']},\n\n"
             f"Please verify your email by clicking the link below:\n{verify_url}\n\n"
