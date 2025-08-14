@@ -164,7 +164,17 @@ class VerifyEmailView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            user.confirm_pending_email()
+            try:
+                user.confirm_pending_email()
+            except DjangoValidationError as e:
+                logger.info(f"No pending email to confirm for {user.email}")
+                return Response(
+                    {
+                        "status": "success", 
+                        'message': 'Email already verified or no pending email to confirm.'
+                    },
+                    status=status.HTTP_200_OK
+                )
             
             user.is_active = True
             user.email_verification_token = None
