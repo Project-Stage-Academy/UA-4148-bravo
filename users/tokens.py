@@ -71,10 +71,13 @@ def decode_uidb64(uidb64: str) -> Optional[int]:
         uidb64 (str): Base64 encoded user ID.
 
     Returns:
-        Optional[int]: Decoded user ID, or None if decoding fails.
+        Optional[Union[int, str]]: Decoded user ID as int if possible, else str. None if decoding fails.
     """
     try:
-        return int(force_str(urlsafe_base64_decode(uidb64)))
+        decoded = force_str(urlsafe_base64_decode(uidb64))
+        if decoded.isdigit():
+            return int(decoded)
+        return decoded 
     except (TypeError, ValueError, OverflowError):
         return None
 
