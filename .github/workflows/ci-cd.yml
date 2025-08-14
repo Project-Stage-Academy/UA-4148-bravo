@@ -92,7 +92,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          python manage.py test --parallel 1
+          python manage.py test --keepdb
 
       - name: Run Linting (flake8 - allow fail)
         continue-on-error: true

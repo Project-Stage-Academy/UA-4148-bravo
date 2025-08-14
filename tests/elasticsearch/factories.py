@@ -21,7 +21,7 @@ class UserFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = User
 
-    role = factory.SubFactory(UserRoleFactory)  # завжди отримає існуючий або створить один раз
+    role = factory.SubFactory(UserRoleFactory)
     first_name = "John"
     last_name = "Doe"
     email = factory.Sequence(lambda n: f"user{n}@example.com")
