@@ -137,10 +137,15 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
 
+# For debugging, you can enable console-based email delivery:
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
-    # Password recovery settings
     'CUSTOM_PASSWORD_RESET_CONFIRM_URL': 'users/reset_password_confirm/{uid}/{token}',
     'PASSWORD_RESET_TIMEOUT': 3600,
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
@@ -163,9 +168,6 @@ DJOSER = {
     },
     'USER_ID_FIELD': 'user_id',
 }
-
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 
 # Middleware
 MIDDLEWARE = [
@@ -213,6 +215,15 @@ DATABASES = {
     }
 }
 
+# SQLite for test environments
+if os.environ.get("USE_SQLITE_FOR_TESTS") == "1":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
+
 # Password validation
 if DEBUG:
     AUTH_PASSWORD_VALIDATORS = []
@@ -254,7 +265,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 if 'test' in sys.argv:
     ELASTICSEARCH_DSL = {
         'default': {
-            'hosts': 'http://localhost:9999'  # Unreachable to prevent ES calls in tests
+            'hosts': 'http://localhost:9999'
         }
     }
 else:
@@ -263,9 +274,6 @@ else:
             'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
         }
     }
-
-if 'users' in sys.argv and 'test' not in sys.argv:
-    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
 
 # File validation settings
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
@@ -439,12 +447,3 @@ CELERY_RESULT_BACKEND = 'rpc://'
 if 'users' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
-
-# SQLite for test environments
-if os.environ.get("USE_SQLITE_FOR_TESTS") == "1":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": ":memory:",
-        }
-    }

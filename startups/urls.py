@@ -1,14 +1,16 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
+
+# Direct imports from specific view modules
 from startups.views.startup_elasticsearch import StartupDocumentView
-from startups.views import StartupViewSet, StartupDetailView
+from startups.views.startup import StartupViewSet, StartupDetailView
 
 router = DefaultRouter()
 
-# Elasticsearch search endpoints
+# Elasticsearch-based search endpoint
 router.register(r'search', StartupDocumentView, basename='startups-search')
 
-# DB-backed restful endpoints
+# RESTful endpoints backed by the database
 router.register(r'profiles', StartupViewSet, basename='startups')
 
 urlpatterns = router.urls + [

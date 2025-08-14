@@ -1,7 +1,10 @@
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenBlacklistView
-from .views import CustomTokenObtainPairView
-from .views import CustomPasswordResetView, CustomPasswordResetConfirmView
+from .views import (
+    CustomTokenObtainPairView,
+    CustomPasswordResetView,
+    CustomPasswordResetConfirmView,
+    TokenBlacklistView,
+)
 
 urlpatterns = [
     # ----------------------------------------
@@ -22,7 +25,7 @@ urlpatterns = [
     path('auth/', include('djoser.urls.jwt')),
 
     # ----------------------------------------
-    # JWT Logout endpoint
+    # JWT Logout endpoint (blacklist refresh token)
     # ----------------------------------------
     path('auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
 ]

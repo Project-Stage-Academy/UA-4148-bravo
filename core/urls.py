@@ -9,6 +9,8 @@ Versioning is applied via 'api/v1/' to support future evolution.
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from django.conf.urls.static import static
+
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -42,7 +44,7 @@ api_urlpatterns = [
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/', include(api_urlpatterns)),  # Only versioned API path is used
+    path('api/v1/', include(api_urlpatterns)),
 
     # API schema and docs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
@@ -51,14 +53,10 @@ urlpatterns = [
 
     # Healthcheck
     path('health/elasticsearch/', elasticsearch_healthcheck),
-    path('accounts/', include('allauth.urls')),
 ]
 
-# Serve static and media files only during local development.
-# In production, use a web server (e.g., Nginx) or object storage (e.g., AWS S3).
+# Serve static and media files only during local development
 if settings.DEBUG:
-    from django.conf.urls.static import static
-
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
