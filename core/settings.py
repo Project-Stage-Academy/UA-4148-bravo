@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     # Elasticsearch
     'django_elasticsearch_dsl',
+    'django_elasticsearch_dsl_drf',
 
     # OAuth
     'allauth',
@@ -92,6 +93,12 @@ SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 AUTH_USER_MODEL = 'users.User'
+
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'localhost:9200'
+    }
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
