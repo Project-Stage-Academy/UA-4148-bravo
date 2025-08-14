@@ -390,7 +390,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                 if the pending email is already used by another user.
         """
         if not self.pending_email:
-            raise ValidationError("No pending email to confirm.")
+            raise ValidationError("No pending email to confirm.", code="no_pending_email")
         
         normalized_email = self.pending_email.strip().lower()
 
