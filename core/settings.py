@@ -17,6 +17,8 @@ ALLOWED_HOSTS = config(
 
 # Application definition
 
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+
 INSTALLED_APPS = [
     'daphne',
     'channels',
@@ -44,7 +46,6 @@ INSTALLED_APPS = [
 
     # Elasticsearch
     'django_elasticsearch_dsl',
-    'django_elasticsearch_dsl_drf',
 
     # OAuth
     'allauth',
@@ -94,12 +95,6 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 
 AUTH_USER_MODEL = 'users.User'
 
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': 'localhost:9200'
-    }
-}
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -112,6 +107,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'user': '5/minute',
         'anon': '2/minute',
+        'resend_email': '5/minute',
+        
     },
 }
 
@@ -131,16 +128,6 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'user_id',
     'USER_ID_CLAIM': 'user_id',
 }
-
-# Backend for password recovery system
-
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.sendgrid.net'
-EMAIL_PORT = 587
-EMAIL_HOST_USER = 'apikey'
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
@@ -170,8 +157,29 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Email Configuration (for development)
-DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.sendgrid.net'
+    EMAIL_PORT = 587
+    EMAIL_HOST_USER = 'apikey'
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+    EMAIL_USE_TLS = True
+    DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
+    
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = config('EMAIL_HOST')
+    EMAIL_PORT = 587
+    EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+    EMAIL_USE_TLS = True
+    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 
 MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",  # OAuth

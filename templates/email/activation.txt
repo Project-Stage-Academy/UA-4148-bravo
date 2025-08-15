@@ -1,0 +1,10 @@
+Hello {{ user.first_name|default:user.email }},
+
+Please verify your email address by clicking the link below:
+
+{{ verification_url }}
+
+If you didn't request this, please ignore this email.
+
+Thank you,
+The Team
