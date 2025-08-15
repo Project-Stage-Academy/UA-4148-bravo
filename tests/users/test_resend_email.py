@@ -97,24 +97,35 @@ class ResendEmailTests(APITestCase):
             mock_send_mail.reset_mock()
 
     @patch('users.views.ResendEmailView.throttle_classes', [])
-    def test_bad_input_invalid_email(self):
+    def test_bad_input_invalid_emails(self):
+        invalid_emails = [
+            "plainaddress",
+            "@missingusername.com",
+            "user@.com",
+            "user@domain..com",
+            "user@domain,com",
+            "user@domain com",
+        ]
+
         url = reverse('resend-email')
-        data = {'user_id': self.user.user_id, 'email': 'not-an-email'}
 
-        response = self.client.post(url, data, format='json')
-        self.user.refresh_from_db()
+        for email in invalid_emails:
+            with self.subTest(email=email):
+                data = {'user_id': self.user.user_id, 'email': email}
+                response = self.client.post(url, data, format='json')
+                self.user.refresh_from_db()
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('email', response.data)
-        expected_error = 'Enter a valid email address.'
-        errors = response.data['email']
-        if isinstance(errors, list):
-            self.assertTrue(any(expected_error in str(e) for e in errors))
-        else:
-            self.assertIn(expected_error, str(errors))
-        self.assertTrue(self.user.email.startswith('user_'))
-        if DEBUG_LOGS:
-            logger.info("Bad input test: invalid email correctly rejected")
+                self.assertEqual(response.status_code, 400)
+                self.assertIn('email', response.data)
+                expected_error = 'Enter a valid email address.'
+                errors = response.data['email']
+                if isinstance(errors, list):
+                    self.assertTrue(any(expected_error in str(e) for e in errors))
+                else:
+                    self.assertIn(expected_error, str(errors))
+                self.assertTrue(self.user.email.startswith('user_'))
+                if DEBUG_LOGS:
+                    logger.info("Invalid email '%s' correctly rejected", email)
 
     @patch('users.views.send_mail')
     @patch('users.views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
