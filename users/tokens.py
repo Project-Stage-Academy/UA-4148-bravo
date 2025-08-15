@@ -98,6 +98,10 @@ def make_token(user: User) -> str:
     """
     if user is None:
         raise ValueError("Cannot generate token: user must not be None.")
+    
+    if not user.is_active:
+        raise ValueError("Cannot generate token: user is inactive.")
+    
     return EMAIL_VERIFICATION_TOKEN.make_token(user)
 
 

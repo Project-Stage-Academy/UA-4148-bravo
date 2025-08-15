@@ -305,7 +305,7 @@ class ResendEmailView(APIView):
         verification_relative_url = reverse(
             'verify-email', kwargs={'user_id': user.user_id, 'token': token}
         )
-        verify_url = f"{settings.FRONTEND_URL}{verification_relative_url}?email={email_to_send}"
+        verify_url = f"{settings.FRONTEND_URL}{verification_relative_url}"
 
         context = {
             'user': user,
