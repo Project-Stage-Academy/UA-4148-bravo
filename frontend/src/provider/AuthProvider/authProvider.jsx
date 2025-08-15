@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { api, setAccessToken } from "../../api/client";
 import PropTypes from 'prop-types';
 
@@ -13,7 +13,9 @@ import PropTypes from 'prop-types';
  * @typedef {Object} Ctx
  * @property {User | null} user
  * @property {(e: string, p: string) => Promise<void>} login
- * @property {(data: {email:string;password:string;first_name?:string;last_name?:string}) => Promise<void>} register
+ * @property {(email: string, first_name: string | null, last_name: string | null, password: string, confirmPassword: string)
+ * => Promise<void>} register
+ * @property {(email: string, userId: number) => Promise<void>} resendRegisterEmail
  * @property {() => void} logout
  * @property {(email: string) => Promise<void>} requestReset
  * @property {(uid: string, token: string, newPassword: string) => Promise<void>} confirmReset
@@ -26,11 +28,11 @@ const AuthCtx = createContext(null);
  * Hook to access the authorization provider.
  * @returns {Ctx | null}
  */
-const useAuth = () => useContext(AuthCtx);
+const useAuthContext = () => useContext(AuthCtx);
 
 /**
  * Authorization Context Provider.
- * Environments the application and provides access to the authorization state.
+ * Envelops the application and provides access to the authorization state.
  * @param {{ children: import('react').ReactNode }} props
  * @returns {JSX.Element}
  */
@@ -50,7 +52,16 @@ function AuthProvider({ children }) {
      * @param {string} confirmPassword
      */
     async function register(email, first_name, last_name, password, confirmPassword) {
-        await api.post("/api/v1/auth/register/", { email: email, first_name: first_name, last_name: last_name, password: password, password2: confirmPassword });
+        await api.post('/api/v1/auth/register/', {
+            email,
+            first_name,
+            last_name,
+            password,
+            password2: confirmPassword,
+        }).catch((err) => {
+            console.error(err);
+            throw err;
+        });
     }
 
     /**
@@ -63,7 +74,13 @@ function AuthProvider({ children }) {
      * @param {number} userId
      */
     async function resendRegisterEmail(email, userId) {
-        await api.post("/api/v1/auth/register/resend/", { email: email, user_id: userId });
+        await api.post('/api/v1/auth/register/resend/', {
+            email: email,
+            user_id: userId,
+        }).catch((err) => {
+            console.error(err);
+            throw err;
+        });
     }
 
     /**
@@ -77,12 +94,21 @@ function AuthProvider({ children }) {
      * @returns {Promise<void>}
      */
     async function login(email, password) {
-        const { data } = await api.post("/api/v1/auth/jwt/create/", { email, password });
-        localStorage.setItem("refresh_token", data.refresh);
+        const { data } = await api.post('/api/v1/auth/jwt/create/', {
+            email,
+            password,
+        }).catch((err) => {
+            console.error(err);
+            throw err;
+        });
+
+        if (data.access) {
+            console.log('data.access is missing or null');
+        }
+
         setAccessToken(data.access);
         /*
-        Uncomment when the time comes
-        And may the force be with you
+        TODO
         await loadUser();
         */
     }
@@ -97,9 +123,15 @@ function AuthProvider({ children }) {
      */
     async function loadUser() {
         try {
-            const { data } = await api.get("/api/v1/auth/me/");
+            const { data } = await api.get("/api/v1/auth/me/")
+                .catch((err) => {
+                    console.error(err);
+                });
             setUser(data);
-        } catch { setUser(null); }
+        } catch {
+            console.log('User not found');
+            setUser(null);
+        }
     }
 
     /**
@@ -108,10 +140,10 @@ function AuthProvider({ children }) {
      * Req: { refresh }
      * Res: 205
      */
-    function logout() {
-        const refresh = localStorage.getItem("refresh_token");
-        if (refresh) { api.post("/api/v1/auth/jwt/blacklist/", { refresh }).catch(() => {}); }
-        localStorage.removeItem("refresh_token");
+    async function logout() {
+        await api.post("/api/v1/auth/jwt/blacklist/").catch(() => {
+            console.log('User not found');
+        });
         setAccessToken(null);
         setUser(null);
     }
@@ -126,7 +158,9 @@ function AuthProvider({ children }) {
      * @returns {Promise<void>}
      */
     async function requestReset(email) {
-        await api.post("/api/v1/auth/password/reset/", { email });
+        await api.post("/api/v1/auth/password/reset/", { email }).catch((err) => {
+            console.error(err);
+        });
     }
 
     /**
@@ -141,7 +175,9 @@ function AuthProvider({ children }) {
      * @returns {Promise<void>}
      */
     async function confirmReset(uid, token, new_password) {
-        await api.post("/api/v1/auth/password/reset/confirm/", { uid, token, new_password });
+        await api.post("/api/v1/auth/password/reset/confirm/", { uid, token, new_password }).catch((err) => {
+            console.error(err);
+        });
     }
 
     /**
@@ -150,15 +186,20 @@ function AuthProvider({ children }) {
      * Req: { refresh }
      * Res: 200 { access }
      */
-    async function refresh() {
-        const refresh = localStorage.getItem("refresh_token");
-        if (!refresh) return;
+    async function refreshToken(isMounted) {
         try {
-            const { data } = await api.post("/api/v1/auth/jwt/refresh/", { refresh });
-            setAccessToken(data.access);
-            await loadUser();
+            const { data } = await api.post("/api/v1/auth/jwt/refresh/").catch((err) => {
+                console.error(err);
+            });
+            if (!isMounted) return;
+
+            setAccessToken(data.access || null);
+            /*
+            * TODO
+            * await loadUser();
+            */
         } catch {
-            logout();
+            await logout();
         }
     }
 
@@ -166,21 +207,52 @@ function AuthProvider({ children }) {
      * Try to restore session on mount
      */
     useEffect(() => {
+        let isMounted = true;
+
         (async () => {
-            await refresh();
+            await refreshToken(isMounted);
         })();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     return (
-        <AuthCtx.Provider value={{ user, login, register, resendRegisterEmail, logout, requestReset, confirmReset }}>
+        <AuthCtx.Provider
+            value={useMemo(
+                () => ({
+                    user,
+                    login,
+                    register,
+                    resendRegisterEmail,
+                    logout,
+                    requestReset,
+                    confirmReset
+                }),
+                [
+                    user,
+                    login,
+                    register,
+                    resendRegisterEmail,
+                    logout,
+                    requestReset,
+                    confirmReset
+                ]
+            )}
+        >
             {children}
         </AuthCtx.Provider>
     );
 }
 
 AuthProvider.propTypes = {
-    children: PropTypes.node.isRequired,
+    children: PropTypes.node,
 };
 
-export { useAuth };
+AuthProvider.defaultProps = {
+    children: null,
+};
+
+export { useAuthContext };
 export default AuthProvider;

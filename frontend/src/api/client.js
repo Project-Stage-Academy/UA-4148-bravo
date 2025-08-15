@@ -1,9 +1,5 @@
 import axios from "axios";
 
-export const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL,
-});
-
 /**
  * @type {string | null}
  */
@@ -11,46 +7,78 @@ let accessTokenMemory = null;
 
 /**
  * @param {string | null} t
- * @returns {string}
+ * @returns {void}
  */
-export const setAccessToken = (t) => (accessTokenMemory = t);
-
-api.interceptors.request.use((cfg) => {
-    if (accessTokenMemory) cfg.headers.Authorization = `Bearer ${accessTokenMemory}`;
-    return cfg;
-});
-
+export const setAccessToken = (t) => { accessTokenMemory = t };
 
 /**
- * single-flight refresh
- * @type {Promise<string | null> | null}
+ * Creates an isolated API instance with support for single-flight refresh
  */
-let refreshing = null;
+function createApiClient() {
+    /**
+     * single-flight refresh
+     * @type {Promise<string | null> | null}
+     */
+    let refreshing = null;
 
-/**
- *
- * @returns {Promise<string | null>}
- */
-async function refreshAccess() {
-    const refresh = localStorage.getItem("refresh_token");
-    if (!refresh) return null;
-    const res = await axios.post(`${process.env.REACT_APP_API_URL}/auth/jwt/refresh/`, { refresh });
-    return res.data.access;
+    /**
+     * Refreshes access-token by refresh-token
+     * @returns {Promise<string | null>} New access token or null
+     * if no update is possible
+     */
+    const refreshAccess = async () => {
+        try {
+            const res = await axios.post(
+                `${process.env.REACT_APP_API_URL}/auth/jwt/refresh/`
+            );
+
+            if (res.data && typeof res.data.access === "string" && res.data.access.trim() !== "") {
+                return res.data.access;
+            } else {
+                console.warn("[refreshAccess] No access token in API response", res.data);
+                return null;
+            }
+        } catch (err) {
+            console.error("[refreshAccess] Failed to refresh access token", err);
+            return null;
+        }
+    }
+
+    // New instance
+    const instance = axios.create({
+        baseURL: process.env.REACT_APP_API_URL,
+        withCredentials: true
+    });
+
+    // Request interceptor
+    instance.interceptors.request.use((cfg) => {
+        if (accessTokenMemory) cfg.headers.Authorization = `Bearer ${accessTokenMemory}`;
+        return cfg;
+    });
+
+    // Response interceptor
+    instance.interceptors.response.use(
+        r => r,
+        async (err) => {
+            const original = err.config;
+
+            if (err.response?.status === 401 && !original._retry) {
+                original._retry = true;
+                refreshing ??= refreshAccess().finally(() => (refreshing = null));
+
+                const newAccess = await refreshing;
+
+                if (newAccess) {
+                    setAccessToken(newAccess);
+                    return instance(original);
+                }
+            }
+
+            return Promise.reject(err);
+        }
+    );
+
+    return instance;
 }
 
-api.interceptors.response.use(
-    r => r,
-    async (err) => {
-        const original = err.config;
-        if (err.response?.status === 401 && !original._retry) {
-            original._retry = true;
-            refreshing ??= refreshAccess().finally(() => (refreshing = null));
-            const newAccess = await refreshing;
-            if (newAccess) {
-                setAccessToken(newAccess);
-                return api(original);
-            }
-        }
-        return Promise.reject(err);
-    }
-);
+export const api = createApiClient();

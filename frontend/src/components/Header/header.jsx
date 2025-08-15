@@ -1,7 +1,7 @@
 import "./header.css";
 import { Link, useNavigate } from 'react-router-dom';
 import Search from "../Search/search";
-import {useAuth} from "../../provider/AuthProvider/authProvider";
+import {useAuthContext} from "../../provider/AuthProvider/authProvider";
 import PropTypes from 'prop-types';
 import Button from '../Button/button';
 
@@ -15,7 +15,7 @@ import Button from '../Button/button';
  */
 function Header({ show, hide, toggle, visible }) {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user } = useAuthContext();
 
     return (
         <header className={'header'}>

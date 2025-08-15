@@ -3,7 +3,7 @@ import Image from '../Image/image';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from '../Button/button';
 import { useState } from 'react';
-import { useAuth } from '../../provider/AuthProvider/authProvider';
+import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import FollowStar from '../FollowStar/followStar';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
@@ -41,7 +41,7 @@ import clsx from 'clsx';
  * />
  */
 function ParticipantCard({bcgImgSrc, ppImgSrc, alt, title, location, uid, className, followed, recentlyUpdated}) {
-    const { user } = useAuth();
+    const { user } = useAuthContext();
     const [isFollowed, setFollow] = useState(!!followed);
     const navigate = useNavigate();
     const isRecentlyUpdated = !!recentlyUpdated;
