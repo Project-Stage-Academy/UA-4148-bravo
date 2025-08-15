@@ -1,11 +1,11 @@
+import tempfile
 import time
 from channels.testing import ChannelsLiveServerTestCase
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 
@@ -22,17 +22,26 @@ class ChatTests(ChannelsLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+
+        options = Options()
+        options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument(f"--user-data-dir={tempfile.mkdtemp()}")
+
         try:
             cls.driver = webdriver.Chrome(
-                service=Service(ChromeDriverManager().install())
+                service=Service(ChromeDriverManager().install()),
+                options=options
             )
-        except:
-            super().tearDownClass()
-            raise
+        except Exception as e:
+            cls.tearDownClass()
+            raise RuntimeError(f"Failed to start Chrome WebDriver: {e}")
 
     @classmethod
     def tearDownClass(cls):
-        cls.driver.quit()
+        if hasattr(cls, "driver"):
+            cls.driver.quit()
         super().tearDownClass()
 
     def test_message_visible_to_same_room(self):
