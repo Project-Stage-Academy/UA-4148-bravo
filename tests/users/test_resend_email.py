@@ -29,9 +29,9 @@ class ResendEmailTests(APITestCase):
         if DEBUG_LOGS:
             logger.info("Created test user: %s", self.user.email)
 
-    def perform_resend_email_test(self, user_id, expected_status=202, email=None, user_obj=None):
+    def perform_resend_email_test(self, target_user_id, expected_status=202, email=None, user_obj=None):
         url = reverse('resend-email')
-        data = {'user_id': user_id}
+        data = {'user_id': target_user_id}
         if email:
             data['email'] = email
 
@@ -57,7 +57,7 @@ class ResendEmailTests(APITestCase):
 
         for i, (scenario, email, expected_pending_email, send_mail_expected) in enumerate(scenarios):
             if scenario == "unknown_user":
-                user_id = 999999
+                target_user_id = 999999
                 test_user = None
             else:
                 test_user = User.objects.create(
@@ -69,9 +69,9 @@ class ResendEmailTests(APITestCase):
                     email_verification_token='oldtoken',
                     email_verification_sent_at=timezone.now()
                 )
-                user_id = test_user.user_id
+                target_user_id = test_user.user_id
 
-            response = self.perform_resend_email_test(user_id, user_obj=test_user, email=email)
+            response = self.perform_resend_email_test(target_user_id, user_obj=test_user, email=email)
 
             if scenario in ["happy_path", "email_override"]:
                 self.assertIn('verification email', response.data['detail'])
