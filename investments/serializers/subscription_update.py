@@ -15,16 +15,22 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ['investor', 'project', 'amount', 'investment_share', 'created_at']
-        read_only_fields = ['investor', 'project', 'investment_share', 'created_at']
+        read_only_fields = ['investment_share', 'created_at']
+
+    def validate(self, data):
+        instance = getattr(self, 'instance', None)
+
+        if instance:
+            if 'project' in data and data['project'] != instance.project.id:
+                raise serializers.ValidationError({"project": _("Cannot change project of existing subscription.")})
+
+            if 'investor' in data and data['investor'] != instance.investor.id:
+                raise serializers.ValidationError({"investor": _("Cannot change investor of existing subscription.")})
+
+        return data
 
     def update(self, instance, validated_data):
         new_amount = validated_data.get('amount', instance.amount)
-
-        if 'project' in validated_data and validated_data['project'].pk != instance.project.pk:
-            raise serializers.ValidationError({"project": _("Cannot change project of existing subscription.")})
-
-        if 'investor' in validated_data and validated_data['investor'].pk != instance.investor.pk:
-            raise serializers.ValidationError({"investor": _("Cannot change investor of existing subscription.")})
 
         with transaction.atomic():
             project = Project.objects.select_for_update().get(pk=instance.project.pk)
@@ -35,6 +41,6 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
 
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
-            instance.save()
 
-        return instance
+            instance.save()
+            return instance
