@@ -1,9 +1,6 @@
 from django.test import TestCase
-from rest_framework.test import APIClient
 
-class FastAPITest(TestCase):
-    def setUp(self):
-        self.client = APIClient()
+class FastAPITestCase(TestCase):
 
     def test_hello(self):
         response = self.client.get("/api/fastapi/hello")
