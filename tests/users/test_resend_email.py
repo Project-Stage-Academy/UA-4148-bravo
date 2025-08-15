@@ -66,36 +66,37 @@ class ResendEmailTests(APITestCase):
         ]
 
         for scenario, email, send_mail_expected in scenarios:
-            if scenario == "unknown_user":
-                target_user_id = NON_EXISTENT_USER_ID
-                test_user = None
-            else:
-                test_user = self._create_test_user(email=email)
-                target_user_id = test_user.user_id
-
-            response = self.perform_resend_email_test(target_user_id, user_obj=test_user, email=email)
-
-            if scenario != "unknown_user":
-                self.assertIn('verification email', response.data.get('detail', ''))
-
-            if test_user:
-                self.assertTrue(test_user.email.endswith('@example.com'))
-                if email:
-                    self.assertEqual(test_user.pending_email, email)
+            with self.subTest(scenario=scenario, email=email):
+                if scenario == "unknown_user":
+                    target_user_id = NON_EXISTENT_USER_ID
+                    test_user = None
                 else:
-                    self.assertIsNone(test_user.pending_email)
+                    test_user = self._create_test_user(email=email)
+                    target_user_id = test_user.user_id
 
-            if send_mail_expected:
-                self.assertIsNotNone(mock_send_mail.call_args)
-                _, kwargs = mock_send_mail.call_args
-                recipient_list = kwargs.get('recipient_list', [])
-                self.assertIsNotNone(recipient_list)
-                if email:
-                    self.assertIn(email, recipient_list)
-            else:
-                mock_send_mail.assert_not_called()
+                response = self.perform_resend_email_test(target_user_id, user_obj=test_user, email=email)
 
-            mock_send_mail.reset_mock()
+                if scenario != "unknown_user":
+                    self.assertIn('verification email', response.data.get('detail', ''))
+
+                if test_user:
+                    self.assertTrue(test_user.email.endswith('@example.com'))
+                    if email:
+                        self.assertEqual(test_user.pending_email, email)
+                    else:
+                        self.assertIsNone(test_user.pending_email)
+
+                if send_mail_expected:
+                    self.assertIsNotNone(mock_send_mail.call_args)
+                    _, kwargs = mock_send_mail.call_args
+                    recipient_list = kwargs.get('recipient_list', [])
+                    self.assertIsNotNone(recipient_list)
+                    if email:
+                        self.assertIn(email, recipient_list)
+                else:
+                    mock_send_mail.assert_not_called()
+
+                mock_send_mail.reset_mock()
 
     @patch('users.views.ResendEmailView.throttle_classes', [])
     def test_bad_input_invalid_emails(self):
@@ -135,12 +136,13 @@ class ResendEmailTests(APITestCase):
         data = {'user_id': self.user.user_id}
 
         for i in range(ALLOWED_THROTTLE_REQUESTS):
-            response = self.client.post(url, data, format='json')
-            self.assertEqual(response.status_code, 202)
-            self.user.refresh_from_db()
-            self.assertTrue(self.user.email.startswith('user_'))
-            if DEBUG_LOGS:
-                logger.info("Throttling test: request %d successful", i + 1)
+            with self.subTest(request_number=i + 1):
+                response = self.client.post(url, data, format='json')
+                self.assertEqual(response.status_code, 202)
+                self.user.refresh_from_db()
+                self.assertTrue(self.user.email.startswith('user_'))
+                if DEBUG_LOGS:
+                    logger.info("Throttling test: request %d successful", i + 1)
 
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, 429)
