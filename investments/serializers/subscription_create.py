@@ -51,25 +51,26 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
             
         data['investor'] = investor
         return data
-    
+        
     def create(self, validated_data):
         """
-        Creates a new subscription. The funding update is now handled in the view
-        to ensure the entire operation is within a single transaction.
+        Creates a new subscription and atomically updates the project's funding.
         """
-        with transaction.atomic():
-            project_id = validated_data.get('project')
-            amount = validated_data.get('amount')
-            project = Project.objects.select_for_update().get(id=project_id)
+        project = validated_data['project']
+        investment_amount = validated_data['investment_amount']
+        investor = self.context['request'].user
 
-            if project.current_funding + amount > project.funding_goal:
-                raise serializers.ValidationError(
-                    {"amount": "The investment amount exceeds the remaining funding goal."}
-                )
-            
-            project.current_funding += amount
+        with transaction.atomic():
+            project.refresh_from_db()
+
+            project.current_funding = F('current_funding') + investment_amount
             project.save()
 
-            subscription = Subscription.objects.create(**validated_data)
+            project.refresh_from_db()
 
-            return subscription
+            subscription = Subscription.objects.create(
+                investor=investor,
+                **validated_data
+            )
+        
+        return subscription
