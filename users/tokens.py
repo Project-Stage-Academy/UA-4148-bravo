@@ -73,7 +73,8 @@ def decode_uidb64(uidb64: str) -> Optional[int]:
         uidb64 (str): Base64 encoded user ID.
 
     Returns:
-        Optional[Union[int, str]]: Decoded user ID as int if possible, else str. None if decoding fails.
+        Optional[Union[int, str]]: Decoded user ID as int if numeric, else str.
+                                   Returns None if decoding fails. 
     """
     try:
         decoded = force_str(urlsafe_base64_decode(uidb64))
