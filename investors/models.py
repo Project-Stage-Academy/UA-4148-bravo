@@ -106,12 +106,15 @@ class SavedStartup(models.Model):
         verbose_name_plural = 'Saved Startups'
 
     def clean(self):
-        if self.investor_id and self.startup_id:
-            inv_user_id = getattr(self.investor, 'user_id', None)
-            st_user_id = getattr(self.startup, 'user_id', None)
-            if inv_user_id and st_user_id and st_user_id == inv_user_id:
-                raise ValidationError("You cannot save your own startup.")
-        indexes = [
-            models.Index(fields=['company_name'], name='investor_company_name_idx'),
-            models.Index(fields=['stage'], name='investor_stage_idx'),
-        ]
+        if self.notes is None:
+            self.notes = ""
+
+        # безпечна перевірка "не можна зберегти свій власний стартап"
+        inv_user_id = getattr(self.investor, 'user_id', None) if getattr(self, 'investor_id', None) else None
+        st_user_id  = getattr(self.startup,  'user_id', None) if getattr(self, 'startup_id',  None) else None
+
+        if inv_user_id is not None and st_user_id is not None and inv_user_id == st_user_id:
+            raise ValidationError({"non_field_errors": ["You cannot save your own startup."]})
+
+    def __str__(self):
+        return f"{self.investor} saved {self.startup}"

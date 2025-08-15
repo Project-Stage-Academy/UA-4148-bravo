@@ -31,7 +31,6 @@ django-elasticsearch-dsl==7.4.0
 django-elasticsearch-dsl-drf>=0.22.4,<0.23
 drf-spectacular==0.28.0
 drf_yasg==1.21.10
-djoser==2.3.3
 elasticsearch==7.17.12
 factory_boy==3.3.3
 fastapi==0.116.1
