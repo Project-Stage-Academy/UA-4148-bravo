@@ -95,7 +95,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
 
         try:
             serializer.is_valid(raise_exception=True)
-        except ValidationError:
+        except ValidationError as e:
             if startup_id and SavedStartup.objects.filter(
                 investor=user.investor, startup_id=startup_id
             ).exists():
@@ -103,6 +103,17 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
                     "SavedStartup create failed: duplicate",
                     extra={"investor_id": user.investor.pk, "startup_id": startup_id, "by_user": user.pk},
                 )
+            detail = getattr(e, "detail", {})
+            if isinstance(detail, dict):
+                msgs = detail.get("startup")
+                if msgs:
+                    if not isinstance(msgs, (list, tuple)):
+                        msgs = [msgs]
+                    if any("own startup" in str(m).lower() for m in msgs):
+                        logger.warning(
+                            "SavedStartup create failed: own startup",
+                            extra={"startup_id": startup_id, "by_user": getattr(user, "pk", None)},
+                        )
             raise
 
         self.perform_create(serializer)
