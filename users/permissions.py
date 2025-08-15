@@ -8,8 +8,9 @@ logger = logging.getLogger(__name__)
 
 class IsInvestor(permissions.BasePermission):
     """
-    Allows access only to authenticated users with the 'investor' role.
+    Allows access only to authenticated users who are registered as investors.
     """
+
     def has_permission(self, request, view):
         user = request.user
 
@@ -17,18 +18,11 @@ class IsInvestor(permissions.BasePermission):
             logger.warning(f"Permission denied: Unauthenticated user tried to access {view.__class__.__name__}.")
             return False
 
-        user_role = getattr(user, 'role', None)
-        
-        if hasattr(user.__class__, 'Roles') and hasattr(user.__class__.Roles, 'INVESTOR'):
-            valid_role = user_role == user.__class__.Roles.INVESTOR
-        else:
-            valid_role = user_role == 'investor'
-
-        if valid_role:
-            logger.debug(f"Permission granted for user {user.id} with role '{user_role}'.")
+        if hasattr(user, 'investor'):
+            logger.debug(f"Permission granted for user {user.id} as investor.")
             return True
 
-        logger.warning(f"Permission denied for user {user.id}: Role '{user_role}' is not 'investor'.")
+        logger.warning(f"Permission denied for user {user.id}: Not an investor.")
         return False
 
 
@@ -36,6 +30,7 @@ class IsStartupUser(permissions.BasePermission):
     """
     Allows access only to authenticated users linked to a startup.
     """
+
     def has_permission(self, request, view):
         user = request.user
 
