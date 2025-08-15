@@ -1,73 +1,61 @@
 import logging
-from functools import wraps
+from rest_framework import permissions
 from django.core.exceptions import PermissionDenied
+from startups.models import Startup
 
 logger = logging.getLogger(__name__)
 
 
-def required_permissions(perms):
+class IsInvestor(permissions.BasePermission):
     """
-    Decorator to check if the user has all required permissions.
-
-    If the user lacks any of the specified permissions, a PermissionDenied
-    exception is raised and a warning is logged.
-
-    Args:
-        perms (list): A list of permission strings in the format
-                      '<app_label>.<permission_codename>'.
-
-    Returns:
-        function: The decorated view function with permission checks.
+    Allows access only to authenticated users with the 'investor' role.
     """
+    def has_permission(self, request, view):
+        user = request.user
 
-    def decorator(view_func):
-        """
-        Wraps the view function to enforce permission checks.
+        if not getattr(user, 'is_authenticated', False):
+            logger.warning(f"Permission denied: Unauthenticated user tried to access {view.__class__.__name__}.")
+            return False
 
-        Args:
-            view_func (function): The original view function to be wrapped.
+        user_role = getattr(user, 'role', None)
+        
+        if hasattr(user.__class__, 'Roles') and hasattr(user.__class__.Roles, 'INVESTOR'):
+            valid_role = user_role == user.__class__.Roles.INVESTOR
+        else:
+            valid_role = user_role == 'investor'
 
-        Returns:
-            function: The wrapped view function with permission enforcement.
-        """
+        if valid_role:
+            logger.debug(f"Permission granted for user {user.id} with role '{user_role}'.")
+            return True
 
-        @wraps(view_func)
-        def _wrapped_view(request, *args, **kwargs):
-            """
-            Checks the user's permissions before executing the view.
-
-            Args:
-                request (HttpRequest): The HTTP request object.
-                *args: Positional arguments for the view.
-                **kwargs: Keyword arguments for the view.
-
-            Raises:
-                PermissionDenied: If the user lacks any of the required permissions.
-
-            Returns:
-                HttpResponse: The result of the original view function.
-            """
-            user_identifier = getattr(request.user, 'username', str(request.user))
-            missing_perms = [perm for perm in perms if not request.user.has_perm(perm)]
-
-            if missing_perms:
-                logger.warning(
-                    f"Permission denied for user '{user_identifier}' — missing permissions: {missing_perms}"
-                )
-                raise PermissionDenied
-
-            logger.debug(
-                f"User '{user_identifier}' has all required permissions: {perms}"
-            )
-            return view_func(request, *args, **kwargs)
-
-        return _wrapped_view
-
-    return decorator
+        logger.warning(f"Permission denied for user {user.id}: Role '{user_role}' is not 'investor'.")
+        return False
 
 
-logger.debug("This is a debug message.")
-logger.info("Informational message.")
-logger.warning("Warning occurred!")
-logger.error("An error happened.")
-logger.critical("Critical issue!")
+class IsStartupUser(permissions.BasePermission):
+    """
+    Allows access only to authenticated users linked to a startup.
+    """
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not getattr(user, 'is_authenticated', False):
+            logger.warning(f"Permission denied: Unauthenticated user tried to access {view.__class__.__name__}.")
+            return False
+
+        startup_id = getattr(user, 'startup_id', None)
+        if startup_id and Startup.objects.filter(id=startup_id).exists():
+            logger.debug(f"Permission granted: User {user.id} linked to startup {startup_id}.")
+            return True
+
+        logger.warning(f"Permission denied: User {user.id} has no valid startup linked.")
+        return False
+
+    def has_object_permission(self, request, view, obj):
+        obj_user = getattr(obj, 'user', None)
+        if obj_user == request.user:
+            logger.debug(f"Object-level permission granted for user {request.user.id} on object {obj.pk}.")
+            return True
+
+        logger.warning(f"Object-level permission denied for user {request.user.id} on object {obj.pk}.")
+        return False

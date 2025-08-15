@@ -38,13 +38,3 @@ def validate_project_funding_limit(project: Project, amount, current_subscriptio
         raise ValidationError({
             "amount": _(f"Amount exceeds funding goal. Max allowed: {max_allowed:.2f}")
         })
-
-
-def calculate_investment_share(amount, funding_goal) -> Decimal:
-    """
-    Return the investment share as a percentage of the funding goal.
-    """
-    if funding_goal == 0:
-        return Decimal("0.00")
-    share = (amount / funding_goal) * 100
-    return share.quantize(Decimal('0.01'))

@@ -129,15 +129,30 @@ class TestDataMixin:
     ):
         """
         Create or get a project with optional custom fields.
+        Ensures startup and category are never None.
         """
         if startup is None:
-            startup = cls.startup
+            startup = getattr(cls, "startup", None)
+            if startup is None:
+                cls.setup_industries()
+                cls.setup_locations()
+                cls.setup_users()
+                startup = cls.get_or_create_startup(
+                    cls.startup_user,
+                    cls.industry,
+                    "Auto Created Startup",
+                    cls.startup_location
+                )
+
         if category is None:
-            category = cls.category
+            category = getattr(cls, "category", None)
+            if category is None:
+                category = cls.get_or_create_category()
+
         if email is None:
             email = f"project_{uuid.uuid4().hex[:6]}@example.com"
 
-        project, created = Project.objects.get_or_create(
+        project, _ = Project.objects.get_or_create(
             startup=startup,
             title=title,
             defaults={

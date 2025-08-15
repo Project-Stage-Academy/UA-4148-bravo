@@ -5,15 +5,12 @@
 
 /* Container */
 
-.container {
-    max-width: calc(1512px - 104px * 2);
-    margin: 0 auto;
-}
-
 .home--container {
     display: flex;
     flex-direction: column;
     align-items: center;
+    max-width: calc(1512px - 104px * 2);
+    margin: 0 auto;
 }
 
 .home--container__direction-row {
@@ -188,7 +185,7 @@
 }
 
 @media screen and (max-width: 1513px) {
-    .container {
+    .home--container {
         max-width: calc(768px - 24px * 2);
     }
 
@@ -221,7 +218,7 @@
 
     .participants--grid {
         grid-template-columns: repeat(2, 1fr);
-        width: auto;
+        width: 100%;
     }
 
     .target--grid {
@@ -234,7 +231,7 @@
 }
 
 @media screen and (max-width: 769px) {
-    .container {
+    .home--container {
         max-width: calc(375px - 16px * 2);
     }
 
