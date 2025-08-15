@@ -8,7 +8,6 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import UserRole
-from unittest.mock import Mock
 
 User = get_user_model()
 
@@ -28,7 +27,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
         """
         self.client = APIClient()
         self.auth_url = reverse('oauth_login')
-        self.role = UserRole.objects.get(role="user")
+        self.role, _ = UserRole.objects.get_or_create(role="user")
         
         # Test users                 
         self.oauth_user = User.objects.create_user(
@@ -276,6 +275,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
     # ------------------------------
     @patch("users.views.requests.get")
     def test_no_real_http_calls(self, mock_get):
+        from unittest.mock import Mock
         """
         Ensure no real HTTP request is made by mocking requests.get.
         """
