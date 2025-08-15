@@ -156,21 +156,20 @@ class SavedStartupSerializer(serializers.ModelSerializer):
         if not investor:
             raise serializers.ValidationError({'non_field_errors': ['Only authenticated investors can save startups.']})
 
-        if validated_data.get('notes') is None:
-            validated_data['notes'] = ''
+        startup = validated_data.get('startup')
+        status_val = validated_data.get('status', 'watching')
+        notes_val = validated_data.get('notes')
+        if notes_val is None:
+            notes_val = ''
 
-        obj = self.Meta.model(investor=investor, **validated_data)
+        with transaction.atomic():
+            obj, created = SavedStartup.objects.get_or_create(
+                investor=investor,
+                startup=startup,
+                defaults={'status': status_val, 'notes': notes_val},
+            )
 
-        try:
-            obj.clean()
-        except DjangoValidationError as e:
-            if hasattr(e, 'message_dict'):
-                raise serializers.ValidationError(e.message_dict)
-            raise serializers.ValidationError({'non_field_errors': e.messages})
-
-        try:
-            with transaction.atomic():
-                obj.save()
-                return obj
-        except IntegrityError:
+        if not created:
             raise serializers.ValidationError({'non_field_errors': ['Already saved.']})
+
+        return obj

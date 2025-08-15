@@ -55,14 +55,12 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
 
         payload = request.data or {}
 
-        # 1) Missing startup -> expected WARN for tests
         if "startup" not in payload or payload.get("startup") in (None, "", []):
             logger.warning(
                 "SavedStartup create failed: missing startup",
                 extra={"by_user": user.pk},
             )
 
-        # 2) Invalid status -> expected WARN for tests
         status_val = payload.get("status")
         if status_val is not None:
             status_field = SavedStartup._meta.get_field("status")
@@ -73,7 +71,6 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
                     extra={"status": status_val, "by_user": user.pk},
                 )
 
-        # 3) Duplicate pre-check -> WARN before serializer validation
         startup_id = payload.get("startup")
         if startup_id and SavedStartup.objects.filter(
             investor=user.investor, startup_id=startup_id
@@ -88,7 +85,6 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
         try:
             serializer.is_valid(raise_exception=True)
         except ValidationError:
-            # If UniqueTogetherValidator caught duplicate, log it here too
             if startup_id and SavedStartup.objects.filter(
                 investor=user.investor, startup_id=startup_id
             ).exists():

@@ -89,18 +89,15 @@ class SavedStartup(models.Model):
         ('passed', 'Passed'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='watching')
-    # щоб не ловити NULL у БД/тестах — краще мати дефолт
-    notes = models.TextField(blank=True, default="")   # <-- замість null=True
+    notes = models.TextField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
-        # нормалізуємо notes
         if self.notes is None:
             self.notes = ""
 
-        # заборона зберегти власний стартап
         inv_user_id = self.investor.user_id if getattr(self, 'investor_id', None) else None
         st_user_id  = self.startup.user_id  if getattr(self, 'startup_id',  None) else None
         if inv_user_id is not None and st_user_id is not None and inv_user_id == st_user_id:
@@ -117,4 +114,9 @@ class SavedStartup(models.Model):
         ordering = ['-saved_at']
         verbose_name = 'Saved Startup'
         verbose_name_plural = 'Saved Startups'
+        indexes = [
+            models.Index(fields=['investor', 'startup'], name='saved_investor_startup_idx'),
+            models.Index(fields=['status'], name='saved_status_idx'),
+            models.Index(fields=['-saved_at'], name='saved_saved_at_desc_idx'),
+        ]
 
