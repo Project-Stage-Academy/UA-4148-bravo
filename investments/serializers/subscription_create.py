@@ -1,51 +1,61 @@
 from decimal import Decimal
-
 from django.db import transaction
-from django.utils.translation import gettext_lazy as _
+from django.db.models import F
 from rest_framework import serializers
 
-from investors.models import Investor
+from investments.models import Subscription
 from projects.models import Project
-from ..models import Subscription
-from ..services.investment_share_service import calculate_investment_share
-from ..services.subscription_validation_service import validate_subscription_business_rules
-
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
-    investor = serializers.IntegerField()
-    project = serializers.IntegerField()
-    amount = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=Decimal("0.01"))
-
+    """
+    Serializer for creating a new investment subscription.
+    Handles validation for investment amount and project status.
+    Uses atomic updates to prevent race conditions.
+    """
     class Meta:
         model = Subscription
-        fields = ['id', 'investor', 'project', 'amount', 'investment_share', 'created_at']
-        read_only_fields = ['investment_share', 'created_at']
+        fields = ['project', 'amount']
 
     def validate(self, data):
-        try:
-            investor = Investor.objects.get(pk=data['investor'])
-        except Investor.DoesNotExist:
-            raise serializers.ValidationError({"investor": _("Investor does not exist.")})
+        """
+        Validates the investment amount and the state of the project.
+        """
+        project = data.get('project')
+        amount = data.get('amount')
+        user = self.context['request'].user
+        investor = getattr(user, 'investor', None)
 
-        try:
-            project = Project.objects.get(pk=data['project'])
-        except Project.DoesNotExist:
-            raise serializers.ValidationError({"project": _("Project does not exist.")})
+        if not project:
+            raise serializers.ValidationError({"project": "This field is required."})
 
-        amount = data['amount']
-        exclude_amount = Decimal('0.00')
+        if not investor:
+             raise serializers.ValidationError({"user": "The requesting user is not an investor."})
 
-        validate_subscription_business_rules(investor, project, amount, exclude_amount)
-        data['investor'] = investor
-        data['project'] = project
-        return data
-
-    def create(self, validated_data):
-        project = validated_data['project']
-        amount = validated_data['amount']
+        if project.startup and investor.user == project.startup.user:
+            raise serializers.ValidationError("You cannot invest in your own project.")
 
         with transaction.atomic():
             project_locked = Project.objects.select_for_update().get(pk=project.pk)
-            validate_subscription_business_rules(validated_data['investor'], project_locked, amount)
-            validated_data['investment_share'] = calculate_investment_share(amount, project_locked.funding_goal)
-            return Subscription.objects.create(**validated_data)
+            
+            current_funding = Decimal(str(project_locked.current_funding))
+            funding_goal = Decimal(str(project_locked.funding_goal))
+
+            if current_funding >= funding_goal:
+                raise serializers.ValidationError("This project is already fully funded.")
+
+            remaining_funding = funding_goal - current_funding
+            if amount > remaining_funding:
+                raise serializers.ValidationError(
+                    f"The investment amount exceeds the remaining funding. Only {remaining_funding} is available."
+                )
+            
+        data['investor'] = investor
+        return data
+
+    def create(self, validated_data):
+        """
+        Creates a new subscription. The funding update is now handled in the view
+        to ensure the entire operation is within a single transaction.
+        """
+        subscription = Subscription.objects.create(**validated_data)
+        return subscription
