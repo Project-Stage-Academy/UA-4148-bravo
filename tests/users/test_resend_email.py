@@ -10,6 +10,10 @@ from users.models import User, UserRole
 logger = logging.getLogger(__name__)
 DEBUG_LOGS = os.environ.get("DEBUG_TEST_LOGS") == "1"
 
+NON_EXISTENT_USER_ID = 999_999
+ALLOWED_THROTTLE_REQUESTS = 5
+
+
 class ResendEmailTests(APITestCase):
 
     @classmethod
@@ -55,9 +59,9 @@ class ResendEmailTests(APITestCase):
             ("unknown_user", None, None, False),
         ]
 
-        for i, (scenario, email, expected_pending_email, send_mail_expected) in enumerate(scenarios):
+        for scenario, email, expected_pending_email, send_mail_expected in scenarios:
             if scenario == "unknown_user":
-                target_user_id = 999999
+                target_user_id = NON_EXISTENT_USER_ID
                 test_user = None
             else:
                 test_user = User.objects.create(
@@ -118,9 +122,8 @@ class ResendEmailTests(APITestCase):
     def test_throttling_with_limit(self, mock_make_token, mock_send_mail):
         url = reverse('resend-email')
         data = {'user_id': self.user.user_id}
-        allowed_requests = 5
 
-        for i in range(allowed_requests):
+        for i in range(ALLOWED_THROTTLE_REQUESTS):
             response = self.client.post(url, data, format='json')
             self.assertEqual(response.status_code, 202)
             self.user.refresh_from_db()
@@ -130,9 +133,9 @@ class ResendEmailTests(APITestCase):
 
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, 429)
-        self.assertEqual(mock_send_mail.call_count, allowed_requests)
+        self.assertEqual(mock_send_mail.call_count, ALLOWED_THROTTLE_REQUESTS)
         if DEBUG_LOGS:
-            logger.info("Throttling limit reached as expected after %d requests", allowed_requests)
+            logger.info("Throttling limit reached as expected after %d requests", ALLOWED_THROTTLE_REQUESTS)
 
     @patch('users.views.ResendEmailView.throttle_classes', [])
     @patch('users.views.send_mail')
