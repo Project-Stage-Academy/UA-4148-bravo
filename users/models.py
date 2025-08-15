@@ -377,6 +377,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         """
         return cls.active_users.all()
     
+    @transaction.atomic
     def confirm_pending_email(self):
         """
         Confirm the user's pending email address.
@@ -397,14 +398,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         if User.objects.filter(email__iexact=normalized_email).exclude(pk=self.pk).exists():
             raise ValidationError({"pending_email": ["This email is already in use by another user."]}, code="email_taken")
         
-        with transaction.atomic():
-            self.email = normalized_email
-            self.pending_email = None
-            self.email_verification_sent_at = None
-            self.verified_at = None
-            self.save(update_fields=['email', 'pending_email', 'email_verification_sent_at', 'verified_at'])
+        self.email = normalized_email
+        self.pending_email = None
+        self.email_verification_sent_at = None
+        self.verified_at = None
+        self.save(update_fields=['email', 'pending_email', 'email_verification_sent_at', 'verified_at'])
         
-        logger.info(f"User {self.user_id} confirmed pending email. New email: {self.email}")
+        logger.info(f"User {self.user_id} confirmed pending email.")
+        
+        logger.warning(f"User {self.user_id} changed their email.")
         
     def update_email_verification_sent_at(self):
         """
