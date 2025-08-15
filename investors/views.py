@@ -12,12 +12,19 @@ logger = logging.getLogger(__name__)
 
 
 class InvestorViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Investor instances.
+    Optimized with select_related to avoid N+1 queries when fetching related user, industry, and location.
+    """
     queryset = Investor.objects.select_related("user", "industry", "location")
     serializer_class = InvestorSerializer
     permission_classes = [IsAuthenticated]
 
 
 class IsSavedStartupOwner(BasePermission):
+    """
+    Custom permission to allow only the owner of a SavedStartup (its investor) to modify or delete it.
+    """
     def has_object_permission(self, request, view, obj):
         if not hasattr(request.user, "investor"):
             return False
@@ -25,6 +32,10 @@ class IsSavedStartupOwner(BasePermission):
 
 
 class SavedStartupViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing SavedStartup instances.
+    Only authenticated investors who own the SavedStartup can modify/delete it.
+    """
     permission_classes = [IsAuthenticated, IsSavedStartupOwner]
     serializer_class = SavedStartupSerializer
 
