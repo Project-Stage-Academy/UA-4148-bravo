@@ -44,7 +44,6 @@ INSTALLED_APPS = [
 
     # Elasticsearch
     'django_elasticsearch_dsl',
-    'django_elasticsearch_dsl_drf',
 
     # OAuth
     'allauth',
@@ -93,12 +92,6 @@ SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 AUTH_USER_MODEL = 'users.User'
-
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': 'localhost:9200'
-    }
-}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -174,7 +167,7 @@ DJOSER = {
 
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
-    DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
+    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.sendgrid.net'
