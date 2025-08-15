@@ -3,6 +3,7 @@ import uuid
 import logging
 from django.urls import reverse
 from django.utils import timezone
+from django.conf import settings
 from rest_framework.test import APITestCase
 from unittest.mock import patch
 from users.models import User, UserRole
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 DEBUG_LOGS = os.environ.get("DEBUG_TEST_LOGS") == "1"
 
 NON_EXISTENT_USER_ID = 999_999
-ALLOWED_THROTTLE_REQUESTS = 5
+ALLOWED_THROTTLE_REQUESTS = getattr(settings, "API_THROTTLE_LIMIT", 5)
 
 
 class ResendEmailTests(APITestCase):
