@@ -1,6 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
-
+from django.core.exceptions import ValidationError
 from common.company import Company
 from common.enums import Stage
 
@@ -35,6 +35,15 @@ class Investor(Company):
         verbose_name="Fund Size",
         help_text="Size of the investor's fund, must not be negative"
     )
+    
+    bookmarks = models.ManyToManyField(
+        'startups.Startup',
+        through='investors.SavedStartup',
+        related_name='bookmarked_by',
+        blank=True,
+        verbose_name='Bookmarked startups',
+        help_text='Startups that this investor has bookmarked.',
+    )
 
     @property
     def user_id(self):
@@ -48,6 +57,60 @@ class Investor(Company):
         ordering = ["company_name"]
         verbose_name = "Investor"
         verbose_name_plural = "Investors"
+
+        indexes = [
+            models.Index(fields=['company_name'], name='investor_company_name_idx'),
+            models.Index(fields=['stage'], name='investor_stage_idx'),
+        ]
+        
+class SavedStartup(models.Model):
+    """
+    Intermediate model representing a startup saved (bookmarked) by an investor.
+    Stores additional metadata such as status, notes, and timestamps.
+    """
+    investor = models.ForeignKey(
+        'investors.Investor',
+        on_delete=models.PROTECT,
+        related_name='saved_startups',
+        db_column='investor_profile_id',
+    )
+    startup = models.ForeignKey(
+        'startups.Startup',
+        on_delete=models.PROTECT,
+        related_name='saved_by_investors',
+        db_column='startup_profile_id',
+    )
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    STATUS_CHOICES = [
+        ('watching', 'Watching'),
+        ('contacted', 'Contacted'),
+        ('negotiating', 'Negotiating'),
+        ('passed', 'Passed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='watching')
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.investor} saved {self.startup}"
+
+    class Meta:
+        db_table = 'saved_startups'
+        constraints = [
+            models.UniqueConstraint(fields=['investor', 'startup'], name='uniq_investor_startup')
+        ]
+        ordering = ['-saved_at']
+        verbose_name = 'Saved Startup'
+        verbose_name_plural = 'Saved Startups'
+
+    def clean(self):
+        if self.investor_id and self.startup_id:
+            inv_user_id = getattr(self.investor, 'user_id', None)
+            st_user_id = getattr(self.startup, 'user_id', None)
+            if inv_user_id and st_user_id and st_user_id == inv_user_id:
+                raise ValidationError("You cannot save your own startup.")
         indexes = [
             models.Index(fields=['company_name'], name='investor_company_name_idx'),
             models.Index(fields=['stage'], name='investor_stage_idx'),
