@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenBlacklistView
 from .views import CustomTokenObtainPairView
 from .views import CustomPasswordResetView, CustomPasswordResetConfirmView
 
+
 urlpatterns = [
     # ----------------------------------------
     # Custom password recovery endpoints

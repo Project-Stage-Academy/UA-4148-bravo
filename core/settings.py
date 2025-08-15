@@ -69,8 +69,8 @@ SOCIALACCOUNT_PROVIDERS = {
         },
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {
-            'access_type': 'online',
-            'prompt': 'select_account',
+            'access_type': 'offline',
+            'prompt': 'consent', 
         },
         'FETCH_USERINFO': True,
     },

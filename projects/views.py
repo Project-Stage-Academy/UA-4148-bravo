@@ -69,11 +69,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """
         Handle PATCH requests for partially updating a project.
         """
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if 'startup' in request.data or 'startup_id' in request.data:
+            return Response(
+                {"detail": "Cannot change the startup of a project."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().partial_update(request, *args, **kwargs)
 
 
 class ProjectDocumentView(DocumentViewSet):

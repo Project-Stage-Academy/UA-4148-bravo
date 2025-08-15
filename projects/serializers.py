@@ -94,6 +94,7 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
             'email', 'has_patents', 'is_participant', 'is_active',
             'created_at', 'updated_at'
         ]
+        read_only_fields = ('startup_id',)
 
     def validate_funding_goal(self, value):
         """

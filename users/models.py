@@ -368,6 +368,16 @@ class User(AbstractBaseUser, PermissionsMixin):
             QuerySet: QuerySet of all users.
         """
         return cls.active_users.all()
+    
+    @property
+    def id(self):
+        """Provides 'id' as an alias for 'user_id' for Django compatibility.
+    
+        Django's ORM and some built-in components expect a conventional 'id' field
+        as the primary key. This property allows the model to work with Django 
+        conventions while maintaining our preferred 'user_id' field name.
+        """
+        return self.user_id
 
 
 class UserRole(models.Model):

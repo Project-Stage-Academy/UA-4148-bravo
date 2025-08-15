@@ -13,21 +13,21 @@ from django.conf.urls.static import static
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
-from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView, CustomPasswordResetView, \
-    CustomPasswordResetConfirmView
+from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView, OAuthTokenObtainPairView
 
 # API endpoints grouped by app
 api_urlpatterns = [
+
     # User authentication endpoints
     path('users/', include('users.urls')),  # User-specific endpoints
-
+    
     # Authentication endpoints
     path('auth/register/', UserRegistrationView.as_view(), name='user_register'),
     path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
     path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
     path('auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
-    path('auth/verify-email/<int:user_id>/<str:token>/',
-        VerifyEmailView.as_view(),
+    path('auth/verify-email/<int:user_id>/<str:token>/', 
+        VerifyEmailView.as_view(), 
         name='verify-email'),
     # Custom OAuth endpoint
     path('oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),
