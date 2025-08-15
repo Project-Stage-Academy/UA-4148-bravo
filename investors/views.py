@@ -12,11 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class InvestorViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing Investor investors.
-    Optimized to avoid N+1 queries when accessing startup_details.
-    """
-    queryset = Investor.objects.select_related('user', 'industry', 'location')
+    queryset = Investor.objects.select_related("user", "industry", "location")
     serializer_class = InvestorSerializer
     permission_classes = [IsAuthenticated]
 
@@ -59,14 +55,14 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
 
         payload = request.data or {}
 
-        # 1) Missing startup -> очікуваний WARN для тесту
+        # 1) Missing startup -> expected WARN for tests
         if "startup" not in payload or payload.get("startup") in (None, "", []):
             logger.warning(
                 "SavedStartup create failed: missing startup",
                 extra={"by_user": user.pk},
             )
 
-        # 2) Invalid status -> очікуваний WARN для тесту
+        # 2) Invalid status -> expected WARN for tests
         status_val = payload.get("status")
         if status_val is not None:
             status_field = SavedStartup._meta.get_field("status")
@@ -77,7 +73,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
                     extra={"status": status_val, "by_user": user.pk},
                 )
 
-        # 3) DUPLICATE -> WARNING до валідації серіалізатора
+        # 3) Duplicate pre-check -> WARN before serializer validation
         startup_id = payload.get("startup")
         if startup_id and SavedStartup.objects.filter(
             investor=user.investor, startup_id=startup_id
@@ -89,10 +85,10 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=payload)
 
-        # Якщо дубль зловився валідатором (UniqueTogetherValidator) — залогуємо тут і пробросимо помилку
         try:
             serializer.is_valid(raise_exception=True)
         except ValidationError:
+            # If UniqueTogetherValidator caught duplicate, log it here too
             if startup_id and SavedStartup.objects.filter(
                 investor=user.investor, startup_id=startup_id
             ).exists():
@@ -140,7 +136,6 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
         try:
             instance = serializer.save(investor=user.investor)
         except IntegrityError:
-            # fallback — якщо дубль впав на рівні БД
             logger.warning(
                 "SavedStartup create failed: duplicate",
                 extra={"investor_id": user.investor.pk, "startup_id": startup.pk, "by_user": user.pk},

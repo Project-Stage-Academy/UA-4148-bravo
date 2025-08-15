@@ -89,10 +89,23 @@ class SavedStartup(models.Model):
         ('passed', 'Passed'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='watching')
-    notes = models.TextField(blank=True, null=True)
+    # щоб не ловити NULL у БД/тестах — краще мати дефолт
+    notes = models.TextField(blank=True, default="")   # <-- замість null=True
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
+    def clean(self):
+        # нормалізуємо notes
+        if self.notes is None:
+            self.notes = ""
+
+        # заборона зберегти власний стартап
+        inv_user_id = self.investor.user_id if getattr(self, 'investor_id', None) else None
+        st_user_id  = self.startup.user_id  if getattr(self, 'startup_id',  None) else None
+        if inv_user_id is not None and st_user_id is not None and inv_user_id == st_user_id:
+            raise ValidationError({"non_field_errors": ["You cannot save your own startup."]})
+
     def __str__(self):
         return f"{self.investor} saved {self.startup}"
 
@@ -105,16 +118,3 @@ class SavedStartup(models.Model):
         verbose_name = 'Saved Startup'
         verbose_name_plural = 'Saved Startups'
 
-    def clean(self):
-        if self.notes is None:
-            self.notes = ""
-
-        # безпечна перевірка "не можна зберегти свій власний стартап"
-        inv_user_id = getattr(self.investor, 'user_id', None) if getattr(self, 'investor_id', None) else None
-        st_user_id  = getattr(self.startup,  'user_id', None) if getattr(self, 'startup_id',  None) else None
-
-        if inv_user_id is not None and st_user_id is not None and inv_user_id == st_user_id:
-            raise ValidationError({"non_field_errors": ["You cannot save your own startup."]})
-
-    def __str__(self):
-        return f"{self.investor} saved {self.startup}"
