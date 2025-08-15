@@ -1,6 +1,6 @@
+import os
 import uuid
 import logging
-import os
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
@@ -21,17 +21,20 @@ class ResendEmailTests(APITestCase):
         cls.user_role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
 
     def setUp(self):
-        self.user = User.objects.create(
-            email=f"user_{uuid.uuid4().hex[:10]}@example.com",
+        self.user = self._create_test_user()
+        if DEBUG_LOGS:
+            logger.info("Created test user: %s", self.user.email)
+
+    def _create_test_user(self, email=None, is_active=False, token='oldtoken'):
+        return User.objects.create(
+            email=email or f"user_{uuid.uuid4().hex[:10]}@example.com",
             first_name='Test',
             last_name='User',
             role=self.user_role,
-            is_active=False,
-            email_verification_token='oldtoken',
+            is_active=is_active,
+            email_verification_token=token,
             email_verification_sent_at=timezone.now()
         )
-        if DEBUG_LOGS:
-            logger.info("Created test user: %s", self.user.email)
 
     def perform_resend_email_test(self, target_user_id, expected_status=202, email=None, user_obj=None):
         url = reverse('resend-email')
@@ -40,10 +43,12 @@ class ResendEmailTests(APITestCase):
             data['email'] = email
 
         response = self.client.post(url, data, format='json')
+
         if user_obj:
             user_obj.refresh_from_db()
 
         self.assertEqual(response.status_code, expected_status)
+
         if expected_status == 202 and DEBUG_LOGS:
             logger.info("Received 202 response with detail: %s", response.data.get('detail'))
 
@@ -54,44 +59,38 @@ class ResendEmailTests(APITestCase):
     @patch('users.views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
     def test_resend_email_scenarios(self, mock_make_token, mock_send_mail):
         scenarios = [
-            ("happy_path", None, None, True),
-            ("email_override", "newemail@example.com", "newemail@example.com", True),
-            ("unknown_user", None, None, False),
+            ("happy_path", None, True),
+            ("email_override", "newemail@example.com", True),
+            ("unknown_user", None, False),
         ]
 
-        for scenario, email, expected_pending_email, send_mail_expected in scenarios:
+        for scenario, email, send_mail_expected in scenarios:
             if scenario == "unknown_user":
                 target_user_id = NON_EXISTENT_USER_ID
                 test_user = None
             else:
-                test_user = User.objects.create(
-                    email=f"user_{uuid.uuid4().hex[:10]}@example.com",
-                    first_name='Test',
-                    last_name='User',
-                    role=self.user_role,
-                    is_active=False,
-                    email_verification_token='oldtoken',
-                    email_verification_sent_at=timezone.now()
-                )
+                test_user = self._create_test_user(email=email)
                 target_user_id = test_user.user_id
 
             response = self.perform_resend_email_test(target_user_id, user_obj=test_user, email=email)
 
-            if scenario in ["happy_path", "email_override"]:
-                self.assertIn('verification email', response.data['detail'])
+            if scenario != "unknown_user":
+                self.assertIn('verification email', response.data.get('detail', ''))
 
             if test_user:
-                if expected_pending_email:
-                    self.assertEqual(test_user.pending_email, expected_pending_email)
+                self.assertTrue(test_user.email.endswith('@example.com'))
+                if email:
+                    self.assertEqual(test_user.pending_email, email)
                 else:
                     self.assertIsNone(test_user.pending_email)
-                self.assertTrue(test_user.email.endswith('@example.com'))
 
             if send_mail_expected:
-                mock_send_mail.assert_called()
+                self.assertIsNotNone(mock_send_mail.call_args)
+                _, kwargs = mock_send_mail.call_args
+                recipient_list = kwargs.get('recipient_list', [])
+                self.assertIsNotNone(recipient_list)
                 if email:
-                    _, kwargs = mock_send_mail.call_args
-                    self.assertIn(email, kwargs['recipient_list'])
+                    self.assertIn(email, recipient_list)
             else:
                 mock_send_mail.assert_not_called()
 
@@ -140,14 +139,10 @@ class ResendEmailTests(APITestCase):
     @patch('users.views.ResendEmailView.throttle_classes', [])
     @patch('users.views.send_mail')
     def test_already_verified_user(self, mock_send_mail):
-        active_user = User.objects.create(
+        active_user = self._create_test_user(
             email=f"active_{uuid.uuid4().hex[:10]}@example.com",
-            first_name='Active',
-            last_name='User',
-            role=self.user_role,
             is_active=True,
-            email_verification_token=None,
-            email_verification_sent_at=None
+            token=None
         )
         if DEBUG_LOGS:
             logger.info("Already verified user created: %s", active_user.email)
