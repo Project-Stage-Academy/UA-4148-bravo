@@ -80,7 +80,11 @@ function AuthProvider({ children }) {
         const { data } = await api.post("/api/v1/auth/jwt/create/", { email, password });
         localStorage.setItem("refresh_token", data.refresh);
         setAccessToken(data.access);
+        /*
+        Uncomment when the time comes
+        And may the force be with you
         await loadUser();
+        */
     }
 
     /**
