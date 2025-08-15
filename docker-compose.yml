@@ -91,6 +91,18 @@ services:
     networks:
       - forum
 
+  test:
+    build: .
+    container_name: test-runner
+    depends_on:
+      - db
+      - elasticsearch
+    volumes:
+      - .:/app
+    command: test
+    networks:
+      - forum
+
 volumes:
   postgres_data:
   pgadmin_data:
