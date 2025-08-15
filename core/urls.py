@@ -29,9 +29,10 @@ api_urlpatterns = [
     path('auth/verify-email/<int:user_id>/<str:token>/', 
         VerifyEmailView.as_view(), 
         name='verify-email'),
+    path('auth/resend-email/', ResendEmailView.as_view(), name='resend-email'),
+    
     # Custom OAuth endpoint
     path('oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),    
-    path('auth/resend-email/', ResendEmailView.as_view(), name='resend-email'),
     
 
     # Project-related endpoints
