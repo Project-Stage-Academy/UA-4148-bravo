@@ -51,6 +51,7 @@ urlpatterns = [
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('health/elasticsearch/', elasticsearch_healthcheck),
     path('accounts/', include('allauth.urls')),
+    path("api/v1/auth/", include("users.urls")),
 ]
 
 if settings.DEBUG:

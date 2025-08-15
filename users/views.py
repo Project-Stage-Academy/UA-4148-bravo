@@ -38,6 +38,10 @@ from .serializers import (
     UserSerializer,
 )
 
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from .serializers import CurrentUserSerializer
+from rest_framework.permissions import IsAuthenticated
+
 logger = logging.getLogger(__name__)
 
 class RegisterThrottle(AnonRateThrottle):
@@ -784,3 +788,18 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
             "access": str(refresh.access_token),
             "user": UserSerializer(user).data
         })    
+
+@extend_schema(
+    operation_id="auth_me",
+    summary="Get current user",
+    responses={200: CurrentUserSerializer, 401: OpenApiResponse(description="Unauthorized")},
+    tags=["Auth"],
+)
+class MeView(APIView):
+    """Returns profile info of the currently authenticated user."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = CurrentUserSerializer(request.user)
+        return Response(serializer.data)
+
