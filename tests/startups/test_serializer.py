@@ -1,6 +1,6 @@
-from rest_framework import serializers
-from startups.models import Startup
+from startups.serializers.startup_full import StartupSerializer
 from tests.test_base_case import BaseAPITestCase
+from startups.models import Startup
 
 class StartupSerializerTest(BaseAPITestCase):
     """ Tests for Startup serializer validation. """
@@ -16,8 +16,8 @@ class StartupSerializerTest(BaseAPITestCase):
             'founded_year': 2023,
             'email': 'valid@example.com',
         }
-        serializer = serializers.ModelSerializer(instance=Startup, data=data)
-        self.assertTrue(serializer.is_valid())
+        serializer = StartupSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_serializer_invalid_data(self):
         """ Serializer rejects empty company_name. """
@@ -30,9 +30,9 @@ class StartupSerializerTest(BaseAPITestCase):
             'founded_year': 2023,
             'email': 'valid@example.com',
         }
-        serializer = serializers.ModelSerializer(instance=Startup, data=data)
+        serializer = StartupSerializer(data=data)
         self.assertFalse(serializer.is_valid())
-
+        self.assertIn('company_name', serializer.errors)
 
 
 
