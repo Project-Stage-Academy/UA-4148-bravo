@@ -1,13 +1,15 @@
 from decimal import Decimal, ROUND_HALF_UP
 
 
-def calculate_investment_share(amount: Decimal, total_funding_goal: Decimal) -> Decimal:
+def calculate_investment_share(amount, funding_goal) -> Decimal:
     """
-    Calculate the investment share as a percentage of the total funding goal, rounded to 2 decimals.
+    Return the investment share as a percentage of the funding goal.
     """
-    if total_funding_goal == 0:
-        return Decimal('0.00')
-    return (amount / total_funding_goal * Decimal('100.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    if funding_goal == 0:
+        return Decimal("0.00")
+
+    share = (Decimal(amount) / Decimal(funding_goal) * Decimal("100"))
+    return share.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def recalculate_investment_shares(project):

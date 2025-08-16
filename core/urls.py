@@ -13,10 +13,11 @@ from django.conf.urls.static import static
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
-from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView
+from users.views import CustomTokenObtainPairView, UserRegistrationView, VerifyEmailView, OAuthTokenObtainPairView, ResendEmailView
 
 # API endpoints grouped by app
 api_urlpatterns = [
+
     # User authentication endpoints
     path('users/', include('users.urls')),  # User-specific endpoints
     
@@ -28,6 +29,10 @@ api_urlpatterns = [
     path('auth/verify-email/<int:user_id>/<str:token>/', 
         VerifyEmailView.as_view(), 
         name='verify-email'),
+    path('auth/resend-email/', ResendEmailView.as_view(), name='resend-email'),
+    
+    # Custom OAuth endpoint
+    path('oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),    
     
 
     # Project-related endpoints
@@ -38,9 +43,6 @@ api_urlpatterns = [
 
     # Investor-related endpoints
     path('investors/', include('investors.urls')),
-  
-    # OAuth endpoints
-    path('accounts/', include('allauth.urls')),
 ]
 
 urlpatterns = [
