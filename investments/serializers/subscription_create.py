@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from investments.models import Subscription
 from projects.models import Project
-from profiles.models import Investor
+from investors.models import Investor
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
     """
