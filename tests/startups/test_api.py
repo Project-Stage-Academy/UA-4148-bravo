@@ -1,4 +1,4 @@
-# tests/startups/test_api.py
+from unittest.mock import patch
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -10,7 +10,7 @@ from tests.test_base_case import BaseAPITestCase
 
 
 class StartupAPITests(DisableElasticsearchSignalsMixin, BaseAPITestCase, TestCase):
-    """API tests for Startup endpoints (CRUD, filtering, search)."""
+    """ API tests for Startup endpoints (CRUD, filtering, search). """
 
     def setUp(self):
         super().setUp()
@@ -24,7 +24,7 @@ class StartupAPITests(DisableElasticsearchSignalsMixin, BaseAPITestCase, TestCas
             'founded_year': 2020,
             'email': 'great@example.com',
         }
-        self.url = reverse('startup-list')
+        self.url = reverse('startups-list')
 
     def test_create_startup_success(self):
         response = self.client.post(self.url, self.startup_data, format='json')

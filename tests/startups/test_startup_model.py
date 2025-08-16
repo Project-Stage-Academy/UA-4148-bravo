@@ -1,6 +1,6 @@
-# tests/startups/test_startup_model.py
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+
 from common.enums import Stage
 from startups.models import Startup
 from tests.startups.test_disable_signal_mixin import DisableElasticsearchSignalsMixin
@@ -8,7 +8,7 @@ from tests.test_base_case import BaseAPITestCase
 
 
 class StartupModelCleanTests(DisableElasticsearchSignalsMixin, BaseAPITestCase, TestCase):
-    """Tests for Startup.clean() and model validations."""
+    """ Tests for Startup.clean() and model validations """
 
     def test_valid_clean_should_pass(self):
         startup = Startup(

@@ -1,12 +1,12 @@
-# tests/startups/test_serializer.py
 from django.test import TestCase
+
 from startups.serializers.startup_full import StartupSerializer
 from tests.startups.test_disable_signal_mixin import DisableElasticsearchSignalsMixin
 from tests.test_base_case import BaseAPITestCase
 
 
 class StartupSerializerTests(DisableElasticsearchSignalsMixin, BaseAPITestCase, TestCase):
-    """Tests for StartupSerializer."""
+    """ Tests for StartupSerializer """
 
     def test_valid_startup_data(self):
         data = {
@@ -39,6 +39,7 @@ class StartupSerializerTests(DisableElasticsearchSignalsMixin, BaseAPITestCase, 
         serializer = StartupSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('company_name', serializer.errors)
+
 
 
 
