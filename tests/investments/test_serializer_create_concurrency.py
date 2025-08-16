@@ -7,7 +7,8 @@ from django.db.models import F
 from django.test import TransactionTestCase
 from rest_framework import serializers
 
-from investments.models import Subscription, Project
+from investments.models import Subscription
+from projects.models import Project
 from investments.serializers.subscription_create import SubscriptionCreateSerializer
 from investments.services.subscriptions import get_total_subscribed
 from investors.models import Investor
