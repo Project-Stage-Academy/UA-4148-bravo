@@ -11,5 +11,4 @@ router.register(r'projects-documents', ProjectDocumentView, basename='project-do
 urlpatterns = [
     path('', include(router.urls)),
     path('search/', ProjectDocumentView.as_view({'get': 'list'}), name='project-search'),
-    path('subscriptions/create/', SubscriptionCreateView.as_view(), name='subscription-create'),
 ]

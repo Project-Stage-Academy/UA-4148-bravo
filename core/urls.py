@@ -43,6 +43,7 @@ api_urlpatterns = [
 
     # Investor-related endpoints
     path('investors/', include('investors.urls')),
+    path('investments/', include('investments.urls'))
 ]
 
 urlpatterns = [

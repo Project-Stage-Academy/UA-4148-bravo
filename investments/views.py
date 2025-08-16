@@ -8,7 +8,7 @@ import logging
 
 from .models import Subscription
 from projects.models import Project
-from projects.serializers import SubscriptionCreateSerializer
+from investments.serializers.subscription_create import SubscriptionCreateSerializer 
 from users.permissions import IsInvestor
 
 logger = logging.getLogger(__name__)

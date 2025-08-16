@@ -1,51 +1,73 @@
 from decimal import Decimal
-
 from django.db import transaction
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from investors.models import Investor
+from investments.models import Subscription
 from projects.models import Project
-from ..models import Subscription
-from ..services.investment_share_service import calculate_investment_share
-from ..services.subscription_validation_service import validate_subscription_business_rules
-
+from investors.models import Investor
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
-    investor = serializers.IntegerField()
-    project = serializers.IntegerField()
-    amount = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=Decimal("0.01"))
-
+    """
+    Serializer for creating a new investment subscription.
+    Handles validation for investment amount and project status.
+    Uses atomic updates to prevent race conditions.
+    """
     class Meta:
         model = Subscription
-        fields = ['id', 'investor', 'project', 'amount', 'investment_share', 'created_at']
-        read_only_fields = ['investment_share', 'created_at']
+        fields = ['project', 'amount']
+        read_only_fields = ['investor']
 
     def validate(self, data):
+        """
+        Validates the investment amount and the state of the project.
+        """
+        project = data.get('project')
+        amount = data.get('amount')
+        request = self.context.get('request')
+        user = request.user
+
         try:
-            investor = Investor.objects.get(pk=data['investor'])
+            investor = user.investor
         except Investor.DoesNotExist:
-            raise serializers.ValidationError({"investor": _("Investor does not exist.")})
+            raise serializers.ValidationError({"investor": "The requesting user is not an investor."})
 
-        try:
-            project = Project.objects.get(pk=data['project'])
-        except Project.DoesNotExist:
-            raise serializers.ValidationError({"project": _("Project does not exist.")})
+        if project.startup and investor.user == project.startup.user:
+            raise serializers.ValidationError({"non_field_errors": "You cannot invest in your own project."})
 
-        amount = data['amount']
-        exclude_amount = Decimal('0.00')
-
-        validate_subscription_business_rules(investor, project, amount, exclude_amount)
+        if project.current_funding >= project.funding_goal:
+            raise serializers.ValidationError({"project": "This project is already fully funded."})
+        
+        if amount is not None:
+            remaining_funding = project.funding_goal - project.current_funding
+            if amount > remaining_funding:
+                raise serializers.ValidationError({"amount": "The investment amount exceeds the remaining funding."})
+        
         data['investor'] = investor
-        data['project'] = project
         return data
-
+        
     def create(self, validated_data):
-        project = validated_data['project']
+        """
+        Creates a new subscription instance within a transaction to prevent race conditions.
+        """
         amount = validated_data['amount']
+        project = validated_data['project']
 
         with transaction.atomic():
+
             project_locked = Project.objects.select_for_update().get(pk=project.pk)
-            validate_subscription_business_rules(validated_data['investor'], project_locked, amount)
-            validated_data['investment_share'] = calculate_investment_share(amount, project_locked.funding_goal)
-            return Subscription.objects.create(**validated_data)
+            
+            if project_locked.current_funding + amount > project_locked.funding_goal:
+                raise serializers.ValidationError(
+                    {"amount": "The investment amount exceeds the remaining funding."}
+                )
+
+            project_locked.current_funding += amount
+            project_locked.save()
+            
+            subscription = Subscription.objects.create(
+                project=project_locked,
+                amount=amount,
+                investor=validated_data['investor']
+            )
+
+        return subscription
