@@ -26,6 +26,9 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         user = request.user
 
+        if amount is None:
+            pass
+
         try:
             investor = user.investor
         except Investor.DoesNotExist:
@@ -36,11 +39,12 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
         if project.current_funding >= project.funding_goal:
             raise serializers.ValidationError({"project": "This project is already fully funded."})
-        
-        remaining_funding = project.funding_goal - project.current_funding
-        if amount > remaining_funding:
-            raise serializers.ValidationError({"amount": "The investment amount exceeds the remaining funding."})
-        
+
+        if amount is not None:
+            remaining_funding = project.funding_goal - project.current_funding
+            if amount > remaining_funding:
+                raise serializers.ValidationError({"amount": "The investment amount exceeds the remaining funding."})
+
         data['investor'] = investor
         return data
         
