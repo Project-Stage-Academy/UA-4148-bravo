@@ -47,6 +47,9 @@ class SubscriptionSerializerValidDataTests(BaseAPITestCase):
         serializer = SubscriptionCreateSerializer(data=data, context={'request': request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         subscription = serializer.save()
+        
+        recalculate_investment_shares(self.project)
+        subscription.refresh_from_db()
 
         expected_share = (Decimal("333.33") / self.project.funding_goal * 100).quantize(Decimal("0.01"),
                                                                                         rounding=ROUND_DOWN)
@@ -62,6 +65,10 @@ class SubscriptionSerializerValidDataTests(BaseAPITestCase):
         serializer = SubscriptionCreateSerializer(data=data, context={'request': request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         subscription = serializer.save()
+
+        recalculate_investment_shares(self.project)
+        subscription.refresh_from_db()
+
         expected_share = (Decimal("0.01") / self.project.funding_goal * 100).quantize(Decimal("0.01"))
         self.assertEqual(subscription.investment_share, expected_share)
 
