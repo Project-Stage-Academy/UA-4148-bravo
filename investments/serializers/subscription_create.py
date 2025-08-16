@@ -2,8 +2,9 @@ from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 
-from investments.models import Subscription, Project
-from profiles.models import Investor
+from investments.models import Subscription
+from projects.models import Project
+from investors.models import Investor
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
     """
