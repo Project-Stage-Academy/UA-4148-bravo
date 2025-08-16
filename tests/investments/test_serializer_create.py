@@ -179,7 +179,7 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseAPITestCase):
         self.assertIn("non_field_errors", serializer.errors)
         error_messages = serializer.errors["non_field_errors"]
         self.assertTrue(
-            any("cannot invest in their own" in str(msg).lower() for msg in error_messages),
+            any("cannot invest in your own" in str(msg).lower() for msg in error_messages),
             f"Expected self-investment error, got: {error_messages}"
         )
 

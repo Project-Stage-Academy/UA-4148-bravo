@@ -2,8 +2,8 @@ from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 
-from investments.models import Subscription
-from projects.models import Project
+from investments.models import Subscription, Project
+from profiles.models import Investor
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
     """
@@ -14,6 +14,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ['project', 'amount']
+        read_only_fields = ['investor']
 
     def validate(self, data):
         """
@@ -21,40 +22,49 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         """
         project = data.get('project')
         amount = data.get('amount')
-        user = self.context['request'].user
-        investor = getattr(user, 'investor', None)
+        request = self.context.get('request')
+        user = request.user
 
-        if not project:
-            raise serializers.ValidationError({"project": "This field is required."})
-
-        if not investor:
-             raise serializers.ValidationError({"user": "The requesting user is not an investor."})
+        try:
+            investor = user.investor
+        except Investor.DoesNotExist:
+            raise serializers.ValidationError({"investor": "The requesting user is not an investor."})
 
         if project.startup and investor.user == project.startup.user:
-            raise serializers.ValidationError("You cannot invest in your own project.")
+            raise serializers.ValidationError({"non_field_errors": "You cannot invest in your own project."})
 
-        with transaction.atomic():
-            project_locked = Project.objects.select_for_update().get(pk=project.pk)
-            
-            current_funding = Decimal(str(project_locked.current_funding))
-            funding_goal = Decimal(str(project_locked.funding_goal))
-
-            if current_funding >= funding_goal:
-                raise serializers.ValidationError("This project is already fully funded.")
-
-            remaining_funding = funding_goal - current_funding
-            if amount > remaining_funding:
-                raise serializers.ValidationError(
-                    f"The investment amount exceeds the remaining funding. Only {remaining_funding} is available."
-                )
-            
+        if project.current_funding >= project.funding_goal:
+            raise serializers.ValidationError({"project": "This project is already fully funded."})
+        
+        remaining_funding = project.funding_goal - project.current_funding
+        if amount > remaining_funding:
+            raise serializers.ValidationError({"amount": "The investment amount exceeds the remaining funding."})
+        
         data['investor'] = investor
         return data
         
     def create(self, validated_data):
         """
-        Creates a new subscription instance.
-        The view is responsible for updating the project's funding.
+        Creates a new subscription instance within a transaction to prevent race conditions.
         """
-        subscription = Subscription.objects.create(**validated_data)
+        amount = validated_data['amount']
+        project = validated_data['project']
+
+        with transaction.atomic():
+            project_locked = Project.objects.select_for_update().get(pk=project.pk)
+            
+            if project_locked.current_funding + amount > project_locked.funding_goal:
+                raise serializers.ValidationError(
+                    {"amount": "The investment amount exceeds the remaining funding."}
+                )
+
+            project_locked.current_funding += amount
+            project_locked.save()
+            
+            subscription = Subscription.objects.create(
+                project=project_locked,
+                amount=amount,
+                investor=validated_data['investor']
+            )
+
         return subscription
