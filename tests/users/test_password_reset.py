@@ -21,8 +21,8 @@ class CustomPasswordResetTests(APITestCase):
             email="test@example.com",
             password=self.user_password
         )
-        self.reset_url = "/api/v1/users/reset_password/"
-        self.confirm_url = "/api/v1/users/reset_password_confirm/"
+        self.reset_url = "/api/v1/auth/password/reset/"
+        self.confirm_url = "/api/v1/auth/password/reset/confirm/"
 
     # Tests for CustomPasswordResetView
 
