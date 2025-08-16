@@ -1,4 +1,3 @@
-# tests/startups/test_disable_signal_mixin.py
 """
 Mixin to disable Elasticsearch indexing during tests.
 All updates and deletes from django-elasticsearch-dsl become no-ops.
@@ -25,7 +24,6 @@ delete_patcher.start()
 # Ensure patch stops when Python exits
 atexit.register(update_patcher.stop)
 atexit.register(delete_patcher.stop)
-
 
 class DisableElasticsearchSignalsMixin:
     """

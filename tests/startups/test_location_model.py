@@ -1,15 +1,14 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
-
 from startups.models import Location
 from tests.startups.test_disable_signal_mixin import DisableElasticsearchSignalsMixin
 from tests.test_base_case import BaseAPITestCase
-
 
 class LocationModelCleanTests(DisableElasticsearchSignalsMixin, BaseAPITestCase, TestCase):
     """ Tests for Location.clean() / full_clean() validations """
 
     def test_valid_location_should_pass(self):
+        """ A complete location should pass full_clean """
         location = Location(
             country='US',
             region='California',
@@ -20,13 +19,15 @@ class LocationModelCleanTests(DisableElasticsearchSignalsMixin, BaseAPITestCase,
         try:
             location.full_clean()
         except ValidationError:
-            self.fail("clean() raised ValidationError unexpectedly.")
+            self.fail("full_clean() raised ValidationError unexpectedly.")
 
     def test_postal_code_too_short_should_raise(self):
+        """ Invalid postal code should raise ValidationError """
         location = Location(country='US', postal_code='12')
         with self.assertRaises(ValidationError) as context:
             location.clean()
         self.assertIn('postal_code', context.exception.message_dict)
+
 
 
 

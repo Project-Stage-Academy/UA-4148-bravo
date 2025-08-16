@@ -1,16 +1,15 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
-
 from common.enums import Stage
 from startups.models import Startup
 from tests.startups.test_disable_signal_mixin import DisableElasticsearchSignalsMixin
 from tests.test_base_case import BaseAPITestCase
 
-
 class StartupModelCleanTests(DisableElasticsearchSignalsMixin, BaseAPITestCase, TestCase):
     """ Tests for Startup.clean() and model validations """
 
     def test_valid_clean_should_pass(self):
+        """ A valid Startup instance should pass full_clean """
         startup = Startup(
             user=self.user,
             company_name='ValidTech',
@@ -29,6 +28,7 @@ class StartupModelCleanTests(DisableElasticsearchSignalsMixin, BaseAPITestCase, 
             self.fail(f"ValidationError raised unexpectedly: {e}")
 
     def test_invalid_social_links_clean_should_raise(self):
+        """ Invalid social_links should raise ValidationError """
         startup = Startup(
             user=self.user,
             company_name='CleanTech',
@@ -47,13 +47,16 @@ class StartupModelCleanTests(DisableElasticsearchSignalsMixin, BaseAPITestCase, 
         self.assertIn('unknown', errors)
 
     def test_missing_required_fields_should_raise(self):
+        """ Missing required fields should raise ValidationError """
         startup = Startup(user=self.user, founded_year=2022, industry=self.industry, location=self.location)
         with self.assertRaises(ValidationError):
             startup.full_clean()
 
     def test_default_stage_is_set_if_missing(self):
+        """ Stage should default to IDEA if not set """
         startup = Startup(user=self.user, company_name='DefaultStageStartup', founded_year=2020, industry=self.industry, location=self.location)
         self.assertEqual(startup.stage, Stage.IDEA)
         startup.save()
         startup.refresh_from_db()
         self.assertEqual(startup.stage, Stage.IDEA)
+
