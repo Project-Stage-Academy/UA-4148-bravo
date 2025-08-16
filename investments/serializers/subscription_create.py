@@ -1,6 +1,5 @@
 from decimal import Decimal
 from django.db import transaction
-from django.db.models import F
 from rest_framework import serializers
 
 from investments.models import Subscription
@@ -54,23 +53,8 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         
     def create(self, validated_data):
         """
-        Creates a new subscription and atomically updates the project's funding.
+        Creates a new subscription instance.
+        The view is responsible for updating the project's funding.
         """
-        project = validated_data['project']
-        investment_amount = validated_data['investment_amount']
-        investor = self.context['request'].user
-
-        with transaction.atomic():
-            project.refresh_from_db()
-
-            project.current_funding = F('current_funding') + investment_amount
-            project.save()
-
-            project.refresh_from_db()
-
-            subscription = Subscription.objects.create(
-                investor=investor,
-                **validated_data
-            )
-        
+        subscription = Subscription.objects.create(**validated_data)
         return subscription
