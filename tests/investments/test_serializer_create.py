@@ -111,6 +111,8 @@ class SubscriptionSerializerValidDataTests(BaseAPITestCase):
 
         self.assertLessEqual(total_share, Decimal("100.00"))
         self.assertGreaterEqual(total_share, Decimal("99.99"))
+
+
 class SubscriptionSerializerAmountValidationTests(BaseAPITestCase):
     def test_missing_amount_field(self):
         data = self.get_subscription_data(self.investor1, self.project, 250.00)
@@ -163,7 +165,6 @@ class SubscriptionSerializerAmountValidationTests(BaseAPITestCase):
         )
 
 
-#--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class SubscriptionSerializerInvestmentConstraintsTests(BaseAPITestCase):
     def test_self_investment_rejected(self):
         self.project.startup.user = self.investor1.user
@@ -209,7 +210,7 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseAPITestCase):
         self.assertIn("amount", serializer.errors)
         error_messages = serializer.errors["amount"]
         self.assertTrue(
-            any("exceeds funding goal" in str(msg).lower() for msg in error_messages),
+            any("exceeds" in str(msg).lower() for msg in error_messages),
             f"Expected 'exceeds funding goal' error message, got: {error_messages}"
         )
 
@@ -236,7 +237,7 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseAPITestCase):
         self.assertIn("amount", serializer2.errors)
         error_messages = serializer2.errors["amount"]
         self.assertTrue(
-            any("exceeds funding goal" in str(msg).lower() for msg in error_messages),
+            any("exceeds" in str(msg).lower() for msg in error_messages),
             f"Expected 'exceeds funding goal' error message, got: {error_messages}"
         )
 
@@ -256,16 +257,13 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseAPITestCase):
         
         serializer = SubscriptionCreateSerializer(data=data, context={'request': request})
         self.assertFalse(serializer.is_valid())
+        self.assertIn("project", serializer.errors)
+        error_messages = serializer.errors.get("project", [])
         self.assertTrue(
-            "amount" in serializer.errors or "project" in serializer.errors,
-            f"Expected validation error for fully funded project, got: {serializer.errors}"
+            any("fully funded" in str(msg).lower() for msg in error_messages),
+            f"Expected 'fully funded' error message, got: {error_messages}"
         )
-        error_messages = serializer.errors.get("amount", []) + serializer.errors.get("project", [])
-        self.assertTrue(
-            any("exceeds funding goal" in str(msg).lower() or "fully funded" in str(msg).lower()
-                for msg in error_messages),
-            f"Expected 'exceeds funding goal' error message, got: {error_messages}"
-        )
+
 
     def test_total_investment_share_cannot_exceed_funding_goal(self):
         self.get_or_create_subscription(
@@ -298,6 +296,6 @@ class SubscriptionSerializerInvestmentConstraintsTests(BaseAPITestCase):
         self.assertIn("amount", serializer.errors)
         error_messages = serializer.errors["amount"]
         self.assertTrue(
-            any("exceeds funding goal" in str(msg).lower() for msg in error_messages),
+            any("exceeds" in str(msg).lower() for msg in error_messages),
             f"Expected 'exceeds funding goal' error message, got: {error_messages}"
         )

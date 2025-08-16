@@ -7,14 +7,19 @@ from django.db.models import F
 from django.test import TransactionTestCase
 from rest_framework import serializers
 
-from common.enums import Stage
-from investments.models import Subscription
+from investments.models import Subscription, Project
 from investments.serializers.subscription_create import SubscriptionCreateSerializer
 from investments.services.subscriptions import get_total_subscribed
 from investors.models import Investor
-from projects.models import Project
-from tests.elasticsearch.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, ProjectFactory, \
-    CategoryFactory
+from common.enums import Stage
+from tests.elasticsearch.factories import (
+    UserFactory,
+    IndustryFactory,
+    LocationFactory,
+    StartupFactory,
+    ProjectFactory,
+    CategoryFactory,
+)
 
 
 class SubscriptionSerializerConcurrencyTests(TransactionTestCase):

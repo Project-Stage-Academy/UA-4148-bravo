@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from investments.models import Subscription
 from projects.models import Project
-from investors.models import Investor
+from profiles.models import Investor
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
     """
@@ -26,9 +26,6 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         user = request.user
 
-        if amount is None:
-            pass
-
         try:
             investor = user.investor
         except Investor.DoesNotExist:
@@ -39,12 +36,12 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
         if project.current_funding >= project.funding_goal:
             raise serializers.ValidationError({"project": "This project is already fully funded."})
-
+        
         if amount is not None:
             remaining_funding = project.funding_goal - project.current_funding
             if amount > remaining_funding:
                 raise serializers.ValidationError({"amount": "The investment amount exceeds the remaining funding."})
-
+        
         data['investor'] = investor
         return data
         
@@ -56,6 +53,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         project = validated_data['project']
 
         with transaction.atomic():
+
             project_locked = Project.objects.select_for_update().get(pk=project.pk)
             
             if project_locked.current_funding + amount > project_locked.funding_goal:
