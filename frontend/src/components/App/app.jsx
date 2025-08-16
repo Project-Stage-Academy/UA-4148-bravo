@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import React from 'react';
-import AuthProvider from '../../context/AuthContext/authContext';
+import AuthProvider from '../../provider/AuthProvider/authProvider';
 import Layout from '../Layout/layout';
 import ProfileEditing from '../../pages/ProfileEditing/profileEditing';
 import NotFound from '../../pages/NotFound/notFound';
@@ -14,10 +14,11 @@ import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
 import RegistrationPage from '../../pages/Registration/registration';
+import RequireAuth from '../RequireAuth/requireAuth';
 
 /**
- * Main application component that sets up routing and context providers.
- * It wraps the application in an AuthProvider for authentication context
+ * Main application component that sets up routing and provider providers.
+ * It wraps the application in an AuthProvider for authentication provider
  * and uses React Router for navigation.
  * The main layout is defined in the Layout component, which includes
  * the header, sidebar, and footer.
@@ -58,20 +59,19 @@ function App() {
                         {/* Who we are */}
                         <Route path="who-we-are" element={<WhoWeAre />} />
 
-                        {/* Log in */}
-                        <Route path="login" element={<LogInPage />} />
+                        <Route path="auth" element={<RequireAuth />}>
 
-                        {/* Registration */}
-                        <Route path="register" element={<RegistrationPage />} />
+                            {/* Log in */}
+                            <Route path="login" element={<LogInPage />} />
 
-                        {/* Password */}
-                        <Route path="password">
+                            {/* Registration */}
+                            <Route path="register" element={<RegistrationPage />} />
 
                             {/* Forgot password */}
                             <Route path="forgot" element={<ForgotPassword />} />
 
                             {/* Restore password */}
-                            <Route path="restore" element={<RestorePassword />} />
+                            <Route path="reset/:uid/:token" element={<RestorePassword />} />
                         </Route>
 
                         {/* Profile */}

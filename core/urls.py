@@ -32,8 +32,8 @@ api_urlpatterns = [
     path('auth/resend-email/', ResendEmailView.as_view(), name='resend-email'),
     
     # Custom OAuth endpoint
-    path('oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),    
-    
+    path('oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),
+
 
     # Project-related endpoints
     path('projects/', include('projects.urls')),
