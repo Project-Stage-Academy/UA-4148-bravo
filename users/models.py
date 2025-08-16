@@ -1,3 +1,4 @@
+import logging
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.core.exceptions import ValidationError
@@ -7,7 +8,9 @@ from django.forms.models import model_to_dict
 from validation.validate_email import validate_email_custom
 from validation.validate_string_fields import validate_max_length
 from validation.validate_role import validate_role_exists
+from django.db import transaction
 
+logger = logging.getLogger(__name__)
 
 class ActiveUserManager(models.Manager):
     """Manager that returns only active users."""
@@ -95,6 +98,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         updated_at (datetime): Record last update timestamp.
         is_active (bool): User active status.
         is_staff (bool): User staff status.
+        pending_email (str, optional): New email address pending verification.
     """
 
     user_id = models.AutoField(primary_key=True)
@@ -114,6 +118,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
+    pending_email = models.EmailField(null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True,
+        help_text="Timestamp when the user's email was verified"
+    )
 
     objects = CustomUserManager()
     all_objects = models.Manager() 
@@ -132,7 +140,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     EMAIL_FIELD = 'email'
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['first_name', 'last_name', 'role']
+    REQUIRED_FIELDS = ['first_name', 'last_name']
 
     class Meta:
         db_table = 'users'
@@ -369,6 +377,56 @@ class User(AbstractBaseUser, PermissionsMixin):
         """
         return cls.active_users.all()
     
+    @transaction.atomic
+    def confirm_pending_email(self):
+        """
+        Confirm the user's pending email address.
+
+        This method replaces the current `email` with the `pending_email`,
+        clears the `pending_email` field, and resets the email verification
+        timestamp.
+
+        Raises:
+            ValidationError: If there is no pending email to confirm or
+                if the pending email is already used by another user.
+        """
+        if not self.pending_email:
+            raise ValidationError({"pending_email": ["No pending email to confirm."]}, code="no_pending_email")
+        
+        normalized_email = self.pending_email.strip().lower()
+
+        if User.objects.filter(email__iexact=normalized_email).exclude(pk=self.pk).exists():
+            raise ValidationError({"pending_email": ["This email is already in use by another user."]}, code="email_taken")
+        
+        self.email = normalized_email
+        self.pending_email = None
+        self.email_verification_sent_at = None
+        self.verified_at = None
+        self.save(update_fields=['email', 'pending_email', 'email_verification_sent_at', 'verified_at'])
+        
+        logger.info(f"User {self.user_id} confirmed pending email.")
+        
+        logger.warning(f"User {self.user_id} changed their email.")
+        
+    def update_email_verification_sent_at(self):
+        """
+        Update the timestamp of the last email verification message sent.
+
+        This method should be called each time an email verification
+        message is sent to the user, allowing the system to track when
+        the last confirmation email was dispatched.
+
+        Useful for:
+            - Implementing resend rate limiting (e.g., prevent spamming).
+            - Auditing and logging email verification activity.
+            - Improving security by monitoring frequent resend attempts.
+
+        Returns:
+            None
+        """
+        self.email_verification_sent_at = timezone.now()
+        self.save(update_fields=['email_verification_sent_at'])
+    
     @property
     def id(self):
         """Provides 'id' as an alias for 'user_id' for Django compatibility.
@@ -422,3 +480,5 @@ class UserRole(models.Model):
     def save(self, *args, **kwargs):
         self.clean() 
         super().save(*args, **kwargs)
+        
+    
