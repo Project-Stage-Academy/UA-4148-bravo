@@ -163,3 +163,7 @@ cython_debug/
 staticfiles/
 
 /logs
+
+.history/
+__pycache__/
+*.pyc

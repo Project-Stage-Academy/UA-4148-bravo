@@ -1,7 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import UniqueConstraint, F
 from django_countries.fields import CountryField
 from typing import cast
+
 from common.company import Company
 from common.enums import Stage
 from core import settings
@@ -95,19 +97,27 @@ class Location(models.Model):
             raise ValidationError(errors)
 
     def __str__(self):
-        values = [
-            self.address_line,
-            self.city,
-            self.region,
-            str(self.country) if self.country else None
-        ]
-        return ", ".join(s for s in values if s)
+        city_str = self.city if self.city else 'Unknown City'
+        country_str = self.country if self.country else 'Unknown Country'
+
+        if self.region:
+            return f"{city_str}, {self.region}, {country_str}"
+        return f"{city_str}, {country_str}"
 
     class Meta:
         db_table = "locations"
         ordering = ["country"]
         verbose_name = "Location"
         verbose_name_plural = "Locations"
+        constraints = [
+            UniqueConstraint(
+                F('city'),
+                F('region'),
+                F('country'),
+                name='unique_location',
+                violation_error_message='This location already exists.'
+            )
+        ]
         indexes = [
             models.Index(fields=['country']),
             models.Index(fields=['city']),
@@ -137,9 +147,7 @@ class Industry(models.Model):
     def clean(self):
         """
         Validates the Industry name to ensure it does not contain forbidden terms.
-
-        Raises:
-            ValidationError: If forbidden names are detected.
+        Raises ValidationError if forbidden names are detected.
         """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")

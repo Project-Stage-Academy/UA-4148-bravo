@@ -1,10 +1,13 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
 from elasticsearch_dsl import Q
+
 from projects.models import Project
-from rest_framework.exceptions import ValidationError
+
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 from django_elasticsearch_dsl_drf.filter_backends import (
     FilteringFilterBackend,
@@ -66,11 +69,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """
         Handle PATCH requests for partially updating a project.
         """
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if 'startup' in request.data or 'startup_id' in request.data:
+            return Response(
+                {"detail": "Cannot change the startup of a project."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().partial_update(request, *args, **kwargs)
 
 
 class ProjectDocumentView(DocumentViewSet):

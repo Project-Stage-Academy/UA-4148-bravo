@@ -25,12 +25,104 @@ Use `/api/token/refresh/` to obtain a new access token.
 
 ---
 
+###  JWT Logout
+
+The `POST /api/users/auth/jwt/logout/` endpoint logs out a user by **blacklisting the refresh token**.
+
+###  Requirements
+
+- The **refresh token must be included** in the request body.
+- The **client must delete both access and refresh tokens** from local storage (or other storage) after a successful logout.
+
+###  Example Request
+
+```http
+POST /api/users/auth/jwt/logout/
+Content-Type: application/json
+
+{
+  "refresh": "<your_refresh_token>"
+}
+```
+
+---
+
+# OAuth Authentication API Documentation
+
+## Overview
+This document describes the OAuth authentication endpoints for Google and GitHub integration.
+
+### Endpoint: POST /users/oauth/login/
+
+**Description:**  
+Authenticate users using Google or GitHub OAuth providers. The endpoint exchanges OAuth provider tokens for application JWT tokens and returns user information.
+
+#### Request
+
+- **Headers:**  
+  `Content-Type: application/json`
+
+- **Body:**
+  ```json
+  {
+    "provider": "google" | "github",
+    "token": "<OAuth token>"
+  }
+  ```
+
+#### Response
+```json
+{
+  "refresh": "jwt_refresh_token",
+  "access": "jwt_access_token",
+  "user": {
+    "id": "user_123",
+    "email": "user@example.com",
+    "username": "username123",
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_phone": "+1234567890",
+    "title": "Software Developer",
+    "role": "user"
+  }
+}
+```
+
+**Status codes:**
+
+| Status Code | Description |
+|-------------|-------------|
+| `400 Bad Request` | Invalid request parameters or malformed data |
+| `401 Unauthorized` | Authentication failed or invalid credentials |
+| `403 Forbidden` | Authenticated but insufficient permissions |
+| `404 Not Found` | Requested resource doesn't exist |
+| `408 Request Timeout` | Provider API timeout |
+| `429 Too Many Requests` | Rate limit exceeded |
+| `500 Internal Server Error` | Unexpected server error |
+| `502 Bad Gateway` | Provider API communication failed |
+
+### Callback URLs
+
+The OAuth callback URLs are configured to handle redirects after successful authentication.
+
+- **Development**: `http://127.0.0.1:8000/oauth/callback/`
+
+**Usage:**  
+1. Redirect user to provider’s authorization page  
+2. Handle redirect back to your `callback_url`  
+3. Extract `code` and exchange at `/users/oauth/login/`  
+
+---
+
 ## Startup API
 
 ### Endpoints
 
 - `GET /api/v1/startups/profiles/` — Retrieve a list of all startup profiles  
+- `POST /api/v1/startups/profiles/` — Create a new startup profile  
 - `GET /api/v1/startups/profiles/{id}/` — Retrieve detailed startup profile  
+- `PATCH /api/v1/startups/profiles/{id}/` — Update an existing startup profile  
+- `DELETE /api/v1/startups/profiles/{id}/` — Delete a startup profile  
 - `GET /api/v1/startups/profiles/{id}/short/` — Retrieve short version of startup profile  
 - `GET /api/v1/startups/search/` — Search startups using Elasticsearch  
 
@@ -43,48 +135,6 @@ company_name, description, investment_needs, projects__title, projects__descript
 **Supports ordering by:**  
 company_name, funding_stage, company_size, created_at
 
-### Request Example: Create Startup Profile
-
-```json
-{
-  "company_name": "GreenTech",
-  "description": "Eco-friendly solutions",
-  "website": "https://greentech.ua",
-  "logo": null,
-  "funding_stage": "Seed",
-  "investment_needs": "Looking for angel investors",
-  "company_size": "1-10",
-  "location": 1,
-  "industries": [2, 3]
-}
-```
-
-### Response Example: Created Startup Profile (201 Created)
-
-```json
-{
-  "id": 1,
-  "company_name": "GreenTech",
-  "description": "Eco-friendly solutions",
-  "website": "https://greentech.ua",
-  "logo": null,
-  "funding_stage": "Seed",
-  "investment_needs": "Looking for angel investors",
-  "company_size": "1-10",
-  "location": {
-    "id": 1,
-    "country": "Ukraine"
-  },
-  "industries": [
-    {"id": 2, "name": "CleanTech"},
-    {"id": 3, "name": "Energy"}
-  ],
-  "projects": [],
-  "created_at": "2025-08-05T00:00:00Z",
-  "updated_at": "2025-08-05T00:00:00Z"
-}
-```
-
 ---
 
 ## Project API
@@ -96,50 +146,6 @@ company_name, funding_stage, company_size, created_at
 - `GET /api/v1/projects/{id}/` — Retrieve details of a specific project  
 - `PATCH /api/v1/projects/{id}/` — Update an existing project  
 - `DELETE /api/v1/projects/{id}/` — Delete a project  
-
-### Request Example: Create Project
-
-```json
-{
-  "startup": 1,
-  "title": "AI Platform",
-  "description": "Smart analytics for business",
-  "status": "draft",
-  "duration": 30,
-  "funding_goal": "100000.00",
-  "current_funding": "5000.00",
-  "category": 2,
-  "email": "project@example.com",
-  "has_patents": true,
-  "is_participant": false,
-  "is_active": true
-}
-```
-
-### Response Example: Created Project (201 Created)
-
-```json
-{
-  "id": 1,
-  "startup": 1,
-  "title": "AI Platform",
-  "description": "Smart analytics for business",
-  "status": "draft",
-  "duration": 30,
-  "funding_goal": "100000.00",
-  "current_funding": "5000.00",
-  "category": {
-    "id": 2,
-    "name": "Artificial Intelligence"
-  },
-  "email": "project@example.com",
-  "has_patents": true,
-  "is_participant": false,
-  "is_active": true,
-  "created_at": "2025-08-05T00:00:00Z",
-  "updated_at": "2025-08-05T00:00:00Z"
-}
-```
 
 ---
 
@@ -225,3 +231,4 @@ company_name, funding_stage, company_size, created_at
 - All IDs are integers  
 - All list endpoints support pagination via limit and offset query parameters  
 - All endpoints are versioned under `/api/v1/` for future compatibility  
+

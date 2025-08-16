@@ -19,11 +19,13 @@ from users.views import (
     UserRegistrationView,
     VerifyEmailView,
     TokenBlacklistView,
+    OAuthTokenObtainPairView,
+    ResendEmailView,
 )
 
 # Grouped API endpoints under versioned path
 api_urlpatterns = [
-    # User-specific endpoints
+    # User endpoints
     path('users/', include('users.urls')),
 
     # Authentication endpoints
@@ -32,6 +34,10 @@ api_urlpatterns = [
     path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
     path('auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
     path('auth/verify-email/<int:user_id>/<str:token>/', VerifyEmailView.as_view(), name='verify-email'),
+    path('auth/resend-email/', ResendEmailView.as_view(), name='resend-email'),
+
+    # Custom OAuth endpoint
+    path('oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),
 
     # App-specific endpoints
     path('projects/', include('projects.urls')),

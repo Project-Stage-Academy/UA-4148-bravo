@@ -6,6 +6,7 @@ from .views import (
     TokenBlacklistView,
 )
 
+
 urlpatterns = [
     # ----------------------------------------
     # Custom password recovery endpoints
