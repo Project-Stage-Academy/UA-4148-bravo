@@ -1,0 +1,142 @@
+from django.db import models
+from rest_framework import serializers
+from .models import (
+    Notification, 
+    UserNotificationPreference,
+    NotificationType,
+    UserNotificationTypePreference
+)
+
+
+class NotificationTypeSerializer(serializers.ModelSerializer):
+    """Serializer for notification types."""
+    class Meta:
+        model = NotificationType
+        fields = ['id', 'code', 'name', 'description', 'is_active']
+        read_only_fields = ['id', 'code'] 
+
+
+class NotificationFrequencyField(serializers.ChoiceField):
+    """Custom field for notification frequency choices."""
+    def __init__(self, **kwargs):
+        from .models import NotificationFrequency
+        kwargs.setdefault('choices', NotificationFrequency.choices)
+        super().__init__(**kwargs)
+
+
+class UserNotificationTypePreferenceSerializer(serializers.ModelSerializer):
+    """Serializer for the UserNotificationTypePreference model."""
+    notification_type = NotificationTypeSerializer(read_only=True)
+    notification_type_id = serializers.PrimaryKeyRelatedField(
+        source='notification_type',
+        write_only=True,
+        queryset=NotificationType.objects.none()
+    )
+    frequency = NotificationFrequencyField()
+    
+    class Meta:
+        model = UserNotificationTypePreference
+        fields = [
+            'id', 'notification_type', 'notification_type_id', 
+            'frequency', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'notification_type', 'created_at', 'updated_at']
+    
+    def get_fields(self):
+        """
+        Dynamically set queryset for notification_type_id field.
+        - For updates: Allow current notification type (even if inactive) + all active types
+        - For creation: Only allow active notification types
+        """
+        fields = super().get_fields()
+        
+        if self.instance and hasattr(self.instance, 'notification_type'):
+            queryset = NotificationType.objects.filter(
+                models.Q(is_active=True) | 
+                models.Q(id=self.instance.notification_type.id)
+            )
+        else:
+            queryset = NotificationType.objects.filter(is_active=True)
+            
+        fields['notification_type_id'].queryset = queryset
+        return fields
+
+
+class UserNotificationPreferenceSerializer(serializers.ModelSerializer):
+    """    
+    Serializer for the UserNotificationPreference model.
+    Handles both creation and updates of notification preferences.
+    The user is automatically set from the request context on creation.
+    """
+    type_preferences = UserNotificationTypePreferenceSerializer(
+        source='type_preferences.all',
+        many=True,
+        read_only=True
+    )
+    user_id = serializers.PrimaryKeyRelatedField(
+        source='user',
+        read_only=True
+    )
+    
+    class Meta:
+        model = UserNotificationPreference
+        fields = [
+            'user_id', 'enable_in_app', 'enable_email', 'enable_push',
+            'type_preferences', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['user_id', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        """Create notification preferences for the authenticated user."""
+        request = self.context.get('request')
+        
+        if not request or not hasattr(request, 'user') or not request.user.is_authenticated:
+            raise serializers.ValidationError('Authentication required for creating preferences.')
+        
+        validated_data['user'] = request.user
+        
+        if UserNotificationPreference.objects.filter(user=request.user).exists():
+            raise serializers.ValidationError(
+                'Notification preferences already exist for this user.'
+            )
+            
+        return super().create(validated_data)
+
+
+    def update(self, instance, validated_data):
+        """Update notification preference fields."""
+        update_fields = ['enable_in_app', 'enable_email', 'enable_push']
+        for field in update_fields:
+            if field in validated_data:
+                setattr(instance, field, validated_data[field])
+        
+        instance.save()
+        return instance
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for notifications."""
+    notification_type = NotificationTypeSerializer(read_only=True)
+    priority_display = serializers.CharField(
+        source='get_priority_display',
+        read_only=True
+    )
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'notification_id',
+            'notification_type',
+            'title',
+            'message',
+            'is_read',
+            'priority',
+            'priority_display',
+            'created_at',
+            'updated_at',
+            'expires_at',
+            'action_link'
+        ]
+        read_only_fields = [
+            'notification_id', 'created_at', 'updated_at'
+        ]

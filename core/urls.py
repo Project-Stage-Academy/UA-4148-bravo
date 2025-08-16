@@ -33,8 +33,10 @@ api_urlpatterns = [
     
     # Custom OAuth endpoint
     path('oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),    
-    
 
+    # Communications endpoints
+    path('communications/', include('communications.urls')),
+    
     # Project-related endpoints
     path('projects/', include('projects.urls')),
 

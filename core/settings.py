@@ -313,6 +313,38 @@ ALLOWED_SOCIAL_PLATFORMS = {
     'telegram': ['t.me', 'telegram.me'],
 }
 
+# Communications app: notification types seeding configuration
+COMMUNICATIONS_NOTIFICATION_TYPES = [
+    {
+        'code': 'startup_saved',
+        'name': 'Startup Saved',
+        'description': 'Notification when a user saves a startup to their favorites',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
+    {
+        'code': 'project_followed',
+        'name': 'Project Followed',
+        'description': 'Notification when a user follows a project',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
+    {
+        'code': 'message_received',
+        'name': 'Message Received',
+        'description': 'Notification when a user receives a new message',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
+    {
+        'code': 'project_updated',
+        'name': 'Project Updated',
+        'description': 'Notification when a followed project is updated',
+        'default_frequency': 'daily_digest',
+        'is_active': True,
+    },
+]
+
 # Logs
 LOG_DIR = BASE_DIR / 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
