@@ -1,26 +1,27 @@
 import os
 import sys
-
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Security and debug settings
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS', 
+    'ALLOWED_HOSTS',
     default='127.0.0.1, localhost, 0.0.0.0',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
 # Application definition
-
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
+# Installed apps
 INSTALLED_APPS = [
+    # Django built-in apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -28,6 +29,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+
+    # Local apps
     'users',
     'investors',
     'projects',
@@ -35,17 +38,18 @@ INSTALLED_APPS = [
     'communications',
     'dashboard',
     'investments',
+
+    # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'djoser',
     'django_filters',
     'corsheaders',
-
-    # Elasticsearch
     'django_elasticsearch_dsl',
+    'drf_spectacular',  # API schema generator
 
-    # OAuth
+    # OAuth providers
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -55,12 +59,14 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 
+# Authentication backends
 AUTHENTICATION_BACKENDS = [
     'users.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
+# OAuth provider configuration
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
@@ -71,11 +77,10 @@ SOCIALACCOUNT_PROVIDERS = {
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {
             'access_type': 'offline',
-            'prompt': 'consent', 
+            'prompt': 'consent',
         },
         'FETCH_USERINFO': True,
     },
-
     'github': {
         'APP': {
             'client_id': config('GITHUB_CLIENT_ID'),
@@ -86,18 +91,19 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# Ensure email is saved and verified
 SOCIALACCOUNT_EMAIL_REQUIRED = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 AUTH_USER_MODEL = 'users.User'
 
+# DRF and JWT settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.AnonRateThrottle',
@@ -106,7 +112,6 @@ REST_FRAMEWORK = {
         'user': '5/minute',
         'anon': '2/minute',
         'resend_email': '5/minute',
-        
     },
 }
 
@@ -127,14 +132,25 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
+# Email settings
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = config('EMAIL_HOST', default='smtp.sendgrid.net')
+    EMAIL_PORT = 587
+    EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='apikey')
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+    EMAIL_USE_TLS = True
+    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='pbeinner@gmail.com')
+
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
-    # Pass recovery
-    'CUSTOM_PASSWORD_RESET_CONFIRM_URL': 'users/reset_password_confirm/{uid}/{token}',  # link for front-end developer
+    'CUSTOM_PASSWORD_RESET_CONFIRM_URL': 'users/reset_password_confirm/{uid}/{token}',
     'PASSWORD_RESET_TIMEOUT': 3600,
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
-
     'SEND_ACTIVATION_EMAIL': True,
     'SEND_CONFIRMATION_EMAIL': True,
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
@@ -155,32 +171,9 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
-    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp.sendgrid.net'
-    EMAIL_PORT = 587
-    EMAIL_HOST_USER = 'apikey'
-    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-    EMAIL_USE_TLS = True
-    DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
-    
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
-    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = config('EMAIL_HOST')
-    EMAIL_PORT = 587
-    EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-    EMAIL_USE_TLS = True
-    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
-
+# Middleware
 MIDDLEWARE = [
-    "allauth.account.middleware.AccountMiddleware",  # OAuth
+    "allauth.account.middleware.AccountMiddleware",  # OAuth middleware
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -193,6 +186,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
+# Templates
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -211,6 +205,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
+# Database configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -222,36 +217,40 @@ DATABASES = {
     }
 }
 
-#if DEBUG:
-#    AUTH_PASSWORD_VALIDATORS = []
-#else:
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {'min_length': 8}
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-    {
-        'NAME': 'users.validators.CustomPasswordValidator',
-    },
+# SQLite for test environments
+if os.environ.get("USE_SQLITE_FOR_TESTS") == "1":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
+
+# Password validation
+if DEBUG:
+    AUTH_PASSWORD_VALIDATORS = []
+else:
+    AUTH_PASSWORD_VALIDATORS = [
+        {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+        {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
+        {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+        {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+        {'NAME': 'users.validators.CustomPasswordValidator'},
+    ]
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='UTC')
 USE_I18N = True
 USE_TZ = True
 
+# Static and media files
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
@@ -261,18 +260,22 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Elasticsearch DSL Configuration
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
-    },
-}
-
-# Override Elasticsearch index names for testing
-if 'users' in sys.argv:
-    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
+# Elasticsearch DSL configuration
+if 'test' in sys.argv:
+    ELASTICSEARCH_DSL = {
+        'default': {
+            'hosts': 'http://localhost:9999'
+        }
+    }
+else:
+    ELASTICSEARCH_DSL = {
+        'default': {
+            'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
+        }
+    }
 
 # File validation settings
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
@@ -302,7 +305,7 @@ ALLOWED_DOCUMENT_MIME_TYPES = [
     "application/x-rar-compressed",
 ]
 
-# Social platform validation settings
+# Allowed social platforms
 ALLOWED_SOCIAL_PLATFORMS = {
     'facebook': ['facebook.com'],
     'twitter': ['twitter.com'],
@@ -313,7 +316,7 @@ ALLOWED_SOCIAL_PLATFORMS = {
     'telegram': ['t.me', 'telegram.me'],
 }
 
-# Logs
+# Logging settings
 LOG_DIR = BASE_DIR / 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -439,10 +442,11 @@ LOGGING = {
     },
 }
 
-# Celery
+# Celery configuration
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = 'rpc://'
 
 if 'users' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
+

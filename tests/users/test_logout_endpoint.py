@@ -33,13 +33,25 @@ class JWTLogoutTest(TestCase):
         response = self.client.post(
             self.login_url,
             data=json.dumps({
-                'email': 'test_user@example.com',
+                'email': self.user.email,
                 'password': 'test_password123'
             }),
             content_type='application/json'
         )
+
+        assert response.status_code == 200, f"Login failed: {response.content}"
+        assert response.headers['Content-Type'] == 'application/json'
+
         self.refresh_token = response.data['refresh']
         self.access_token = response.data['access']
+
+    def tearDown(self):
+        """
+        Cleans up tokens after each test to avoid DB pollution.
+        """
+        RefreshToken(self.refresh_token).blacklist()
+        OutstandingToken.objects.filter(user=self.user).delete()
+        BlacklistedToken.objects.filter(token__user=self.user).delete()
 
     def test_logout_blacklists_refresh_token(self):
         """
@@ -48,12 +60,19 @@ class JWTLogoutTest(TestCase):
         """
         refresh = RefreshToken(self.refresh_token)
         jti = refresh['jti']
-        token = OutstandingToken.objects.get(jti=jti)
+
+        try:
+            token = OutstandingToken.objects.get(jti=jti)
+        except OutstandingToken.DoesNotExist:
+            self.fail(f"Outstanding token with jti={jti} not found")
 
         response = self.client.post(self.logout_url, {'refresh': self.refresh_token}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.headers['Content-Type'], 'application/json')
+        self.assertIn('success', str(response.data).lower())
 
-        self.assertTrue(BlacklistedToken.objects.filter(token=token).exists())
+        blacklisted = BlacklistedToken.objects.filter(token=token)
+        self.assertEqual(blacklisted.count(), 1)
 
     def test_blacklisted_token_cannot_be_used(self):
         """
@@ -66,5 +85,30 @@ class JWTLogoutTest(TestCase):
             'refresh': self.refresh_token
         }, format='json')
 
-        self.assertEqual(response.status_code, 401)
-        self.assertIn('token is blacklisted', str(response.data).lower())
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.headers['Content-Type'], 'application/json')
+
+        error_detail = response.data.get('detail', '').lower()
+        self.assertIn('blacklisted', error_detail)
+
+    def test_logout_twice_does_not_duplicate_blacklist(self):
+        """
+        Logging out twice should not create duplicate blacklist entries.
+        """
+        refresh = RefreshToken(self.refresh_token)
+        jti = refresh['jti']
+
+        try:
+            token = OutstandingToken.objects.get(jti=jti)
+        except OutstandingToken.DoesNotExist:
+            self.fail(f"Outstanding token with jti={jti} not found")
+
+        response1 = self.client.post(self.logout_url, {'refresh': self.refresh_token}, format='json')
+        self.assertEqual(response1.status_code, status.HTTP_200_OK)
+
+        response2 = self.client.post(self.logout_url, {'refresh': self.refresh_token}, format='json')
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+
+        blacklisted = BlacklistedToken.objects.filter(token=token)
+        self.assertEqual(blacklisted.count(), 1)
+

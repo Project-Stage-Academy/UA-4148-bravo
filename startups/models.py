@@ -13,8 +13,9 @@ from validation.validate_social_links import validate_social_links_dict
 
 class Location(models.Model):
     """
-    Represents a physical location with country, region, city, address line, and postal code.
-    Includes validation to ensure fields follow expected formats and logical consistency.
+    Represents a physical location associated with a startup.
+    Includes country, region, city, address line, and postal code.
+    Validates formatting and logical consistency.
     """
     country = CountryField(
         verbose_name="Country",
@@ -53,14 +54,10 @@ class Location(models.Model):
 
     def clean(self):
         """
-        Validates the Location instance.
-
-        - Postal code must be at least 3 characters and contain only Latin characters.
+        Validates the Location instance:
+        - Postal code must be at least 3 characters and contain only Latin letters, spaces, hyphens, or apostrophes.
         - City, region, and address line must not be empty or contain only spaces and must be Latin characters only.
         - Enforces logical dependencies: address_line requires city and region, city requires region.
-
-        Raises:
-            ValidationError: If any validation rules fail.
         """
         errors = {}
 
@@ -150,9 +147,7 @@ class Industry(models.Model):
     def clean(self):
         """
         Validates the Industry name to ensure it does not contain forbidden terms.
-
-        Raises:
-            ValidationError: If forbidden names are detected.
+        Raises ValidationError if forbidden names are detected.
         """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")
@@ -195,16 +190,52 @@ class Startup(Company):
         verbose_name="Social Links",
         help_text="Social media links as a JSON object"
     )
+    industry = models.ForeignKey(
+        Industry,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='startups'
+    )
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='startups'
+    )
+    founded_year = models.PositiveIntegerField(blank=True, null=True)
+    team_size = models.PositiveIntegerField(blank=True, null=True)
+    funding_stage = models.CharField(
+        max_length=50,
+        choices=[
+            ('pre_seed', 'Pre-Seed'),
+            ('seed', 'Seed'),
+            ('series_a', 'Series A'),
+            ('series_b', 'Series B'),
+            ('growth', 'Growth'),
+        ],
+        blank=True,
+        null=True
+    )
+    investment_needs = models.TextField(blank=True, null=True)
+    company_size = models.CharField(
+        max_length=50,
+        choices=[
+            ('1-10', '1-10'),
+            ('11-50', '11-50'),
+            ('51-200', '51-200'),
+            ('201-500', '201-500'),
+            ('500+', '500+'),
+        ],
+        blank=True,
+        null=True
+    )
+    is_active = models.BooleanField(default=True)
 
     def clean(self):
         """
-        Validates the Startup instance.
-
+        Validates the Startup instance:
         - Ensures social_links only contain allowed platforms.
         - Validates URLs for the platforms.
-
-        Raises:
-            ValidationError: If social_links are invalid.
         """
         super().clean()
         social_links = cast(dict, self.social_links)

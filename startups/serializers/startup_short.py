@@ -4,7 +4,8 @@ from startups.models import Startup
 
 class StartupShortSerializer(serializers.ModelSerializer):
     """
-    Lightweight serializer for nested use (e.g., inside Investor).
+    Lightweight serializer for nested use (e.g., inside Investor, Subscription).
+    All fields are read-only to prevent accidental modifications.
     """
     class Meta:
         model = Startup
