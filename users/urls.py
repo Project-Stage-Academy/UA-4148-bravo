@@ -1,29 +1,35 @@
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenBlacklistView
-from .views import CustomTokenObtainPairView
-from .views import CustomPasswordResetView, CustomPasswordResetConfirmView
+from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
+from .views import (
+    CustomTokenObtainPairView,
+    UserRegistrationView,
+    VerifyEmailView,
+    OAuthTokenObtainPairView,
+    CustomPasswordResetView,
+    CustomPasswordResetConfirmView,
+    ResendEmailView,
+)
 
 
 urlpatterns = [
-    # ----------------------------------------
-    # Custom password recovery endpoints
-    # ----------------------------------------
-    path('reset_password/', CustomPasswordResetView.as_view(), name="custom_reset_password"),
-    path('reset_password_confirm/', CustomPasswordResetConfirmView.as_view(), name="custom_reset_password_confirm"),
+    # Sign up
+    path('register/', UserRegistrationView.as_view(), name='user_register'),
 
-    # ----------------------------------------
-    # Custom authentication endpoint
-    # ----------------------------------------
-    path('login/', CustomTokenObtainPairView.as_view(), name='custom_login'),
+    # JWT Auth
+    path('jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
+    path('jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
+    path('jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
 
-    # ----------------------------------------
-    # Djoser authentication endpoints
-    # ----------------------------------------
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt')),
+    # Password reset
+    path('password/reset/', CustomPasswordResetView.as_view(), name='custom_reset_password'),
+    path('password/reset/confirm/', CustomPasswordResetConfirmView.as_view(), name='custom_reset_password_confirm'),
 
-    # ----------------------------------------
-    # JWT Logout endpoint
-    # ----------------------------------------
-    path('auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
+    # Email verification
+    path('verify-email/<int:user_id>/<str:token>/', VerifyEmailView.as_view(), name='verify-email'),
+
+    # Resend verification email
+    path('resend-email/', ResendEmailView.as_view(), name='resend-email'),
+
+    # OAuth
+    path('oauth/login/', OAuthTokenObtainPairView.as_view(), name='oauth_login'),
 ]
