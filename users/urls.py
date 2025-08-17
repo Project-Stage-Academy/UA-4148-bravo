@@ -32,8 +32,4 @@ urlpatterns = [
 
     # OAuth
     path('oauth/login/', OAuthTokenObtainPairView.as_view(), name='oauth_login'),
-
-    # Djoser (optional)
-    # path('djoser/', include('djoser.urls')),
-    # path('djoser/', include('djoser.urls.jwt')),
 ]
