@@ -51,29 +51,20 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         return data
         
     def create(self, validated_data):
-        """
-        Creates a new subscription instance within a transaction to prevent race conditions.
-        """
-        amount = serializers.DecimalField(
-            max_digits=18,
-            decimal_places=2,
-            required=True,
-            min_value=Decimal("0.01")
-        )
+        amount = validated_data['amount']
         project = validated_data['project']
 
         with transaction.atomic():
-
             project_locked = Project.objects.select_for_update().get(pk=project.pk)
-            
-            if project_locked.current_funding + amount > project_locked.funding_goal:
+            current_funding = project_locked.subscriptions.aggregate(
+                total=Sum("amount")
+            )["total"] or Decimal("0.00")
+
+            if current_funding + amount > project_locked.funding_goal:
                 raise serializers.ValidationError(
                     {"amount": "The investment amount exceeds the remaining funding."}
                 )
 
-            project_locked.current_funding += amount
-            project_locked.save()
-            
             subscription = Subscription.objects.create(
                 project=project_locked,
                 amount=amount,
