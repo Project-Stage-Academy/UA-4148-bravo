@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.db import transaction
+from django.db.models import Sum
 from rest_framework import serializers
 
 from investments.models import Subscription
@@ -16,11 +17,8 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         model = Subscription
         fields = ['project', 'amount']
         read_only_fields = ['investor']
-
+ 
     def validate(self, data):
-        """
-        Validates the investment amount and the state of the project.
-        """
         project = data.get('project')
         amount = data.get('amount')
         request = self.context.get('request')
@@ -34,14 +32,21 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         if project.startup and investor.user == project.startup.user:
             raise serializers.ValidationError({"non_field_errors": "You cannot invest in your own project."})
 
-        if project.current_funding >= project.funding_goal:
+        current_funding = project.subscriptions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+
+        if current_funding >= project.funding_goal:
             raise serializers.ValidationError({"project": "This project is already fully funded."})
-        
-        if amount is not None:
-            remaining_funding = project.funding_goal - project.current_funding
-            if amount > remaining_funding:
-                raise serializers.ValidationError({"amount": "The investment amount exceeds the remaining funding."})
-        
+
+        if amount is None:
+            raise serializers.ValidationError({"amount": "This field is required."})
+
+        if amount <= 0:
+            raise serializers.ValidationError({"amount": "Ensure this value is greater than or equal to 0.01."})
+
+        remaining_funding = project.funding_goal - current_funding
+        if amount > remaining_funding:
+            raise serializers.ValidationError({"amount": "The investment amount exceeds the remaining funding."})
+
         data['investor'] = investor
         return data
         
@@ -49,7 +54,12 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         """
         Creates a new subscription instance within a transaction to prevent race conditions.
         """
-        amount = validated_data['amount']
+        amount = serializers.DecimalField(
+            max_digits=18,
+            decimal_places=2,
+            required=True,
+            min_value=Decimal("0.01")
+        )
         project = validated_data['project']
 
         with transaction.atomic():
