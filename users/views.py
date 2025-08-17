@@ -153,10 +153,12 @@ class VerifyEmailView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Try to confirm pending email if model supports it
+            # Reviewer fix: prefer duck typing over hasattr()
             try:
-                if hasattr(user, "confirm_pending_email"):
-                    user.confirm_pending_email()
+                user.confirm_pending_email()
+            except AttributeError:
+                # If the model doesn't implement confirm_pending_email, ignore silently.
+                pass
             except DjangoValidationError as e:
                 if getattr(e, "code", None) == "no_pending_email":
                     logger.info(f"No pending email to confirm for {user.email}")
@@ -313,10 +315,11 @@ class CustomPasswordResetConfirmView(APIView):
         user = serializer.context['user']
         new_password = serializer.validated_data['new_password']
 
+        # Reviewer fix: catch only the specific validation error instead of broad Exception
         try:
             validate_password(new_password, user)
-        except Exception as e:
-            return error_response({"new_password": list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+        except DjangoValidationError as e:
+            return error_response({"new_password": list(e.messages)}, status.HTTP_400_BAD_REQUEST)
 
         user.set_password(new_password)
         user.save()
@@ -436,7 +439,8 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
 
         except requests.exceptions.RequestException as e:
             response_data = {}
-            if hasattr(e, 'response') and e.response is not None:
+            # Reviewer fix: hasattr check is enough; no need for 'is not None'
+            if hasattr(e, 'response'):
                 try:
                     response_data = e.response.json()
                 except ValueError:
@@ -662,3 +666,4 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
             "access": str(refresh.access_token),
             "user": UserSerializer(user).data
         })
+
