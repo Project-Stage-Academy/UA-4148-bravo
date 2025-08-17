@@ -1,5 +1,4 @@
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
 from .views import (
     CustomTokenObtainPairView,
     UserRegistrationView,
@@ -8,6 +7,8 @@ from .views import (
     CustomPasswordResetView,
     CustomPasswordResetConfirmView,
     ResendEmailView,
+    JWTRefreshView,
+    JWTLogoutView,
 )
 
 
@@ -17,8 +18,8 @@ urlpatterns = [
 
     # JWT Auth
     path('jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
-    path('jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
-    path('jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
+    path('jwt/refresh/', JWTRefreshView.as_view(), name='jwt-refresh'),
+    path('jwt/logout/', JWTLogoutView.as_view(), name='token_blacklist'),
 
     # Password reset
     path('password/reset/', CustomPasswordResetView.as_view(), name='custom_reset_password'),
