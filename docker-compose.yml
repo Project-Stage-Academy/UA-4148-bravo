@@ -1,3 +1,8 @@
+# Docker Compose for local development with Django, FastAPI, PostgreSQL and Elasticsearch 7.x
+# Key changes:
+# - Pin Elasticsearch to 7.17.12 to match python client 7.x
+# - Override ELASTICSEARCH_HOST for app containers to use "elasticsearch" hostname inside the Docker network
+
 version: '3.9'
 
 services:
@@ -11,6 +16,9 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # Inside Docker network the Elasticsearch hostname is the service name
+      ELASTICSEARCH_HOST: http://elasticsearch:9200
     depends_on:
       db:
         condition: service_healthy
@@ -27,6 +35,9 @@ services:
       - "8001:8001"
     env_file:
       - .env
+    environment:
+      # Ensure FastAPI/Django layer also reaches ES via service hostname
+      ELASTICSEARCH_HOST: http://elasticsearch:9200
     volumes:
       - .:/app
     depends_on:
@@ -38,7 +49,7 @@ services:
       - forum
 
   elasticsearch:
-    image: elasticsearch:8.13.4
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.12
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
@@ -54,10 +65,11 @@ services:
         soft: -1
         hard: -1
     healthcheck:
+      # Wait for at least yellow cluster status
       test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
       start_period: 30s
     networks:
       - forum
@@ -79,7 +91,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
     networks:
       - forum
 
@@ -107,3 +119,4 @@ volumes:
 
 networks:
   forum:
+

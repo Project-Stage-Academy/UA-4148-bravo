@@ -1,3 +1,9 @@
+# GitHub Actions workflow for Django CI/CD with PostgreSQL and Elasticsearch 7.x
+# Key fixes:
+# - Use ELASTICSEARCH_HOST consistently (127.0.0.1 in CI to avoid IPv6 issues with localhost)
+# - Robust wait for Elasticsearch cluster health (yellow/green)
+# - Keep build/deploy stages but make them depend on tests
+
 name: Django CI/CD Pipeline
 
 on:
@@ -19,27 +25,32 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+      # Django config
       DJANGO_SETTINGS_MODULE: core.settings
       SECRET_KEY: dummy_key_for_ci
       DEBUG: 0
+
+      # Database config
       DB_NAME: test_db
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_HOST: localhost
-      ELASTICSEARCH_HOST: http://localhost:9200
+      DB_PORT: 5432
+
+      # IMPORTANT: Use 127.0.0.1 in CI to avoid IPv6 "localhost" pitfalls
+      ELASTICSEARCH_HOST: http://127.0.0.1:9200
+
+      # OAuth/Email (read from repo secrets where applicable)
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-
       GITHUB_CLIENT_ID: ${{ secrets.GIT_CLIENT_ID }}
       GITHUB_CLIENT_SECRET: ${{ secrets.GIT_CLIENT_SECRET }}
-      
       EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
       EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
       EMAIL_PORT: 587
       EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
       EMAIL_USE_TLS: true
       DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
-
 
     services:
       db:
@@ -54,20 +65,23 @@ jobs:
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=10
 
       elasticsearch:
+        # Match client library 7.x used in requirements.txt
         image: docker.elastic.co/elasticsearch/elasticsearch:7.17.12
         env:
           discovery.type: single-node
-          ES_JAVA_OPTS: -Xms512m -Xmx512m
+          # Security is disabled for CI simplicity. If you enable it, also set creds/CA.
+          xpack.security.enabled: "false"
+          ES_JAVA_OPTS: "-Xms512m -Xmx512m"
         ports:
           - 9200:9200
         options: >-
-          --health-cmd="curl -f http://localhost:9200/_cat/health?h=status"
+          --health-cmd="curl -fsS http://localhost:9200/_cluster/health || exit 1"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=30
 
     steps:
       - name: Checkout code
@@ -85,23 +99,22 @@ jobs:
           pip install -r requirements.txt
 
       - name: Wait for Elasticsearch
+        # Wait for ES port AND for cluster to reach at least "yellow" status
         run: |
           echo "Waiting for Elasticsearch to be ready..."
-          timeout 60 bash -c 'until curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s > /dev/null; do sleep 2; done'
+          curl --retry 60 --retry-delay 3 --retry-connrefused -fsS http://127.0.0.1:9200 > /dev/null
+          curl -fsS "http://127.0.0.1:9200/_cluster/health?wait_for_status=yellow&timeout=120s" > /dev/null
           echo "Elasticsearch is ready!"
 
       - name: Run Migrations
-        run: |
-          python manage.py migrate
+        run: python manage.py migrate --noinput
 
       - name: Run Tests
-        run: |
-          python manage.py test --keepdb
+        run: python manage.py test --keepdb
 
       - name: Run Linting (flake8 - allow fail)
         continue-on-error: true
-        run: |
-          flake8 . --exclude=venv,migrations,__pycache__,settings.py
+        run: flake8 . --exclude=venv,migrations,__pycache__,settings.py
 
   build:
     runs-on: ubuntu-latest
@@ -137,5 +150,5 @@ jobs:
 
     steps:
       - name: Deploy to Production
-        run: |
-          echo " Deployment triggered! Production code is going live."
+        run: echo "Deployment triggered! Production code is going live."
+

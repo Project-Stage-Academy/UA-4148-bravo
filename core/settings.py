@@ -1,3 +1,11 @@
+"""
+Django settings for the project.
+
+Key changes in this version:
+- Remove hardcoded Elasticsearch port 9999 for tests.
+- Use ELASTICSEARCH_HOST from environment everywhere (defaults to http://localhost:9200).
+"""
+
 import os
 import sys
 from decouple import config
@@ -6,7 +14,9 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ---------------------------------------------------------------------------
 # Security and debug settings
+# ---------------------------------------------------------------------------
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
@@ -19,7 +29,9 @@ ALLOWED_HOSTS = config(
 # Application definition
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
+# ---------------------------------------------------------------------------
 # Installed apps
+# ---------------------------------------------------------------------------
 INSTALLED_APPS = [
     # Django built-in apps
     'django.contrib.admin',
@@ -59,14 +71,18 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 
+# ---------------------------------------------------------------------------
 # Authentication backends
+# ---------------------------------------------------------------------------
 AUTHENTICATION_BACKENDS = [
     'users.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
+# ---------------------------------------------------------------------------
 # OAuth provider configuration
+# ---------------------------------------------------------------------------
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
@@ -97,7 +113,9 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 
 AUTH_USER_MODEL = 'users.User'
 
+# ---------------------------------------------------------------------------
 # DRF and JWT settings
+# ---------------------------------------------------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -114,7 +132,7 @@ REST_FRAMEWORK = {
         'resend_email': '5/minute',
     },
 }
-
+# Disable throttling in tests to speed up and avoid flakiness
 if 'test' in sys.argv:
     REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
 
@@ -132,11 +150,15 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
+# ---------------------------------------------------------------------------
 # Email settings
+# ---------------------------------------------------------------------------
 if DEBUG:
+    # Use console email backend in development
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 else:
+    # SMTP settings for production/CI
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = config('EMAIL_HOST', default='smtp.sendgrid.net')
     EMAIL_PORT = 587
@@ -171,7 +193,9 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
+# ---------------------------------------------------------------------------
 # Middleware
+# ---------------------------------------------------------------------------
 MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",  # OAuth middleware
     'corsheaders.middleware.CorsMiddleware',
@@ -186,7 +210,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
+# ---------------------------------------------------------------------------
 # Templates
+# ---------------------------------------------------------------------------
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -205,7 +231,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
+# ---------------------------------------------------------------------------
 # Database configuration
+# ---------------------------------------------------------------------------
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -217,7 +245,7 @@ DATABASES = {
     }
 }
 
-# SQLite for test environments
+# Optional: SQLite for fast, isolated unit tests
 if os.environ.get("USE_SQLITE_FOR_TESTS") == "1":
     DATABASES = {
         "default": {
@@ -226,7 +254,9 @@ if os.environ.get("USE_SQLITE_FOR_TESTS") == "1":
         }
     }
 
+# ---------------------------------------------------------------------------
 # Password validation
+# ---------------------------------------------------------------------------
 if DEBUG:
     AUTH_PASSWORD_VALIDATORS = []
 else:
@@ -244,13 +274,17 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
+# ---------------------------------------------------------------------------
 # Internationalization
+# ---------------------------------------------------------------------------
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='UTC')
 USE_I18N = True
 USE_TZ = True
 
+# ---------------------------------------------------------------------------
 # Static and media files
+# ---------------------------------------------------------------------------
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
@@ -260,24 +294,26 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ---------------------------------------------------------------------------
 # CORS settings
+# ---------------------------------------------------------------------------
 CORS_ALLOW_ALL_ORIGINS = True
 
+# ---------------------------------------------------------------------------
 # Elasticsearch DSL configuration
-if 'test' in sys.argv:
-    ELASTICSEARCH_DSL = {
-        'default': {
-            'hosts': 'http://localhost:9999'
-        }
+# Use a single source of truth: ELASTICSEARCH_HOST env var
+# Default points to local ES on port 9200.
+# In Docker Compose use "http://elasticsearch:9200"; in CI use "http://127.0.0.1:9200".
+# ---------------------------------------------------------------------------
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
     }
-else:
-    ELASTICSEARCH_DSL = {
-        'default': {
-            'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
-        }
-    }
+}
 
+# ---------------------------------------------------------------------------
 # File validation settings
+# ---------------------------------------------------------------------------
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
 ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png"]
 ALLOWED_IMAGE_MODES = ["RGB", "RGBA", "L"]
@@ -305,7 +341,9 @@ ALLOWED_DOCUMENT_MIME_TYPES = [
     "application/x-rar-compressed",
 ]
 
+# ---------------------------------------------------------------------------
 # Allowed social platforms
+# ---------------------------------------------------------------------------
 ALLOWED_SOCIAL_PLATFORMS = {
     'facebook': ['facebook.com'],
     'twitter': ['twitter.com'],
@@ -316,7 +354,9 @@ ALLOWED_SOCIAL_PLATFORMS = {
     'telegram': ['t.me', 'telegram.me'],
 }
 
+# ---------------------------------------------------------------------------
 # Logging settings
+# ---------------------------------------------------------------------------
 LOG_DIR = BASE_DIR / 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -442,11 +482,15 @@ LOGGING = {
     },
 }
 
+# ---------------------------------------------------------------------------
 # Celery configuration
+# ---------------------------------------------------------------------------
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = 'rpc://'
 
+# Run Celery tasks eagerly when running specific commands/tests (optional)
 if 'users' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
+
 

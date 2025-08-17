@@ -33,7 +33,7 @@ class StartupAPITests(DisableElasticsearchSignalsMixin, BaseAPITestCase, TestCas
     def test_delete_startup(self):
         """ Test deletion of a startup. """
         startup = self.get_or_create_startup(user=self.user, company_name='ToDelete', industry=self.industry, location=self.location)
-        # DELETE должен идти на ViewSet endpoint, а не /detail/
+        # DELETE should go to the ViewSet endpoint, not to /detail/.
         url_detail = reverse('startups-detail', args=[startup.pk])
         response = self.client.delete(url_detail)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
