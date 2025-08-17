@@ -9,13 +9,23 @@ from tests.elasticsearch.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 
 import logging
-logging.disable(logging.CRITICAL)
 
 User = get_user_model()
 
 
 @ddt.ddt
 class NotificationPreferencesTestCase(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Silence logs produced by this test class only
+        logging.disable(logging.CRITICAL)
+
+    @classmethod
+    def tearDownClass(cls):
+        # Re-enable logging for the rest of the test suite
+        logging.disable(logging.NOTSET)
+        super().tearDownClass()
     def setUp(self):
         """Common setup using factories for user and notification types."""
         self.notification_type1 = NotificationTypeFactory(default_frequency='immediate')
