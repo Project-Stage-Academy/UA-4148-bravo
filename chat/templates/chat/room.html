@@ -10,40 +10,109 @@
     <input id="chat-message-submit" type="button" value="Send">
     {{ room_name|json_script:"room-name" }}
     <script>
-        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+    document.addEventListener('DOMContentLoaded', function() {
+        const roomNameElement = document.getElementById('room-name');
+        if (!roomNameElement) {
+            console.error("Room name element not found");
+            return;
+        }
+
+        let roomName;
+        try {
+            roomName = JSON.parse(roomNameElement.textContent);
+        } catch (e) {
+            console.error("Failed to parse room name JSON:", e);
+            alert("Invalid room name. Please go back and try again.");
+            window.location.href = '/';
+            return;
+        }
 
         const chatSocket = new WebSocket(
-            'ws://'
-            + window.location.host
-            + '/ws/chat/'
-            + roomName
-            + '/'
+            'ws://' + window.location.host + '/ws/chat/' + encodeURIComponent(roomName) + '/'
         );
 
         chatSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            document.querySelector('#chat-log').value += (data.message + '\n');
+            let data;
+            try {
+                data = JSON.parse(e.data);
+            } catch (err) {
+                console.error("Received malformed JSON from server:", err, e.data);
+                return; // Ignore malformed message
+            }
+
+            if (data && data.message) {
+                document.querySelector('#chat-log').value += (data.message + '\n');
+            } else {
+                console.warn("Received unexpected message format:", data);
+            }
         };
 
         chatSocket.onclose = function(e) {
             console.error('Chat socket closed unexpectedly');
-        };
 
-        document.querySelector('#chat-message-input').focus();
-        document.querySelector('#chat-message-input').onkeyup = function(e) {
-            if (e.key === 'Enter') {  // enter, return
-                document.querySelector('#chat-message-submit').click();
+            // Show a user-friendly message in the chat UI
+            const chatLog = document.querySelector('#chat-log');
+            if (chatLog) {
+                chatLog.value += "\n⚠️ Connection to the chat server was lost. Please refresh the page or try again later.\n";
+            } else {
+                alert("⚠️ Connection to the chat server was lost. Please refresh the page.");
             }
         };
 
-        document.querySelector('#chat-message-submit').onclick = function(e) {
-            const messageInputDom = document.querySelector('#chat-message-input');
-            const message = messageInputDom.value;
-            chatSocket.send(JSON.stringify({
-                'message': message
-            }));
-            messageInputDom.value = '';
+        const messageInput = document.querySelector('#chat-message-input');
+        const messageSubmit = document.querySelector('#chat-message-submit');
+
+        messageInput.focus();
+
+        // Pressing Enter triggers send
+        messageInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                messageSubmit.click();
+            }
+        });
+
+        messageSubmit.addEventListener('click', function() {
+            let message = messageInput.value.trim();
+
+            if (!message) {
+                alert("Cannot send an empty message.");
+                return;
+            }
+
+            // Disable input and button to prevent sending until acknowledgment
+            messageInput.disabled = true;
+            messageSubmit.disabled = true;
+
+            try {
+                chatSocket.send(JSON.stringify({
+                    'message': message
+                }));
+                messageInput.value = '';
+            } catch (err) {
+                console.error("Failed to send message:", err);
+                alert("Message could not be sent. Please try again.");
+                // Re-enable on failure
+                messageInput.disabled = false;
+                messageSubmit.disabled = false;
+            }
+        });
+
+        // When server responds with a new message, re-enable input and button
+        chatSocket.onmessage = function(e) {
+            try {
+                const data = JSON.parse(e.data);
+                document.querySelector('#chat-log').value += (data.message + '\n');
+            } catch (err) {
+                console.error("Malformed message received:", err);
+                alert("Received invalid data from server.");
+            } finally {
+                // Always re-enable input & button after response
+                messageInput.disabled = false;
+                messageSubmit.disabled = false;
+                messageInput.focus();
+            }
         };
+    });
     </script>
 </body>
 </html>
