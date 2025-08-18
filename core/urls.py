@@ -12,13 +12,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
- 
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
- 
+
     # Versioned API
-    path('api/v1/auth/', include('users.urls')),           
+    path('api/v1/auth/', include('users.urls')),
     path('api/v1/projects/', include('projects.urls')),
     path('api/v1/startups/', include('startups.urls')),
     path('api/v1/investors/', include('investors.urls')),
@@ -32,6 +32,7 @@ urlpatterns = [
     # Health & allauth
     path('health/elasticsearch/', elasticsearch_healthcheck),
     path('accounts/', include('allauth.urls')),
+    path("chat/", include("chat.urls")),
 ]
 
 if settings.DEBUG:

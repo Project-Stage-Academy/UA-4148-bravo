@@ -11,7 +11,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS', 
+    'ALLOWED_HOSTS',
     default='127.0.0.1, localhost, 0.0.0.0',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
@@ -21,6 +21,9 @@ ALLOWED_HOSTS = config(
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
+    'chat',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -210,9 +213,9 @@ DATABASES = {
     }
 }
 
-#if DEBUG:
+# if DEBUG:
 #    AUTH_PASSWORD_VALIDATORS = []
-#else:
+# else:
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -335,7 +338,7 @@ COMMUNICATIONS_NOTIFICATION_TYPES = [
 
 # Logs
 LOG_DIR = BASE_DIR / 'logs'
-os.makedirs(LOG_DIR, exist_ok=True)
+LOG_DIR.mkdir(exist_ok=True)
 
 LOGGING = {
     'version': 1,
@@ -362,48 +365,53 @@ LOGGING = {
         },
         'file_django': {
             'level': 'INFO',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'django.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
         'file_apps': {
             'level': 'DEBUG',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'apps.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
         'file_errors': {
             'level': 'ERROR',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'errors.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
         'db_file': {
             'level': 'INFO',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'db_queries.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
         'file_json': {
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'json_logs.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'json',
             'level': 'INFO',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
     },
     'loggers': {
@@ -466,3 +474,18 @@ CELERY_RESULT_BACKEND = 'rpc://'
 if 'users' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
+
+# Chat
+ASGI_APPLICATION = "core.asgi.application"
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+        },
+    },
+}
+
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'

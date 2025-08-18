@@ -1,11 +1,12 @@
 import json
-from unittest.mock import patch, MagicMock
-from django.test import TestCase, Client
+from unittest.mock import patch
+
+from django.test import Client
 from django.urls import reverse
-from django.core import mail
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
+
 from users.models import User, UserRole
 
 
