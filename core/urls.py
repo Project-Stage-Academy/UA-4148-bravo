@@ -20,6 +20,8 @@ from users.views import (
     VerifyEmailView,
     OAuthTokenObtainPairView,
     ResendEmailView,
+    CustomPasswordResetView,
+    CustomPasswordResetConfirmView,
 )
 
 urlpatterns = [
@@ -53,6 +55,8 @@ urlpatterns = [
     path('health/elasticsearch/', elasticsearch_healthcheck),
     path('accounts/', include('allauth.urls')),
     path("chat/", include("chat.urls")),
+    path("password/reset/", CustomPasswordResetView.as_view(), name="password-reset"),
+    path("password/reset/confirm/", CustomPasswordResetConfirmView.as_view(), name="password-reset-confirm"),
 ]
 
 if settings.DEBUG:

@@ -48,26 +48,26 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         user = getattr(request, 'user', None)
 
         if not isinstance(project, Project):
-            raise serializers.ValidationError({"project": "A valid project is required."})
+            raise serializers.ValidationError({"project": "Project does not exist"})
 
         investor = getattr(user, 'investor', None)
         if not isinstance(investor, Investor):
             raise serializers.ValidationError({"investor": "The requesting user is not an investor."})
 
         if getattr(project, 'startup', None) and getattr(project.startup, 'user', None) == getattr(investor, 'user', None):
-            raise serializers.ValidationError({"non_field_errors": "You cannot invest in your own project."})
+            raise serializers.ValidationError({"non_field_errors": "Investors cannot invest in their own project."})
 
         current_funding = project.subscriptions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
         if current_funding >= project.funding_goal:
-            raise serializers.ValidationError({"project": "This project is already fully funded."})
+            raise serializers.ValidationError({"project": "This project is fully funded."})
 
         if amount is not None and amount < Decimal("0.01"):
             raise serializers.ValidationError({"amount": "Ensure this value is greater than or equal to 0.01."})
 
         remaining_funding = project.funding_goal - current_funding
         if amount and amount > remaining_funding:
-            raise serializers.ValidationError({"amount": "The investment amount exceeds the remaining funding."})
+            raise serializers.ValidationError({"amount": "Amount exceeds funding goal."})
 
         data['investor'] = investor
         return data
@@ -85,7 +85,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
             if current_funding + amount > project_locked.funding_goal:
                 raise serializers.ValidationError(
-                    {"amount": "The investment amount exceeds the remaining funding."}
+                    {"amount": "Amount exceeds funding goal."}
                 )
 
             subscription = Subscription.objects.create(
