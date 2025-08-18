@@ -9,10 +9,11 @@ import CompanyList from '../../pages/CompanyList/companyList';
 import FeedbackForm from '../../pages/FeedbackForm/feedbackForm';
 import ForgotPassword from '../../pages/ForgotPassword/forgotPassword';
 import RestorePassword from '../../pages/RestorePassword/restorePassword';
+import ProfilePage from '../../pages/ProfilePage/profilePage';
 import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
-import Registration from '../../pages/Registration/registration';
+import RegistrationPage from '../../pages/Registration/registration';
 import AuthorizationWrapper from '../../pages/AuthorizationWrapper/authorizationWrapper';
 import RegistrationConfirmation from '../../pages/RegistrationConfirmation/registrationConfirmation';
 import RegisterReconfirmation from '../../pages/RegisterReconfirmation/registerReconfirmation';
@@ -33,9 +34,11 @@ import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePassword
  * - Feedback form
  * - Policy page
  * - Who we are page
- * - Authentication routes (login, registration, forgot password, restore password)
- * - Profile editing
- * - Not found page for unmatched routes.
+ * - Log in page
+ * - Registration page
+ * - Password management (forgot and restore)
+ * - User and company profile pages with editing capabilities
+ * - A catch-all route for 404 Not Found
  * @returns {JSX.Element} The main application component.
  */
 function App() {
@@ -68,7 +71,7 @@ function App() {
                             <Route path="login" element={<LogInPage />} />
 
                             {/* Registration */}
-                            <Route path="register" element={<Registration />} />
+                            <Route path="register" element={<RegistrationPage />} />
                             <Route path="register/confirm" element={<RegistrationConfirmation />} />
                             <Route path="register/confirm-email" element={<EmailConfirmationHandler />} />
                             <Route path="register/re-confirm" element={<RegisterReconfirmation />} />
@@ -86,8 +89,12 @@ function App() {
                         {/* Profile */}
                         <Route path="profile">
 
-                            {/* Profile editing */}
-                            <Route path="edit" element={<ProfileEditing />} />
+                            {/* Company profile */}
+                            <Route path="company/:uid" element={<ProfilePage />}>
+
+                                {/* Profile editing */}
+                                <Route path="edit" element={<ProfileEditing />} />
+                            </Route>
                         </Route>
 
                         {/* Page not found */}
