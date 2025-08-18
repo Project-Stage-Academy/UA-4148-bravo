@@ -5,14 +5,12 @@ import re
 import time
 from collections import defaultdict
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+from core.settings import FORBIDDEN_WORDS
+from chat.models import Room, Message
 
 logger = logging.getLogger(__name__)
 
-FORBIDDEN_WORDS = {
-    "spam", "scam", "xxx", "viagra", "free money", "lottery", "bitcoin",
-    "crypto", "click here", "subscribe", "buy now", "offer", "promotion",
-    "gamble", "casino", "adult", "nsfw", "sex", "porn", "nude"
-}
 MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", 1000))
 MIN_MESSAGE_LENGTH = int(os.getenv("MIN_MESSAGE_LENGTH", 1))
 MESSAGE_RATE_LIMIT = int(os.getenv("MESSAGE_RATE_LIMIT", 5))
@@ -76,6 +74,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
         """
         Handles incoming messages from the WebSocket client.
         Validates size, rate, and content before broadcasting.
+        Call the method that saves messages in the database.
         """
         try:
             text_data_json = json.loads(text_data)
@@ -115,6 +114,9 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({"error": "Too many messages, slow down."}))
                 return
 
+            user = self.scope["user"] if self.scope["user"].is_authenticated else None
+            await self.save_message(self.room_name, user, message)
+
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {"type": "receive_chat_message", "message": message}
@@ -143,3 +145,15 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
 
         except Exception as e:
             logger.error("Error sending message to WebSocket client: %s", e)
+
+    @database_sync_to_async
+    def save_message(self, room_name, user, message):
+        """ Saves messages in the database. """
+        room, _ = Room.objects.get_or_create(
+            name=room_name
+        )
+        return Message.objects.create(
+            room=room,
+            sender=user,
+            text=message
+        )

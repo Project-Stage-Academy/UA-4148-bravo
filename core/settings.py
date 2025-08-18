@@ -348,6 +348,12 @@ COMMUNICATIONS_NOTIFICATION_TYPES = [
     },
 ]
 
+FORBIDDEN_WORDS = {
+    "spam", "scam", "xxx", "viagra", "free money", "lottery", "bitcoin",
+    "crypto", "click here", "subscribe", "buy now", "offer", "promotion",
+    "gamble", "casino", "adult", "nsfw", "sex", "porn", "nude"
+}
+
 # Logs
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
