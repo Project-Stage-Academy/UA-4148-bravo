@@ -30,7 +30,7 @@ def validate_project_funding_limit(project: Project, amount, current_subscriptio
     current_subscription_amount = to_decimal(current_subscription_amount)
     total_subscribed = get_total_subscribed(project) - current_subscription_amount
 
-    if total_subscribed >= project.funding_goal:
+    if total_subscribed >= project.funding_goal or project.current_funding >= project.funding_goal:
         raise ValidationError({"project": _("Project is fully funded.")})
 
     if total_subscribed + amount > project.funding_goal:

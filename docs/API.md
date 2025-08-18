@@ -170,6 +170,7 @@ Use `/api/token/refresh/` to obtain a new access token.
 
 # OAuth Authentication API Documentation
 
+## Part 1
 ## Overview
 This document describes the OAuth authentication endpoints for Google and GitHub integration.
 
@@ -222,3 +223,35 @@ Authenticate users using Google or GitHub OAuth providers. The endpoint exchange
 | `429 Too Many Requests` | Rate limit exceeded |
 | `500 Internal Server Error` | Unexpected server error |
 | `502 Bad Gateway` | Provider API communication failed |
+
+
+## Part 2
+## Callback URLs
+The OAuth callback URLs are configured to handle redirects after successful authentication with the OAuth provider. These URLs are used by the frontend to receive authorization codes or tokens.
+
+### Configured Callback URLs
+- **Production**: ----
+- **Development**: `http://127.0.0.1:8000/oauth/callback/`
+
+## Usage Instructions
+1. **Initiate OAuth Flow**:
+   - Redirect users to the OAuth provider's authorization endpoint (e.g., `https://provider.com/oauth/authorize`).
+   - Include the appropriate `redirect_uri` parameter matching one of the configured callback URLs
+
+2. **Handle Callback**:
+   - After authentication, the OAuth provider will redirect the user to the specified callback URL with an authorization code or token in the query parameters (e.g., `https://yourapp.com/auth/callback?code=abc123`).
+   - The frontend should extract the `code` from the URL query parameters using `URLSearchParams`.
+
+3. **Extracting Query Parameters**:
+   - Example of JavaScript to extract parameters from the callback URL:
+     ```javascript
+     const urlParams = new URLSearchParams(window.location.search);
+     const code = urlParams.get('code');
+     const state = urlParams.get('state');
+     const error = urlParams.get('error');
+     ```
+
+4. **ExchangeCode for Token**:
+  -Send the authorization code to your backend API `/users/oauth/login/` to exchange it for an access token.
+=======
+

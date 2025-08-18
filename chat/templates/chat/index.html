@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Chat Rooms</title>
+</head>
+<body>
+<h2>What chat room would you like to enter?</h2>
+<input id="room-name-input" type="text" size="50" placeholder="Enter room name">
+<input id="room-name-submit" type="button" value="Enter">
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const MAX_ROOM_NAME_LENGTH = 50; // Maximum length for the room name
+
+    const input = document.querySelector('#room-name-input');
+    const submit = document.querySelector('#room-name-submit');
+
+    input.focus();
+
+    // Pressing Enter triggers submit
+    input.addEventListener('keyup', function (e) {
+        if (e.key === 'Enter') {
+            submit.click();
+        }
+    });
+
+    submit.addEventListener('click', function (e) {
+        let roomName = input.value.trim();
+
+        // Check for empty input
+        if (!roomName) {
+            alert("Please enter a room name.");
+            return;
+        }
+
+        // Check maximum length
+        if (roomName.length > MAX_ROOM_NAME_LENGTH) {
+            alert(`Room name must be at most ${MAX_ROOM_NAME_LENGTH} characters.`);
+            return;
+        }
+
+        // Validate allowed characters (letters, numbers, dash, underscore)
+        const validPattern = /^[a-zA-Z0-9_-]+$/;
+        if (!validPattern.test(roomName)) {
+            alert("Room name can only contain letters, numbers, dashes, and underscores.");
+            return;
+        }
+
+        // Encode the room name safely for the URL
+        const safeRoomName = encodeURIComponent(roomName);
+
+        // Redirect to the chat room
+        window.location.pathname = '/chat/' + safeRoomName + '/';
+    });
+});
+</script>
+</body>
+</html>
