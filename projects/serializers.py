@@ -45,7 +45,7 @@ class ProjectReadSerializer(serializers.ModelSerializer):
 
     def get_status_display(self, obj):
         return ProjectStatus(obj.status).label if obj.status else None
-    
+
     def get_startup_name(self, obj):
         """Returns the name of the associated startup."""
         return obj.startup.company_name if obj.startup else None
@@ -142,6 +142,7 @@ class ProjectDocumentSerializer(DocumentSerializer):
     """
     Serializer for the Elasticsearch ProjectDocument.
     """
+
     class Meta:
         document = ProjectDocument
         fields = ('id', 'title', 'description', 'status', 'startup', 'category')
