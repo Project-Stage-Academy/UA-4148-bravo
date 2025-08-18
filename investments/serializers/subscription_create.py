@@ -64,11 +64,11 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
         current_funding = self._effective_current_funding(project)
 
+        if current_funding >= project.funding_goal:
+            raise serializers.ValidationError({"project": "This project is already fully funded."})
+
         if amount is not None and current_funding + amount > project.funding_goal:
             raise serializers.ValidationError({"amount": "Amount exceeds funding goal — exceeds the remaining funding."})
-
-        if current_funding >= project.funding_goal:
-            raise serializers.ValidationError({"project": "This project is fully funded."})
 
         data["investor"] = investor
         return data
@@ -82,11 +82,11 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
             current_funding = self._effective_current_funding(project_locked)
 
+            if current_funding >= project_locked.funding_goal:
+                raise serializers.ValidationError({"project": "This project is already fully funded."})
+
             if current_funding + amount > project_locked.funding_goal:
                 raise serializers.ValidationError({"amount": "Amount exceeds funding goal — exceeds the remaining funding."})
-
-            if current_funding >= project_locked.funding_goal:
-                raise serializers.ValidationError({"project": "This project is fully funded."})
 
             subscription = Subscription.objects.create(
                 project=project_locked,
