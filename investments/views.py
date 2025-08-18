@@ -14,41 +14,38 @@ logger = logging.getLogger(__name__)
 
 
 class SubscriptionCreateView(CreateAPIView):
-    queryset = Subscription.objects.all()
+    """
+    API endpoint for creating a new investment subscription.
+    """
+    queryset = Subscription.objects.all(), Project.objects.all()
     serializer_class = SubscriptionCreateSerializer
     permission_classes = [IsAuthenticated, IsInvestor]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        
         serializer.is_valid(raise_exception=True)
         
-        try:
-            subscription = serializer.save()
+        subscription = serializer.save()
 
-            project = subscription.project
-            remaining_funding = project.funding_goal - project.current_funding
-            project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
+        project = subscription.project
+        project.refresh_from_db()
 
-            logger.info(
-                "Subscription created successfully for project %s by user %s",
-                project.id,
-                request.user.id,
-            )
+        remaining_funding = project.funding_goal - project.current_funding
+        project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
 
-            return Response(
-                {
-                    "message": "Subscription created successfully.",
-                    "remaining_funding": remaining_funding,
-                    "project_status": project_status,
-                },
-                status=status.HTTP_201_CREATED,
-            )
-        except serializers.ValidationError as e:
-            logger.exception("Validation error during subscription creation for user %s: %s", getattr(request.user, 'id', None), e.detail)
-            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
-        except Exception:
-            logger.exception("Failed to create subscription for user %s", getattr(request.user, 'id', None))
-            return Response(
-                {"detail": "Failed to create subscription. Please try again."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        logger.info(
+            "Subscription created successfully for project %s by user %s",
+            project.id,
+            request.user.id,
+        )
+
+        return Response(
+            {
+                "message": "Subscription created successfully.",
+                "remaining_funding": remaining_funding,
+                "project_status": project_status,
+                "subscription_id": subscription.id,
+            },
+            status=status.HTTP_201_CREATED,
+        )
