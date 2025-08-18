@@ -4,6 +4,8 @@ Django settings for the project.
 Key changes in this version:
 - Remove hardcoded Elasticsearch port 9999 for tests.
 - Use ELASTICSEARCH_HOST from environment everywhere (defaults to http://localhost:9200).
+- Merge conflicts resolved: include Channels/Chat, Redis config, optional SQLite for tests,
+  and communications notification types.
 """
 
 import os
@@ -33,6 +35,11 @@ FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 # Installed apps
 # ---------------------------------------------------------------------------
 INSTALLED_APPS = [
+    # Channels / WebSockets
+    'daphne',
+    'channels',
+    'chat',
+
     # Django built-in apps
     'django.contrib.admin',
     'django.contrib.auth',
@@ -132,7 +139,7 @@ REST_FRAMEWORK = {
         'resend_email': '5/minute',
     },
 }
-# Disable throttling in tests to speed up and avoid flakiness
+# Disable throttling in tests
 if 'test' in sys.argv:
     REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
 
@@ -154,11 +161,9 @@ SIMPLE_JWT = {
 # Email settings
 # ---------------------------------------------------------------------------
 if DEBUG:
-    # Use console email backend in development
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 else:
-    # SMTP settings for production/CI
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = config('EMAIL_HOST', default='smtp.sendgrid.net')
     EMAIL_PORT = 587
@@ -167,6 +172,9 @@ else:
     EMAIL_USE_TLS = True
     DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='pbeinner@gmail.com')
 
+# ---------------------------------------------------------------------------
+# Djoser config
+# ---------------------------------------------------------------------------
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
@@ -197,7 +205,7 @@ DJOSER = {
 # Middleware
 # ---------------------------------------------------------------------------
 MIDDLEWARE = [
-    "allauth.account.middleware.AccountMiddleware",  # OAuth middleware
+    "allauth.account.middleware.AccountMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -230,6 +238,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = "core.asgi.application"
 
 # ---------------------------------------------------------------------------
 # Database configuration
@@ -245,7 +254,7 @@ DATABASES = {
     }
 }
 
-# Optional: SQLite for fast, isolated unit tests
+# Optional: SQLite for isolated unit tests
 if os.environ.get("USE_SQLITE_FOR_TESTS") == "1":
     DATABASES = {
         "default": {
@@ -295,15 +304,12 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ---------------------------------------------------------------------------
-# CORS settings
+# CORS
 # ---------------------------------------------------------------------------
 CORS_ALLOW_ALL_ORIGINS = True
 
 # ---------------------------------------------------------------------------
-# Elasticsearch DSL configuration
-# Use a single source of truth: ELASTICSEARCH_HOST env var
-# Default points to local ES on port 9200.
-# In Docker Compose use "http://elasticsearch:9200"; in CI use "http://127.0.0.1:9200".
+# Elasticsearch
 # ---------------------------------------------------------------------------
 ELASTICSEARCH_DSL = {
     'default': {
@@ -312,7 +318,7 @@ ELASTICSEARCH_DSL = {
 }
 
 # ---------------------------------------------------------------------------
-# File validation settings
+# File validation
 # ---------------------------------------------------------------------------
 ALLOWED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"]
 ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png"]
@@ -355,10 +361,44 @@ ALLOWED_SOCIAL_PLATFORMS = {
 }
 
 # ---------------------------------------------------------------------------
-# Logging settings
+# Communications app: notification types seeding
+# ---------------------------------------------------------------------------
+COMMUNICATIONS_NOTIFICATION_TYPES = [
+    {
+        'code': 'startup_saved',
+        'name': 'Startup Saved',
+        'description': 'Notification when a user saves a startup',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
+    {
+        'code': 'project_followed',
+        'name': 'Project Followed',
+        'description': 'Notification when a user follows a project',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
+    {
+        'code': 'message_received',
+        'name': 'Message Received',
+        'description': 'Notification when a user receives a new message',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
+    {
+        'code': 'project_updated',
+        'name': 'Project Updated',
+        'description': 'Notification when a followed project is updated',
+        'default_frequency': 'daily_digest',
+        'is_active': True,
+    },
+]
+
+# ---------------------------------------------------------------------------
+# Logging
 # ---------------------------------------------------------------------------
 LOG_DIR = BASE_DIR / 'logs'
-os.makedirs(LOG_DIR, exist_ok=True)
+LOG_DIR.mkdir(exist_ok=True)
 
 LOGGING = {
     'version': 1,
@@ -385,48 +425,53 @@ LOGGING = {
         },
         'file_django': {
             'level': 'INFO',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'django.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
         'file_apps': {
             'level': 'DEBUG',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'apps.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
         'file_errors': {
             'level': 'ERROR',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'errors.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
         'db_file': {
             'level': 'INFO',
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'db_queries.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'verbose',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
         'file_json': {
-            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
             'filename': os.path.join(LOG_DIR, 'json_logs.log'),
-            'when': 'midnight',
             'backupCount': 7,
             'formatter': 'json',
             'level': 'INFO',
-            'encoding': 'utf8',
+            'encoding': 'utf-8',
+            'mode': 'a',
+            'delay': True,
         },
     },
     'loggers': {
@@ -483,14 +528,30 @@ LOGGING = {
 }
 
 # ---------------------------------------------------------------------------
-# Celery configuration
+# Celery
 # ---------------------------------------------------------------------------
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = 'rpc://'
 
-# Run Celery tasks eagerly when running specific commands/tests (optional)
 if 'users' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
+# ---------------------------------------------------------------------------
+# Channels / Redis
+# ---------------------------------------------------------------------------
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+        },
+    },
+}
 
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'

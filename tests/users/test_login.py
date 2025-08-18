@@ -2,8 +2,8 @@
 import uuid
 
 # Django
-from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 
 # DRF
 from rest_framework.test import APIClient
@@ -47,7 +47,7 @@ def test_successful_login(api_client, test_user):
     Should return access and refresh tokens for valid credentials.
     Also checks response structure, token format, and content type.
     """
-    url = reverse("users:login")  # Or use hardcoded path if reverse not configured
+    url = reverse("users:jwt-create")  # Adjust to your URL name if needed
     response = api_client.post(url, {
         "email": test_user.email,
         "password": "testpass"
@@ -68,7 +68,7 @@ def test_login_wrong_password(api_client, test_user):
     """
     Should return 401 Unauthorized for incorrect password.
     """
-    url = reverse("users:login")
+    url = reverse("users:jwt-create")
     response = api_client.post(url, {
         "email": test_user.email,
         "password": "wrongpass"
@@ -81,7 +81,7 @@ def test_login_nonexistent_user(api_client):
     """
     Should return 401 Unauthorized for non-existent user.
     """
-    url = reverse("users:login")
+    url = reverse("users:jwt-create")
     response = api_client.post(url, {
         "email": "ghost@example.com",
         "password": "nopass"
@@ -94,7 +94,7 @@ def test_login_missing_fields(api_client):
     """
     Should return 400 Bad Request when required fields are missing.
     """
-    url = reverse("users:login")
+    url = reverse("users:jwt-create")
     response = api_client.post(url, {
         "email": "testuser@example.com"
         # Missing password

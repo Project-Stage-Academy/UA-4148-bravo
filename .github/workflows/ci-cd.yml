@@ -1,8 +1,10 @@
-# GitHub Actions workflow for Django CI/CD with PostgreSQL and Elasticsearch 7.x
-# Key fixes:
-# - Use ELASTICSEARCH_HOST consistently (127.0.0.1 in CI to avoid IPv6 issues with localhost)
-# - Robust wait for Elasticsearch cluster health (yellow/green)
-# - Keep build/deploy stages but make them depend on tests
+# GitHub Actions workflow for Django CI/CD with PostgreSQL, Elasticsearch 7.x, and Redis
+# Key points:
+# - Use 127.0.0.1 for Elasticsearch to avoid IPv6 issues with "localhost"
+# - Wait robustly for Elasticsearch cluster health (yellow/green)
+# - Include Redis as a service with environment variables
+# - Separate jobs: test → build → deploy
+# - Deployment is optional and can be enabled via workflow_dispatch input
 
 name: Django CI/CD Pipeline
 
@@ -37,10 +39,14 @@ jobs:
       DB_HOST: localhost
       DB_PORT: 5432
 
-      # IMPORTANT: Use 127.0.0.1 in CI to avoid IPv6 "localhost" pitfalls
+      # Elasticsearch config
       ELASTICSEARCH_HOST: http://127.0.0.1:9200
 
-      # OAuth/Email (read from repo secrets where applicable)
+      # Redis config
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+
+      # OAuth/Email (from repository secrets)
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       GITHUB_CLIENT_ID: ${{ secrets.GIT_CLIENT_ID }}
@@ -68,11 +74,10 @@ jobs:
           --health-retries=10
 
       elasticsearch:
-        # Match client library 7.x used in requirements.txt
+        # Elasticsearch 7.x to match Python client version
         image: docker.elastic.co/elasticsearch/elasticsearch:7.17.12
         env:
           discovery.type: single-node
-          # Security is disabled for CI simplicity. If you enable it, also set creds/CA.
           xpack.security.enabled: "false"
           ES_JAVA_OPTS: "-Xms512m -Xmx512m"
         ports:
@@ -82,6 +87,16 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=30
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout code
@@ -99,7 +114,6 @@ jobs:
           pip install -r requirements.txt
 
       - name: Wait for Elasticsearch
-        # Wait for ES port AND for cluster to reach at least "yellow" status
         run: |
           echo "Waiting for Elasticsearch to be ready..."
           curl --retry 60 --retry-delay 3 --retry-connrefused -fsS http://127.0.0.1:9200 > /dev/null
@@ -151,4 +165,5 @@ jobs:
     steps:
       - name: Deploy to Production
         run: echo "Deployment triggered! Production code is going live."
+
 

@@ -1,9 +1,11 @@
 """
 URL configuration for core project.
 
-Routes are organized by app and follow RESTful naming conventions.
-All API endpoints use plural nouns for consistency.
-Versioning is applied via 'api/v1/' to support future evolution.
+- Routes are organized by app and follow RESTful naming conventions.
+- All API endpoints use plural nouns for consistency.
+- Versioning is applied via 'api/v1/' to support future evolution.
+- JWT authentication and OAuth endpoints are included.
+- API schema and docs are available via drf-spectacular.
 """
 
 from django.contrib import admin
@@ -13,6 +15,8 @@ from django.conf.urls.static import static
 
 from .healthcheck import elasticsearch_healthcheck
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+
+# JWT and custom authentication views
 from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import (
     CustomTokenObtainPairView,
@@ -43,13 +47,18 @@ api_urlpatterns = [
     path('projects/', include('projects.urls')),
     path('startups/', include('startups.urls')),
     path('investors/', include('investors.urls')),
+    path('communications/', include('communications.urls')),
+    path('chat/', include('chat.urls')),
 
-    # OAuth endpoints
+    # OAuth endpoints (django-allauth)
     path('accounts/', include('allauth.urls')),
 ]
 
 urlpatterns = [
+    # Admin panel
     path('admin/', admin.site.urls),
+
+    # Versioned API entrypoint
     path('api/v1/', include(api_urlpatterns)),
 
     # API schema and docs
@@ -57,7 +66,7 @@ urlpatterns = [
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
-    # Healthcheck
+    # Healthcheck endpoint
     path('health/elasticsearch/', elasticsearch_healthcheck),
 ]
 
