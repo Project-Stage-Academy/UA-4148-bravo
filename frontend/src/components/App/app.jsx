@@ -20,7 +20,7 @@ import RegistrationConfirmation from '../../pages/RegistrationConfirmation/regis
 import RegisterReconfirmation from '../../pages/RegisterReconfirmation/registerReconfirmation';
 import RegistrationError from '../../pages/RegistrationError/registrationError';
 import RegistrationDone from '../../pages/RegistrationDone/registrationDone';
-import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/EmailConfirmationHandler';
+import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/emailConfirmationHandler';
 import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
 
 /**
@@ -75,7 +75,6 @@ function App() {
                             <Route path="register" element={<RegistrationPage />} />
 
                             <Route path="register/confirm" element={<RegistrationConfirmation />} />
-                            <Route path="register/confirm-email" element={<EmailConfirmationHandler />} />
                             <Route path="register/re-confirm" element={<RegisterReconfirmation />} />
                             <Route path="register/error" element={<RegistrationError />} />
                             <Route path="register/done" element={<RegistrationDone />} />
@@ -98,6 +97,9 @@ function App() {
                                 <Route path="edit" element={<ProfileEditing />} />
                             </Route>
                         </Route>
+
+                        {/* Email verificator */}
+                        <Route path="api/v1/auth/verify-email/:user_id/:token" element={<EmailConfirmationHandler />} />
 
                         {/* Page not found */}
                         <Route path="*" element={<NotFound />} />

@@ -55,17 +55,20 @@ function AuthProvider({ children }) {
      */
     const register = useCallback(
         async (email, first_name, last_name, password, confirmPassword) => {
-            await api.post("/api/v1/auth/register/", {
-                email,
-                first_name,
-                last_name,
-                password,
-                password2: confirmPassword,
-            }).catch((err) => {
+            try {
+                return await api.post('/api/v1/auth/register/', {
+                    email,
+                    first_name,
+                    last_name,
+                    password,
+                    password2: confirmPassword,
+                });
+            } catch (err) {
                 console.error(err);
                 throw err;
-            });
-        }, []
+            }
+        },
+        []
     );
 
     /**
@@ -79,7 +82,7 @@ function AuthProvider({ children }) {
      */
     const resendRegisterEmail = useCallback(
         async (email, userId) => {
-            await api.post('/api/v1/auth/register/resend/', {
+            await api.post('/api/v1/auth/resend-email/', {
                 email: email,
                 user_id: userId,
             }).catch((err) => {
@@ -204,9 +207,7 @@ function AuthProvider({ children }) {
      */
     async function refreshToken(isMounted) {
         try {
-            const { data } = await api.post("/api/v1/auth/jwt/refresh/").catch((err) => {
-                console.error(err);
-            });
+            const { data } = await api.post("/api/v1/auth/jwt/refresh/");
             if (!isMounted) return;
 
             setAccessToken(data.access || null);
@@ -214,8 +215,16 @@ function AuthProvider({ children }) {
             * TODO
             * await loadUser();
             */
-        } catch {
-            await logout();
+        } catch (err) {
+            if (err.response) {
+                console.log("Refresh token missing or invalid:", err.response.status);
+            } else {
+                console.error(err);
+            }
+
+            if (err.response?.status === 401) {
+                await logout();
+            }
         }
     }
 
@@ -239,6 +248,7 @@ function AuthProvider({ children }) {
             value={useMemo(
                 () => ({
                     user,
+                    setUser,
                     login,
                     register,
                     resendRegisterEmail,
@@ -248,6 +258,7 @@ function AuthProvider({ children }) {
                 }),
                 [
                     user,
+                    setUser,
                     login,
                     register,
                     resendRegisterEmail,

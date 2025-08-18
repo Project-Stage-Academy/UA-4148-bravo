@@ -1,4 +1,5 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import './emailConfirmationHandler.css';
+import {useNavigate, useParams} from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Loading from '../../components/Loading/loading';
 
@@ -10,14 +11,12 @@ import Loading from '../../components/Loading/loading';
  * @returns {JSX.Element}
  */
 function EmailConfirmationHandler() {
-    const [searchParams] = useSearchParams();
+    const { user_id, token } = useParams();
     const navigate = useNavigate();
     const [status, setStatus] = useState('processing');
     //const {  } = useAuthContext();
 
     useEffect(() => {
-        const token = searchParams.get('token');
-
         if (token) {
             // confirmUser(token)
             //     .then(() => setStatus('success'))
@@ -25,9 +24,9 @@ function EmailConfirmationHandler() {
         } else {
             setStatus('error');
         }
-    }, [searchParams]);
+    }, [user_id, token]);
 
-    if (status === 'processing') return <Loading />;
+    if (status === 'processing') return <Loading className={'email-confirmation-handler'}/>;
     else if (status === 'success') navigate('/auth/register/done');
     else navigate('/auth/register/error');
 }

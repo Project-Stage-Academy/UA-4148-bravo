@@ -80,7 +80,7 @@ function Registration() {
             )
                 .then((res) => {
                     setUser({
-                        id: res.data.id,
+                        id: res.data.user_id,
                         email: res.data.email
                     });
 
