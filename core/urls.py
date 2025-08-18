@@ -38,6 +38,8 @@ urlpatterns = [
     path('api/v1/auth/verify-email/<int:user_id>/<str:token>/', VerifyEmailView.as_view(), name='verify-email'),
     path('api/v1/auth/resend-email/', ResendEmailView.as_view(), name='resend-email'),
     path('api/v1/oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),
+    path('api/v1/auth/password/reset/', CustomPasswordResetView.as_view(), name="password-reset"),
+    path('api/v1/auth/password/reset/confirm/', CustomPasswordResetConfirmView.as_view(), name="password-reset-confirm"),
 
     # Domain apps
     path('api/v1/projects/', include('projects.urls')),
@@ -55,8 +57,6 @@ urlpatterns = [
     path('health/elasticsearch/', elasticsearch_healthcheck),
     path('accounts/', include('allauth.urls')),
     path("chat/", include("chat.urls")),
-    path("password/reset/", CustomPasswordResetView.as_view(), name="password-reset"),
-    path("password/reset/confirm/", CustomPasswordResetConfirmView.as_view(), name="password-reset-confirm"),
 ]
 
 if settings.DEBUG:
