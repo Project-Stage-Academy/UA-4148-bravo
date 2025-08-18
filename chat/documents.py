@@ -22,7 +22,7 @@ class Room(Document):
         regex=r'^[a-zA-Z0-9_-]+$',
         unique=True
     )
-    participants = ListField(ReferenceField('User'))
+    participants = ListField(ReferenceField('UserDocument'))
     created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
     updated_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
 
@@ -62,7 +62,7 @@ class Message(Document):
     """
 
     room = ReferenceField(Room, required=True)
-    sender = ReferenceField('User', required=True)
+    sender = ReferenceField('UserDocument', required=True)
     text = StringField(required=True, min_length=1, max_length=1000)
     timestamp = DateTimeField(default=lambda: datetime.now(timezone.utc))
     is_read = BooleanField(default=False)

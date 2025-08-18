@@ -7,7 +7,7 @@ from collections import defaultdict
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from core.settings import FORBIDDEN_WORDS
-from chat.models import Room, Message
+from chat.documents import Room, Message
 
 logger = logging.getLogger(__name__)
 
