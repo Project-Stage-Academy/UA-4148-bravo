@@ -94,4 +94,10 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
                 investor=validated_data['investor']
             )
 
+            project_locked.current_funding = (
+                project_locked.subscriptions.aggregate(total=Sum("amount"))["total"]
+                or Decimal("0.00")
+            )
+            project_locked.save(update_fields=["current_funding"])
+
         return subscription

@@ -3,11 +3,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 import logging
-from rest_framework import serializers
 
 from investments.models import Subscription
-from projects.models import Project
-from investments.serializers.subscription_create import SubscriptionCreateSerializer 
+from investments.serializers.subscription_create import SubscriptionCreateSerializer
 from users.permissions import IsInvestor
 
 logger = logging.getLogger(__name__)
@@ -16,16 +14,18 @@ logger = logging.getLogger(__name__)
 class SubscriptionCreateView(CreateAPIView):
     """
     API endpoint for creating a new investment subscription.
+
+    - Requires authentication and investor role.
+    - Validates funding constraints and prevents invalid investments.
+    - Returns project funding status along with subscription details.
     """
-    queryset = Subscription.objects.all(), Project.objects.all()
+    queryset = Subscription.objects.all()
     serializer_class = SubscriptionCreateSerializer
     permission_classes = [IsAuthenticated, IsInvestor]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        
         serializer.is_valid(raise_exception=True)
-        
         subscription = serializer.save()
 
         project = subscription.project
