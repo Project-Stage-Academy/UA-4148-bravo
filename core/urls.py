@@ -32,6 +32,7 @@ urlpatterns = [
     # Health & allauth
     path('health/elasticsearch/', elasticsearch_healthcheck),
     path('accounts/', include('allauth.urls')),
+    path("chat/", include("chat.urls")),
 ]
 
 if settings.DEBUG:
