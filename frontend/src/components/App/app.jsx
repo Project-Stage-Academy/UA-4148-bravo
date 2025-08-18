@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import React from 'react';
-import AuthProvider from '../../context/AuthContext/authContext';
+import AuthProvider from '../../provider/AuthProvider/authProvider';
 import Layout from '../Layout/layout';
 import ProfileEditing from '../../pages/ProfileEditing/profileEditing';
 import NotFound from '../../pages/NotFound/notFound';
@@ -14,6 +14,7 @@ import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
 import RegistrationPage from '../../pages/Registration/registration';
+import RequireAuth from '../RequireAuth/requireAuth';
 import AuthorizationWrapper from '../../pages/AuthorizationWrapper/authorizationWrapper';
 import RegistrationConfirmation from '../../pages/RegistrationConfirmation/registrationConfirmation';
 import RegisterReconfirmation from '../../pages/RegisterReconfirmation/registerReconfirmation';
@@ -23,8 +24,8 @@ import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/Email
 import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
 
 /**
- * Main application component that sets up routing and context providers.
- * It wraps the application in an AuthProvider for authentication context
+ * Main application component that sets up routing and provider providers.
+ * It wraps the application in an AuthProvider for authentication provider
  * and uses React Router for navigation.
  * The main layout is defined in the Layout component, which includes
  * the header, sidebar, and footer.
@@ -65,7 +66,11 @@ function App() {
                         {/* Who we are */}
                         <Route path="who-we-are" element={<WhoWeAre />} />
 
-                        <Route path={"auth"} element={<AuthorizationWrapper />}>
+                        <Route path={"auth"} element={
+                            <RequireAuth>
+                                <AuthorizationWrapper />
+                            </RequireAuth>
+                        }>
 
                             {/* Log in */}
                             <Route path="login" element={<LogInPage />} />

@@ -1,5 +1,6 @@
 import os
 import sys
+
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
@@ -382,6 +383,7 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
         'file_apps': {
             'level': 'DEBUG',
@@ -391,6 +393,7 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
         'file_errors': {
             'level': 'ERROR',
@@ -400,6 +403,7 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
         'db_file': {
             'level': 'INFO',
@@ -409,6 +413,7 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
         'file_json': {
             'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
@@ -418,6 +423,7 @@ LOGGING = {
             'level': 'INFO',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
     },
     'loggers': {
