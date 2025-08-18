@@ -216,12 +216,6 @@ class VerifyEmailView(APIView):
                 email_verification_token=token
             )
             
-            if user.is_active:
-                return Response(
-                    {'status': 'success', 'message': 'Email is already verified.Email is already verified. No confirmation email was sent.'},
-                    status=status.HTTP_200_OK
-                )
-            
             # Check if token is expired (24 hours)
             token_expired = (
                 user.email_verification_sent_at is None or
@@ -235,26 +229,28 @@ class VerifyEmailView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            try:
-                user.confirm_pending_email()
-            except DjangoValidationError as e:
-                if getattr(e, "code", None) == "no_pending_email":
-                    logger.info(f"No pending email to confirm for {user.email}") 
-                    return Response(
-                        {'status': 'success', 'message': 'Email is already verified.'},
-                        status=status.HTTP_200_OK
-                    )
-                else:
-                    logger.warning(f"Failed to confirm pending email for {user.email}: {e}")         
-                    return Response(
-                        {"status": "error", "message": str(e)},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+            if user.pending_email:
+                try:
+                    user.confirm_pending_email()
+                except DjangoValidationError as e:
+                    if getattr(e, "code", None) == "no_pending_email":
+                        logger.info(f"No pending email to confirm for {user.email}") 
+                        return Response(
+                            {'status': 'success', 'message': 'Email is already verified.'},
+                            status=status.HTTP_200_OK
+                        )
+                    else:
+                        logger.warning(f"Failed to confirm pending email for {user.email}: {e}")         
+                        return Response(
+                            {"status": "error", "message": str(e)},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+            else:
+                user.is_active = True
             
-            user.is_active = True
             user.email_verification_token = None
             user.email_verification_sent_at = None
-            user.save(update_fields=['is_active', 'email_verification_token', 'email_verification_sent_at'])
+            user.save(update_fields=['is_active', 'email', 'email_verification_token', 'email_verification_sent_at'])
             
             logger.info(f"User {user.email} email verified successfully")
             return Response(

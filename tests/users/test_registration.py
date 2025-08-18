@@ -210,7 +210,8 @@ class EmailVerificationTests(APITestCase):
     def test_verification_with_valid_token(self):
         """Test verification with a valid token."""
         self.user.email_verification_sent_at = timezone.now()
-        self.user.save()
+        self.user.pending_email = None
+        self.user.save(update_fields=['email_verification_sent_at', 'pending_email'])
         
         verification_url = reverse('verify-email', kwargs={'user_id': self.user.user_id, 'token': self.verification_token})
         response = self.client.get(verification_url)
