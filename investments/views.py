@@ -5,7 +5,8 @@ from rest_framework import status
 import logging
 from rest_framework import serializers
 
-from investments.models import Subscription, Project
+from investments.models import Subscription
+from projects.models import Project
 from investments.serializers.subscription_create import SubscriptionCreateSerializer 
 from users.permissions import IsInvestor
 
