@@ -1,7 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Loading from '../../components/Loading/loading';
-import { confirmUser } from '../../api';
 
 /**
  * Email confirmation handler
@@ -14,14 +13,15 @@ function EmailConfirmationHandler() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const [status, setStatus] = useState('processing');
+    //const {  } = useAuthContext();
 
     useEffect(() => {
         const token = searchParams.get('token');
 
         if (token) {
-            confirmUser(token)
-                .then(() => setStatus('success'))
-                .catch(() => setStatus('error'));
+            // confirmUser(token)
+            //     .then(() => setStatus('success'))
+            //     .catch(() => setStatus('error'));
         } else {
             setStatus('error');
         }

@@ -3,11 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import Button from '../../components/Button/button';
-import { registerUser } from '../../api';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import TextInput from '../../components/TextInput/textInput';
 import Checkbox from '../../components/Checkbox/checkbox';
 import HiddenInput from '../../components/HiddenInput/hiddenInput';
+import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 
 /**
  * Registration component handles user registration.
@@ -20,6 +20,9 @@ import HiddenInput from '../../components/HiddenInput/hiddenInput';
  */
 function Registration() {
     // This component handles user registration
+    const { setUser, register } = useAuthContext();
+
+    // Hook to navigate programmatically
     const navigate = useNavigate();
 
     // State to hold form data
@@ -47,7 +50,7 @@ function Registration() {
 
     // Function to handle server-side errors
     const handleError = (error) => {
-        if (error.response && error.response.status === 409) {
+        if (error.response && error.response.status === 401) {
             setErrors(prev => ({
                 ...prev,
                 email: Validator.serverSideErrorMessages.emailAlreadyExist
@@ -68,11 +71,24 @@ function Registration() {
         setErrors(validationErrors);
 
         if (Object.values(validationErrors).every(value => value === null)) {
-            registerUser(formData)
-                .then(() => navigate('/auth/register/confirm'))
+            register(
+                formData.email,
+                formData.firstName,
+                formData.lastName,
+                formData.password,
+                formData.confirmPassword
+            )
+                .then((res) => {
+                    setUser({
+                        id: res.data.id,
+                        email: res.data.email
+                    });
+
+                    navigate('/auth/register/confirm');
+                })
                 .catch(handleError);
         } else {
-            console.log('Errors:', validationErrors);
+            console.warn('Errors:', validationErrors);
         }
     };
 

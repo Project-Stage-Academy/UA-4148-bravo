@@ -1,11 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import { api, setAccessToken } from "../../api/client";
 import PropTypes from 'prop-types';
 
 /**
  * @typedef {Object} User - Represents a user in the application
  * @property {number} id - Unique identifier for the user
- * @property {string} name - Name of the user
+ * @property {string} first_name - First name of the user
+ * @property {string} last_name - Last name of the user
+ * @property {string} email - Email of the user
  * @property {string | null} role - Role of the user (e.g., 'admin', 'user')
  */
 
@@ -51,18 +53,20 @@ function AuthProvider({ children }) {
      * @param {string} password
      * @param {string} confirmPassword
      */
-    async function register(email, first_name, last_name, password, confirmPassword) {
-        await api.post('/api/v1/auth/register/', {
-            email,
-            first_name,
-            last_name,
-            password,
-            password2: confirmPassword,
-        }).catch((err) => {
-            console.error(err);
-            throw err;
-        });
-    }
+    const register = useCallback(
+        async (email, first_name, last_name, password, confirmPassword) => {
+            await api.post("/api/v1/auth/register/", {
+                email,
+                first_name,
+                last_name,
+                password,
+                password2: confirmPassword,
+            }).catch((err) => {
+                console.error(err);
+                throw err;
+            });
+        }, []
+    );
 
     /**
      * Resend register email
@@ -73,15 +77,17 @@ function AuthProvider({ children }) {
      * @param {string} email
      * @param {number} userId
      */
-    async function resendRegisterEmail(email, userId) {
-        await api.post('/api/v1/auth/register/resend/', {
-            email: email,
-            user_id: userId,
-        }).catch((err) => {
-            console.error(err);
-            throw err;
-        });
-    }
+    const resendRegisterEmail = useCallback(
+        async (email, userId) => {
+            await api.post('/api/v1/auth/register/resend/', {
+                email: email,
+                user_id: userId,
+            }).catch((err) => {
+                console.error(err);
+                throw err;
+            });
+        }, []
+    );
 
     /**
      * Create
@@ -93,25 +99,27 @@ function AuthProvider({ children }) {
      * @param {string} password
      * @returns {Promise<void>}
      */
-    async function login(email, password) {
-        const { data } = await api.post('/api/v1/auth/jwt/create/', {
-            email,
-            password,
-        }).catch((err) => {
-            console.error(err);
-            throw err;
-        });
+    const login = useCallback(
+        async (email, password) => {
+            const { data } = await api.post('/api/v1/auth/jwt/create/', {
+                email,
+                password,
+            }).catch((err) => {
+                console.error(err);
+                throw err;
+            });
 
-        if (data.access) {
-            console.log('data.access is missing or null');
-        }
+            if (data.access) {
+                console.log('data.access is missing or null');
+            }
 
-        setAccessToken(data.access);
-        /*
-        TODO
-        await loadUser();
-        */
-    }
+            setAccessToken(data.access);
+            /*
+            TODO
+            await loadUser();
+            */
+        }, []
+    );
 
     /**
      * Me
@@ -121,32 +129,36 @@ function AuthProvider({ children }) {
      *
      * @returns {Promise<void>}
      */
-    async function loadUser() {
-        try {
-            const { data } = await api.get("/api/v1/auth/me/")
-                .catch((err) => {
-                    console.error(err);
-                });
-            setUser(data);
-        } catch {
-            console.log('User not found');
-            setUser(null);
-        }
-    }
+    const loadUser = useCallback(
+        async () => {
+            try {
+                const { data } = await api.get("/api/v1/auth/me/")
+                    .catch((err) => {
+                        console.error(err);
+                    });
+                setUser(data);
+            } catch {
+                console.log('User not found');
+                setUser(null);
+            }
+        }, []
+    );
 
     /**
-     * Blacklist
-     * URL: /api/v1/auth/jwt/blacklist/
+     * Logout
+     * URL: /api/v1/auth/jwt/logout/
      * Req: { refresh }
      * Res: 205
      */
-    async function logout() {
-        await api.post("/api/v1/auth/jwt/blacklist/").catch(() => {
-            console.log('User not found');
-        });
-        setAccessToken(null);
-        setUser(null);
-    }
+    const logout = useCallback(
+        async () => {
+            await api.post("/api/v1/auth/jwt/logout/").catch(() => {
+                console.log('Logout');
+            });
+            setAccessToken(null);
+            setUser(null);
+        }, []
+    );
 
     /**
      * Password reset
@@ -157,11 +169,13 @@ function AuthProvider({ children }) {
      * @param {string} email
      * @returns {Promise<void>}
      */
-    async function requestReset(email) {
-        await api.post("/api/v1/auth/password/reset/", { email }).catch((err) => {
-            console.error(err);
-        });
-    }
+    const requestReset = useCallback(
+        async (email) => {
+            await api.post("/api/v1/auth/password/reset/", { email }).catch((err) => {
+                console.error(err);
+            });
+        }, []
+    );
 
     /**
      * Password reset confirm
@@ -174,11 +188,13 @@ function AuthProvider({ children }) {
      * @param {string} new_password
      * @returns {Promise<void>}
      */
-    async function confirmReset(uid, token, new_password) {
-        await api.post("/api/v1/auth/password/reset/confirm/", { uid, token, new_password }).catch((err) => {
-            console.error(err);
-        });
-    }
+    const confirmReset = useCallback(
+        async (uid, token, new_password) => {
+            await api.post("/api/v1/auth/password/reset/confirm/", { uid, token, new_password }).catch((err) => {
+                console.error(err);
+            });
+        }, []
+    );
 
     /**
      * Refresh
@@ -216,7 +232,7 @@ function AuthProvider({ children }) {
         return () => {
             isMounted = false;
         };
-    }, []);
+    });
 
     return (
         <AuthCtx.Provider

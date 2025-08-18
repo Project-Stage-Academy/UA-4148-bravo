@@ -66,17 +66,14 @@ function App() {
                         {/* Who we are */}
                         <Route path="who-we-are" element={<WhoWeAre />} />
 
-                        <Route path={"auth"} element={
-                            <RequireAuth>
-                                <AuthorizationWrapper />
-                            </RequireAuth>
-                        }>
+                        <Route path={"auth"} element={<AuthorizationWrapper />}>
 
                             {/* Log in */}
                             <Route path="login" element={<LogInPage />} />
 
                             {/* Registration */}
                             <Route path="register" element={<RegistrationPage />} />
+
                             <Route path="register/confirm" element={<RegistrationConfirmation />} />
                             <Route path="register/confirm-email" element={<EmailConfirmationHandler />} />
                             <Route path="register/re-confirm" element={<RegisterReconfirmation />} />
@@ -92,7 +89,7 @@ function App() {
                         </Route>
 
                         {/* Profile */}
-                        <Route path="profile">
+                        <Route path="profile" element={<RequireAuth />}>
 
                             {/* Company profile */}
                             <Route path="company/:uid" element={<ProfilePage />}>

@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button/button';
-import { registerUser } from '../../api';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import TextInput from '../../components/TextInput/textInput';
+import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 
 /**
  * Component for reconfirming user registration by resending the activation email.
@@ -17,6 +17,8 @@ import TextInput from '../../components/TextInput/textInput';
  * @returns {JSX.Element}
  */
 function RegisterReconfirmation() {
+    const { user, setUser, resendRegisterEmail } = useAuthContext();
+
     // Hook to navigate programmatically
     const navigate = useNavigate();
 
@@ -32,7 +34,7 @@ function RegisterReconfirmation() {
 
     // Function to handle server-side errors
     const handleError = (error) => {
-        if (error.response && error.response.status === 409) {
+        if (error.response && error.response.status === 401) {
             setErrors(prev => ({
                 ...prev,
                 email: Validator.serverSideErrorMessages.emailAlreadyExist
@@ -51,8 +53,14 @@ function RegisterReconfirmation() {
         setErrors(validationErrors);
 
         if (Object.values(validationErrors).every(value => value === null)) {
-            registerUser(formData)
-                .then(() => navigate('/auth/register/confirm'))
+            resendRegisterEmail(formData.email, user.id)
+                .then(() => {
+                    setUser({
+                        email: formData.email
+                    });
+
+                    navigate('/auth/register/confirm');
+                })
                 .catch(handleError);
         } else {
             console.log("Errors:", validationErrors);
