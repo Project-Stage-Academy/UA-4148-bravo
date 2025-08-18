@@ -3,6 +3,7 @@ import sys
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
+import mongoengine
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -494,4 +495,15 @@ CHANNEL_LAYERS = {
     },
 }
 
+MONGO_DB = os.getenv("MONGO_DB", "my_database")
+MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
+MONGO_PORT = int(os.getenv("MONGO_PORT", 27017))
+
+mongoengine.connect(
+    db=MONGO_DB,
+    host=MONGO_HOST,
+    port=MONGO_PORT
+)
+
+# Tests
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
