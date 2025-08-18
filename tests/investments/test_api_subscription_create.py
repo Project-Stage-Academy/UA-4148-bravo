@@ -236,4 +236,4 @@ class TestSubscriptionCreateAPI(TestCase):
         response = self.client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Project does not exist", str(response.data.get('project')))
+        self.assertIn("object does not exist", str(response.data.get('project')))

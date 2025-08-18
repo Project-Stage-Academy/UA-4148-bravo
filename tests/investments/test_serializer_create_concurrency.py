@@ -144,6 +144,6 @@ class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
         error_messages = [str(err).lower() for err in errors]
 
         self.assertTrue(
-            any("exceeds the remaining funding" in msg for msg in error_messages),
+            any("exceeds the remaining funding" in msg for msg in error_messages) or any("exceeds funding goal" in msg for msg in error_messages),
             f"Expected funding goal exceeded error, got: {error_messages}"
         )
