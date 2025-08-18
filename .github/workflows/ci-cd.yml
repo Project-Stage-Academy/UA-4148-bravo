@@ -1,11 +1,4 @@
 # GitHub Actions workflow for Django CI/CD with PostgreSQL, Elasticsearch 7.x, and Redis
-# Key points:
-# - Use 127.0.0.1 for Elasticsearch to avoid IPv6 issues with "localhost"
-# - Wait robustly for Elasticsearch cluster health (yellow/green)
-# - Include Redis as a service with environment variables
-# - Separate jobs: test → build → deploy
-# - Deployment is optional and can be enabled via workflow_dispatch input
-
 name: Django CI/CD Pipeline
 
 on:
@@ -27,26 +20,17 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Django config
       DJANGO_SETTINGS_MODULE: core.settings
       SECRET_KEY: dummy_key_for_ci
       DEBUG: 0
-
-      # Database config
       DB_NAME: test_db
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_HOST: localhost
       DB_PORT: 5432
-
-      # Elasticsearch config
       ELASTICSEARCH_HOST: http://127.0.0.1:9200
-
-      # Redis config
       REDIS_HOST: localhost
       REDIS_PORT: 6379
-
-      # OAuth/Email (from repository secrets)
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       GITHUB_CLIENT_ID: ${{ secrets.GIT_CLIENT_ID }}
@@ -74,7 +58,6 @@ jobs:
           --health-retries=10
 
       elasticsearch:
-        # Elasticsearch 7.x to match Python client version
         image: docker.elastic.co/elasticsearch/elasticsearch:7.17.12
         env:
           discovery.type: single-node
@@ -112,6 +95,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install concurrent-log-handler
 
       - name: Wait for Elasticsearch
         run: |
@@ -141,21 +125,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # TODO: Enable Docker login when secrets are configured
-      # - name: Log in to Docker Hub
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKER_USERNAME }}
-      #     password: ${{ secrets.DOCKER_PASSWORD }}
-
       - name: Build Docker Image
         run: |
           docker build -t my-django-app:latest -t my-django-app:${{ github.sha }} .
-
-      # TODO: Push image to Docker Hub after testing is complete
-      # - name: Push Docker Image
-      #   run: |
-      #     docker push ${{ secrets.DOCKER_USERNAME }}/projectname:latest
 
   deploy:
     if: ${{ github.event.inputs.enable_deploy == 'on' }}
