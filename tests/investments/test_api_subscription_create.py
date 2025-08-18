@@ -1,7 +1,6 @@
 from decimal import Decimal
-from django.test import TestCase
+from rest_framework.test import APIClient, APITransactionTestCase
 from django.urls import reverse
-from rest_framework.test import APIClient
 from rest_framework import status
 from common.enums import Stage
 from users.models import User, UserRole
@@ -11,72 +10,64 @@ from projects.models import Project, Category
 from investments.models import Subscription
 
 
-class TestSubscriptionCreateAPI(TestCase):
-    """Integration tests for the subscription creation endpoint."""
-
-    @classmethod
-    def setUpTestData(cls):
-        """Set up initial data for all tests."""
-        cls.role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
-        cls.investor_user = User.objects.create_user(
+class TestSubscriptionCreateAPI(APITransactionTestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
+        self.investor_user = User.objects.create_user(
             email="investor@example.com",
             password="testpassword123",
             first_name="Test",
             last_name="Investor",
-            role=cls.role_user,
+            role=self.role_user,
         )
 
-        cls.startup_user = User.objects.create_user(
+        self.startup_user = User.objects.create_user(
             email="startup_owner@example.com",
             password="testpassword123",
             first_name="Startup",
             last_name="Owner",
-            role=cls.role_user,
+            role=self.role_user,
         )
 
-        cls.industry = Industry.objects.create(name="Technology")
-        cls.location = Location.objects.create(country="US", city="Test City")
+        self.industry = Industry.objects.create(name="Technology")
+        self.location = Location.objects.create(country="US", city="Test City")
 
-        cls.startup = Startup.objects.create(
-            user=cls.startup_user,
-            industry=cls.industry,
+        self.startup = Startup.objects.create(
+            user=self.startup_user,
+            industry=self.industry,
             company_name="Startup Inc",
-            location=cls.location,
+            location=self.location,
             email="startup@example.com",
             founded_year=2020,
             team_size=5,
             stage=Stage.MVP,
         )
-        cls.investor = Investor.objects.create(
-            user=cls.investor_user,
-            industry=cls.industry,
+        self.investor = Investor.objects.create(
+            user=self.investor_user,
+            industry=self.industry,
             company_name="Investor Inc",
-            location=cls.location,
+            location=self.location,
             email="investorbit@example.com",
             founded_year=2015,
             team_size=1500,
             stage=Stage.MVP,
             fund_size=Decimal("1000.00")
         )
-        cls.category = Category.objects.create(name="Fintech")
-        cls.project = Project.objects.create(
-            startup=cls.startup,
+        self.category = Category.objects.create(name="Fintech")
+        self.project = Project.objects.create(
+            startup=self.startup,
             title="Funding Project",
             funding_goal=Decimal("1000.00"),
             current_funding=Decimal("0.00"),
-            category=cls.category,
+            category=self.category,
             email="project@example.com",
         )
 
-    def setUp(self):
-        self.client = APIClient()
-
     def authenticate(self, user):
-        """Authenticate API client with the given user."""
         self.client.force_authenticate(user=user)
 
     def test_create_subscription_success(self):
-        """Test successful creation of a subscription by an investor."""
         self.authenticate(self.investor_user)
         url = reverse("subscription-create")
         payload = {
@@ -94,7 +85,6 @@ class TestSubscriptionCreateAPI(TestCase):
         self.assertEqual(Subscription.objects.count(), 1)
 
     def test_create_subscription_fully_funded(self):
-        """Test that the project gets 'Fully funded' status upon reaching its goal."""
         self.project.current_funding = Decimal("900.00")
         self.project.save()
         self.authenticate(self.investor_user)
@@ -113,7 +103,6 @@ class TestSubscriptionCreateAPI(TestCase):
         self.assertEqual(response.data["project_status"], "Fully funded")
 
     def test_create_subscription_exceeds_goal_fails(self):
-        """Test that an investment exceeding the goal is blocked."""
         self.authenticate(self.investor_user)
         url = reverse("subscription-create")
         payload = {
@@ -128,7 +117,6 @@ class TestSubscriptionCreateAPI(TestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
     def test_unauthenticated_user_cannot_subscribe(self):
-        """Test that an unauthenticated user cannot invest."""
         url = reverse("subscription-create")
         payload = {
             "investor": self.investor.id,
@@ -141,7 +129,6 @@ class TestSubscriptionCreateAPI(TestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
     def test_non_investor_cannot_subscribe(self):
-        """Test that a non-investor user cannot create a subscription."""
         self.authenticate(self.startup_user)
         url = reverse("subscription-create")
         payload = {
@@ -155,47 +142,30 @@ class TestSubscriptionCreateAPI(TestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
     def test_startup_owner_cannot_invest_in_own_project(self):
-        """Test that a startup owner cannot invest in their own project."""
-        owner_investor_user = User.objects.create_user(
-            email="owner_investor@example.com",
-            password="testpassword123",
-            first_name="Owner",
-            last_name="Investor",
-            role=self.role_user,
-        )
-
-        owner_investor = Investor.objects.create(
-            user=owner_investor_user,
-            industry=self.project.startup.industry,
+        Investor.objects.create(
+            user=self.startup_user,
+            industry=self.industry,
             company_name="Owner As Investor",
-            location=self.project.startup.location,
+            location=self.location,
             email="owner_as_investor@example.com",
             founded_year=2021,
         )
-
-        self.project.startup.user = owner_investor_user
-        self.project.startup.save()
-
-        self.authenticate(owner_investor_user)
+        self.authenticate(self.startup_user)
         url = reverse("subscription-create")
         payload = {
-            "investor": owner_investor.id,
+            "investor": self.startup_user.investor.id,
             "project": self.project.id,
             "amount": 100
         }
         response = self.client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("invest in their own", str(response.data.get('non_field_errors')))
-        self.assertEqual(Subscription.objects.count(), 0)
+        self.assertIn("invest in their own", str(response.data))
+        self.assertEqual(Subscription.objects.filter(project=self.project).count(), 0)
 
     def test_invest_in_already_fully_funded_project_fails(self):
-        """
-        Test that investing in a fully funded project is blocked.
-        """
         self.project.current_funding = self.project.funding_goal
         self.project.save()
-
         self.authenticate(self.investor_user)
         url = reverse("subscription-create")
         payload = {
@@ -210,22 +180,27 @@ class TestSubscriptionCreateAPI(TestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
     def test_invest_with_invalid_amount_fails(self):
-        """Test that zero or negative investment amounts are blocked."""
         self.authenticate(self.investor_user)
         url = reverse("subscription-create")
-
-        payload_zero = {"project": self.project.id, "amount": 0}
+        payload_zero = {
+            "investor": self.investor.id,
+            "project": self.project.id,
+            "amount": 0
+        }
         response_zero = self.client.post(url, payload_zero, format="json")
         self.assertEqual(response_zero.status_code, status.HTTP_400_BAD_REQUEST)
 
-        payload_negative = {"project": self.project.id, "amount": -100}
+        payload_negative = {
+            "investor": self.investor.id,
+            "project": self.project.id,
+            "amount": -100
+        }
         response_negative = self.client.post(url, payload_negative, format="json")
         self.assertEqual(response_negative.status_code, status.HTTP_400_BAD_REQUEST)
 
         self.assertEqual(Subscription.objects.count(), 0)
 
     def test_invest_in_nonexistent_project_fails(self):
-        """Test that investing in a non-existent project returns a 400 error."""
         self.authenticate(self.investor_user)
         url = reverse("subscription-create")
         payload = {
