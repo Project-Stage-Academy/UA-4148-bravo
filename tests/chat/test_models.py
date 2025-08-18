@@ -4,13 +4,25 @@ from datetime import datetime, timezone
 from chat.documents import Room, Message
 from users.documents import UserDocument, UserRoleDocument, UserRoleEnum
 from core.settings import FORBIDDEN_WORDS
+import mongomock
 
 
 class MongoEngineTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        connect('mongoenginetest', host='mongomock://localhost')
+        disconnect()
+        connect(
+            db='mongoenginetest',
+            host='mongodb://localhost',
+            mongo_client_class=mongomock.MongoClient
+        )
+
+        role = UserRoleDocument.objects(role=UserRoleEnum.USER).first()
+        if not role:
+            role = UserRoleDocument(role=UserRoleEnum.USER)
+            role.save()
+        cls.user_role = role
 
     @classmethod
     def tearDownClass(cls):
@@ -18,23 +30,20 @@ class MongoEngineTestCase(TestCase):
         super().tearDownClass()
 
     def setUp(self):
-        role = UserRoleDocument(role=UserRoleEnum.USER)
-        role.save()
+        UserDocument.drop_collection()
+        Room.drop_collection()
+        Message.drop_collection()
         self.user = UserDocument(
             email="test@example.com",
             first_name="John",
             last_name="Doe",
             password="secret",
-            role=role
+            role=self.user_role
         )
         self.user.save()
 
     def test_create_room(self):
-        """
-        Test that a Room can be created with a valid name and participants.
-        Verifies that the room ID is set, the name is correct, the user is in participants,
-        and the creation timestamp is not in the future.
-        """
+        """Test that a Room can be created with a valid name and participants."""
         room = Room(name="TestRoom", participants=[self.user])
         room.save()
         self.assertIsNotNone(room.id)
@@ -43,20 +52,13 @@ class MongoEngineTestCase(TestCase):
         self.assertLessEqual(room.created_at, datetime.now(timezone.utc))
 
     def test_room_name_validation(self):
-        """
-        Test that creating a Room with invalid characters in the name
-        raises a ValidationError.
-        """
+        """Test that creating a Room with invalid characters raises ValidationError."""
         room = Room(name="Invalid Room!", participants=[self.user])
         with self.assertRaises(ValidationError):
             room.clean()
 
     def test_room_participants_limit(self):
-        """
-        Test that a Room with more than 50 participants
-        raises a ValidationError.
-        """
-        role = UserRoleDocument.objects(role=UserRoleEnum.USER).first()
+        """Test that a Room with more than 50 participants raises ValidationError."""
         users = []
         for i in range(51):
             u = UserDocument(
@@ -64,7 +66,7 @@ class MongoEngineTestCase(TestCase):
                 first_name=f"User{i}",
                 last_name="Test",
                 password="pass",
-                role=role
+                role=self.user_role
             )
             u.save()
             users.append(u)
@@ -73,11 +75,7 @@ class MongoEngineTestCase(TestCase):
             room.clean()
 
     def test_message_creation(self):
-        """
-        Test that a Message can be created in a Room by a participant.
-        Verifies that the message ID is set, the text is correct,
-        and the timestamp is not in the future.
-        """
+        """Test that a Message can be created in a Room by a participant."""
         room = Room(name="ChatRoom", participants=[self.user])
         room.save()
         message = Message(room=room, sender=self.user, text="Hello, world!")
@@ -88,29 +86,22 @@ class MongoEngineTestCase(TestCase):
         self.assertLessEqual(message.timestamp, datetime.now(timezone.utc))
 
     def test_message_forbidden_words(self):
-        """
-        Test that a Message containing forbidden words
-        raises a ValidationError.
-        """
+        """Test that a Message containing forbidden words raises ValidationError."""
         room = Room(name="SpamRoom", participants=[self.user])
         room.save()
-        forbidden_word = FORBIDDEN_WORDS[0] if FORBIDDEN_WORDS else "forbidden"
+        forbidden_word = next(iter(FORBIDDEN_WORDS)) if FORBIDDEN_WORDS else "forbidden"
         message = Message(room=room, sender=self.user, text=f"This contains {forbidden_word}")
         with self.assertRaises(ValidationError):
             message.clean()
 
     def test_message_sender_not_in_room(self):
-        """
-        Test that a Message sent by a user who is not a participant
-        of the Room raises a ValidationError.
-        """
-        role = UserRoleDocument.objects(role=UserRoleEnum.USER).first()
+        """Test that a Message from a non-participant raises ValidationError."""
         sender = UserDocument(
             email="other@example.com",
             first_name="Other",
             last_name="User",
             password="pass",
-            role=role
+            role=self.user_role
         )
         sender.save()
         room = Room(name="OtherRoom", participants=[])
@@ -120,10 +111,7 @@ class MongoEngineTestCase(TestCase):
             message.clean()
 
     def test_message_spam_repeated_chars(self):
-        """
-        Test that a Message containing repeated characters (spammy content)
-        raises a ValidationError.
-        """
+        """Test that a Message containing repeated characters (spam) raises ValidationError."""
         room = Room(name="SpamRoom2", participants=[self.user])
         room.save()
         spam_text = "aaaaaaabbbbbbbcccccc"

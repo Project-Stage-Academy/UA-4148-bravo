@@ -70,16 +70,16 @@ class Message(Document):
     def clean(self):
         """
         Validate message data before saving:
+        - Ensure sender is part of the room.
         - Ensure message doesn't contain forbidden words.
         - Block messages that appear spammy (repeated characters).
-        - Ensure sender is part of the room.
         """
+        if self.sender not in self.room.participants:
+            raise ValidationError("Sender must be a participant of the room.")
+
         lowered = self.text.lower()
         if any(word in lowered for word in FORBIDDEN_WORDS):
             raise ValidationError("Message contains forbidden content.")
 
-        if re.match(r"(.)\1{10,}", self.text):
+        if re.search(r"(.)\1{5,}", self.text):
             raise ValidationError("Message looks like spam.")
-
-        if self.sender not in self.room.participants:
-            raise ValidationError("Sender must be a participant of the room")

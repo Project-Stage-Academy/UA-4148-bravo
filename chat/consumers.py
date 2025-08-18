@@ -8,6 +8,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from core.settings import FORBIDDEN_WORDS
 from chat.documents import Room, Message
+from users.documents import UserDocument
+from mongoengine import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +35,22 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
         room_group_name (str): Group name used by Channels to broadcast messages.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.room_name: str | None = None
+        self.room_group_name: str | None = None
+
     async def connect(self):
         """
         Handles a new WebSocket connection.
         Joins the corresponding room group based on a sanitized room name.
         It allows only alphanumeric, dash, underscore.
         """
+        user = self.scope["user"]
+        if not user or not user.is_authenticated:
+            await self.close(code=4001)  # custom code
+            return
+
         raw_room_name = self.scope["url_route"]["kwargs"]["room_name"]
 
         safe_room_name = re.sub(r"[^a-zA-Z0-9_-]", "", raw_room_name)[:50]
@@ -64,19 +76,26 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
         Handles WebSocket disconnection.
         Removes the connection from the room group.
         """
-        try:
-            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-            logger.info("Client disconnected from room: %s", self.room_group_name)
-        except Exception as e:
-            logger.error("Error removing channel from group %s: %s", self.room_group_name, e)
+        if self.room_group_name:
+            try:
+                await self.channel_layer.group_discard(
+                    self.room_group_name,
+                    self.channel_name
+                )
+                logger.info("Client disconnected from room: %s", self.room_group_name)
+            except Exception as e:
+                logger.error("Error removing channel from group %s: %s", self.room_group_name, e)
 
-    async def receive(self, text_data):
+    async def receive(self, text_data=None, bytes_data=None):
         """
         Handles incoming messages from the WebSocket client.
         Validates size, rate, and content before broadcasting.
         Call the method that saves messages in the database.
         """
         try:
+            if not text_data:
+                return
+
             text_data_json = json.loads(text_data)
             message = text_data_json.get("message")
 
@@ -98,7 +117,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({"error": "Message contains forbidden content."}))
                 return
 
-            if re.match(r"(.)\1{10,}", message):
+            if re.search(r"(.)\1{5,}", message):
                 logger.warning("Blocked spammy message: %s", message)
                 await self.send(text_data=json.dumps({"error": "Message looks like spam."}))
                 return
@@ -114,7 +133,16 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({"error": "Too many messages, slow down."}))
                 return
 
-            user = self.scope["user"] if self.scope["user"].is_authenticated else None
+            user_email = self.scope["user"].email if self.scope["user"].is_authenticated else None
+            if not user_email:
+                await self.send(text_data=json.dumps({"error": "Authentication required."}))
+                return
+
+            user = await self.get_mongo_user(user_email)
+            if not user:
+                await self.send(text_data=json.dumps({"error": "User not found in MongoDB."}))
+                return
+
             await self.save_message(self.room_name, user, message)
 
             await self.channel_layer.group_send(
@@ -147,13 +175,63 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             logger.error("Error sending message to WebSocket client: %s", e)
 
     @database_sync_to_async
-    def save_message(self, room_name, user, message):
-        """ Saves messages in the database. """
-        room, _ = Room.objects.get_or_create(
-            name=room_name
-        )
-        return Message.objects.create(
+    def get_mongo_user(self, email: str):
+        try:
+            return UserDocument.objects.get(email=email)
+        except UserDocument.DoesNotExist:
+            logger.warning("MongoEngine UserDocument not found for email: %s", email)
+            return None
+
+    @database_sync_to_async
+    def save_message(self, room_name: str, user: UserDocument, message: str):
+        """
+        Save message in MongoDB.
+
+        - Creates a room if it doesn't already exist.
+        - Adds a user to a room if they are not already a member.
+        - Checks for forbidden words and spam.
+        - Saves messages and logs.
+        """
+        if not user:
+            logger.warning("Anonymous user attempted to send message: %s", message)
+            raise ValueError("Anonymous users cannot send messages")
+
+        room = Room.objects(name=room_name).first()
+        if not room:
+            room = Room(name=room_name)
+            room.participants = [user]
+            try:
+                room.save()
+                logger.info("Created new room '%s' and added user %s", room_name, user.email)
+            except ValidationError as ve:
+                logger.error("Room creation failed: %s", ve)
+                raise ve
+        else:
+            if not any(u.id == user.id for u in room.participants):
+                room.participants.append(user)
+                try:
+                    room.save()
+                    logger.info("Added user %s to existing room '%s'", user.email, room_name)
+                except ValidationError as ve:
+                    logger.error("Adding user to room failed: %s", ve)
+                    raise ve
+
+        msg = Message(
             room=room,
             sender=user,
             text=message
         )
+
+        try:
+            msg.save()
+            logger.info(
+                "Saved message in room '%s' from user %s: %s",
+                room_name,
+                user.email,
+                message[:50] + ("..." if len(message) > 50 else "")
+            )
+        except ValidationError as ve:
+            logger.warning("Failed to save message: %s", ve)
+            raise ve
+
+        return msg

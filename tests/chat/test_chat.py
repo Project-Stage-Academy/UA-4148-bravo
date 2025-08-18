@@ -8,6 +8,8 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 
+from users.documents import UserDocument, UserRoleDocument, UserRoleEnum
+
 
 class ChatTests(ChannelsLiveServerTestCase):
     """
@@ -22,7 +24,19 @@ class ChatTests(ChannelsLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        role = UserRoleDocument.objects(role=UserRoleEnum.USER).first()
+        if not role:
+            role = UserRoleDocument(role=UserRoleEnum.USER)
+            role.save()
 
+        cls.user = UserDocument(
+            email="testuser@example.com",
+            first_name="Test",
+            last_name="User",
+            password="testpass",
+            role=role
+        )
+        cls.user.save()
         options = Options()
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
@@ -74,11 +88,9 @@ class ChatTests(ChannelsLiveServerTestCase):
             self.wait_for_message("hello", window_index=0)
 
             self._switch_to_window(1)
-            # send a different message in room_2
             self._post_message("world")
             self.wait_for_message("world", window_index=1)
 
-            # Verify room_2 did NOT receive room_1 message
             self.assertTrue(
                 "hello" not in self._chat_log_value,
                 "Message from room_1 incorrectly received in room_2"
@@ -91,11 +103,9 @@ class ChatTests(ChannelsLiveServerTestCase):
         """Open chat page and enter room name."""
         self.driver.get(self.live_server_url + "/chat/")
         ActionChains(self.driver).send_keys(room_name, Keys.ENTER).perform()
-        # Wait until URL updates
         timeout = time.time() + 10
         while time.time() < timeout:
             if room_name in self.driver.current_url:
-                # Wait a moment for WebSocket to connect
                 time.sleep(2)
                 return
             time.sleep(0.2)
