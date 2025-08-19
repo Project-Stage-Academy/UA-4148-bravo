@@ -44,15 +44,8 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         if investor is None or not hasattr(investor, "user"):
             raise serializers.ValidationError({"investor": "Invalid investor."})
 
-        if amount is None or amount < Decimal("0.01"):
+        if amount is not None and amount < Decimal("0.01"):
             raise serializers.ValidationError({"amount": "Investment amount must be at least 0.01."})
-
-        if project.current_funding >= project.funding_goal:
-            raise serializers.ValidationError({"project": "Project is already fully funded."})
-
-        remaining = project.funding_goal - project.current_funding
-        if amount > remaining:
-            raise serializers.ValidationError({"amount": "Amount exceeds funding goal — exceeds the remaining funding."})
 
         if investor.user == project.startup.user:
             raise serializers.ValidationError({"non_field_errors": ["Startup owners cannot invest in their own project."]})
@@ -70,17 +63,22 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
                 total=Sum("amount")
             )["total"] or Decimal("0.00")
 
-            if current_funding >= project_locked.funding_goal:
+            remaining = project_locked.funding_goal - current_funding
+
+            if remaining <= 0:
                 raise serializers.ValidationError({"project": "Project is already fully funded."})
 
-            if current_funding + amount > project_locked.funding_goal:
+            if amount > remaining:
                 raise serializers.ValidationError(
                     {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
                 )
 
             subscription = Subscription.objects.create(**validated_data)
+            new_total = project_locked.subscriptions.aggregate(
+                total=Sum("amount")
+            )["total"] or Decimal("0.00")
 
-            project_locked.current_funding = current_funding + amount
+            project_locked.current_funding = new_total
             project_locked.save(update_fields=["current_funding"])
 
         return subscription
