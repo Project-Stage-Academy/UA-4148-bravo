@@ -34,6 +34,7 @@ class StartupModelCleanTests(BaseAPITestCase):
             industry=self.industry,
             location=self.location,
             email='testapistartup@example.com',
+            team_size=5,
             social_links={
                 'linkedin': 'https://linkedin.com/in/example',
                 'twitter': 'https://twitter.com/example'
@@ -74,6 +75,7 @@ class StartupModelCleanTests(BaseAPITestCase):
             founded_year=2021,
             industry=self.industry,
             location=self.location,
+            team_size=3,
             social_links={}
         )
         try:
@@ -89,6 +91,7 @@ class StartupModelCleanTests(BaseAPITestCase):
             founded_year=2022,
             industry=self.industry,
             location=self.location,
+            team_size=3,
             social_links={
                 'linkedin': ''
             }
@@ -104,6 +107,7 @@ class StartupModelCleanTests(BaseAPITestCase):
             founded_year=2022,
             industry=self.industry,
             location=self.location,
+            team_size=3,
             social_links={
                 'twitter': 'not_a_url'
             }
@@ -130,6 +134,7 @@ class StartupModelCleanTests(BaseAPITestCase):
             founded_year=2022,
             industry=self.industry,
             location=self.location,
+            team_size=3,
             description='short',
             social_links={}
         )
@@ -147,7 +152,8 @@ class StartupModelCleanTests(BaseAPITestCase):
             company_name='TooOldStartup',
             founded_year=1899,
             industry=self.industry,
-            location=self.location
+            location=self.location,
+            team_size=3
         )
         with self.assertRaises(ValidationError) as context_min:
             startup_min.full_clean()
@@ -158,7 +164,8 @@ class StartupModelCleanTests(BaseAPITestCase):
             company_name='FutureStartup',
             founded_year=current_year + 1,
             industry=self.industry,
-            location=self.location
+            location=self.location,
+            team_size=3
         )
         with self.assertRaises(ValidationError) as context_future:
             startup_future.full_clean()
@@ -171,12 +178,14 @@ class StartupModelCleanTests(BaseAPITestCase):
             company_name='DefaultStageStartup',
             founded_year=2020,
             industry=self.industry,
-            location=self.location
+            location=self.location,
+            team_size=3
         )
         self.assertEqual(startup.stage, Stage.IDEA)
         startup.save()
         startup.refresh_from_db()
         self.assertEqual(startup.stage, Stage.IDEA)
+
 
 
 

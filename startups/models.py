@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import UniqueConstraint, F
 from django_countries.fields import CountryField
@@ -29,8 +30,8 @@ class Location(models.Model):
     )
     city = models.CharField(
         max_length=100,
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
         verbose_name="City",
         help_text="City of the location"
     )
@@ -52,6 +53,9 @@ class Location(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
     def clean(self):
+        """
+        Validates field values for formatting and logical consistency.
+        """
         errors = {}
 
         if self.postal_code:
@@ -90,6 +94,9 @@ class Location(models.Model):
             raise ValidationError(errors)
 
     def __str__(self):
+        """
+        Returns a human-readable string representation of the location.
+        """
         city_str = self.city if self.city else 'Unknown City'
         country_str = self.country if self.country else 'Unknown Country'
 
@@ -138,6 +145,9 @@ class Industry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
 
     def clean(self):
+        """
+        Validates the industry name against forbidden terms.
+        """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")
 
@@ -183,12 +193,13 @@ class Startup(Company):
     funding_needed = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        default=0,  # Default value to prevent migration issues
+        default=0,
         verbose_name="Funding Needed",
         help_text="Amount of funding required by the startup"
     )
     team_size = models.PositiveIntegerField(
-        default=0,  # Default value to prevent migration issues
+        default=0,
+        validators=[MinValueValidator(1)],
         verbose_name="Team Size",
         help_text="Number of team members in the startup"
     )
@@ -209,6 +220,9 @@ class Startup(Company):
     )
 
     def clean(self):
+        """
+        Validates the social_links field against allowed platforms.
+        """
         super().clean()
         social_links = cast(dict, self.social_links)
         validate_social_links_dict(
