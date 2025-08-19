@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'corsheaders',
+    "notifications.apps.NotificationsConfig",
 
     # Elasticsearch
     'django_elasticsearch_dsl',
