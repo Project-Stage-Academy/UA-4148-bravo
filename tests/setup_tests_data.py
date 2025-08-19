@@ -15,12 +15,17 @@ TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
 
 class TestDataMixin:
     """
-    Class for creating and cleaning test data:
-    users, investors, startups, projects, subscriptions.
+    Class to create and manage test data for users, investors,
+    startups, projects, and subscriptions. Includes methods
+    to safely create or fetch objects to avoid duplicates.
     """
 
+    # ------------------------
+    # User creation utilities
+    # ------------------------
     @classmethod
     def get_or_create_user(cls, email, first_name, last_name):
+        """Create or fetch a User by email."""
         user = User.objects.filter(email=email).first()
         if not user:
             role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
@@ -36,69 +41,105 @@ class TestDataMixin:
 
     @classmethod
     def setup_users(cls):
+        """Create main test users."""
         cls.user = cls.get_or_create_user("user1@example.com", "Investor", "One")
         cls.user2 = cls.get_or_create_user("user2@example.com", "Investor", "Two")
         cls.investor_user = cls.get_or_create_user("maxinvestor@example.com", "Success", "Investor")
         cls.investor_user2 = cls.get_or_create_user("maxinvestor2@example.com", "Win", "Investor")
         cls.startup_user = cls.get_or_create_user("maxstartup@example.com", "Max", "Startup")
 
+    # ------------------------
+    # Industry creation
+    # ------------------------
     @classmethod
     def get_or_create_industry(cls, name):
+        """Create or fetch an Industry by name."""
         industry, _ = Industry.objects.get_or_create(name=name)
         return industry
 
     @classmethod
     def setup_industries(cls):
+        """Create main test industry."""
         cls.industry = cls.get_or_create_industry("Tech")
 
+    # ------------------------
+    # Location creation
+    # ------------------------
     @classmethod
     def get_or_create_location(cls, country_code):
+        """Create or fetch a Location by country code."""
         location, _ = Location.objects.get_or_create(country=country_code)
         return location
 
     @classmethod
     def setup_locations(cls):
+        """Create main test locations."""
         cls.location = cls.get_or_create_location("UA")
         cls.startup_location = cls.get_or_create_location("US")
 
+    # ------------------------
+    # Investor creation
+    # ------------------------
     @classmethod
     def get_or_create_investor(cls, user, company_name, stage, fund_size):
-        email = f"investor_{uuid.uuid4().hex[:6]}@example.com"
-        investor, _ = Investor.objects.get_or_create(
-            user=user,
-            industry=cls.industry,
-            location=cls.location,
-            company_name=company_name,
-            email=email,
-            founded_year=2010,
-            team_size=5,
-            stage=stage,
-            fund_size=fund_size
-        )
+        """
+        Create or get an investor safely for tests.
+        Ensures uniqueness on company_name to avoid IntegrityError.
+        Email is randomly generated to prevent duplicates.
+        """
+        try:
+            investor, created = Investor.objects.get_or_create(
+                company_name=company_name,  # unique field
+                defaults={
+                    "user": user,
+                    "industry": cls.industry,
+                    "location": cls.location,
+                    "email": f"investor_{uuid.uuid4().hex[:6]}@example.com",
+                    "founded_year": 2010,
+                    "team_size": 5,
+                    "stage": stage,
+                    "fund_size": fund_size
+                }
+            )
+        except Exception:
+            # Fallback: fetch the existing one if duplicate occurs
+            investor = Investor.objects.get(company_name=company_name)
         return investor
 
     @classmethod
     def setup_investors(cls):
-        cls.investor1 = cls.get_or_create_investor(cls.investor_user, "Investor One", Stage.MVP, 1000000.00)
-        cls.investor2 = cls.get_or_create_investor(cls.investor_user2, "Investor Two", Stage.LAUNCH, 2000000.00)
+        """Create main test investors."""
+        cls.investor1 = cls.get_or_create_investor(
+            cls.investor_user, "Investor One", Stage.MVP, 1000000.00
+        )
+        cls.investor2 = cls.get_or_create_investor(
+            cls.investor_user2, "Investor Two", Stage.LAUNCH, 2000000.00
+        )
 
+    # ------------------------
+    # Startup creation
+    # ------------------------
     @classmethod
     def get_or_create_startup(cls, user, industry, company_name, location):
+        """Create or fetch a Startup with unique email."""
         email = f"startup_{uuid.uuid4().hex[:6]}@example.com"
         startup, _ = Startup.objects.get_or_create(
             user=user,
             industry=industry,
             company_name=company_name,
             location=location,
-            email=email,
-            founded_year=2020,
-            team_size=15,
-            stage=Stage.MVP
+            defaults={
+                "email": email,
+                "founded_year": 2020,
+                "team_size": 15,
+                "stage": Stage.MVP
+            }
         )
         return startup
 
     @classmethod
     def setup_startup(cls):
+        """Create main test startup."""
         cls.startup = cls.get_or_create_startup(
             cls.startup_user,
             cls.industry,
@@ -106,30 +147,38 @@ class TestDataMixin:
             cls.startup_location
         )
 
+    # ------------------------
+    # Category creation
+    # ------------------------
     @classmethod
     def get_or_create_category(cls, name="FinTech"):
+        """Create or fetch a project Category."""
         category, _ = Category.objects.get_or_create(name=name)
         return category
 
     @classmethod
     def setup_category(cls):
+        """Create main test category."""
         cls.category = cls.get_or_create_category()
 
+    # ------------------------
+    # Project creation
+    # ------------------------
     @classmethod
     def get_or_create_project(
-            cls,
-            title="Test Project",
-            email=None,
-            funding_goal=Decimal("1000000.00"),
-            current_funding=Decimal("0.00"),
-            startup=None,
-            category=None,
-            status=ProjectStatus.DRAFT,
-            **kwargs
+        cls,
+        title="Test Project",
+        email=None,
+        funding_goal=Decimal("1000000.00"),
+        current_funding=Decimal("0.00"),
+        startup=None,
+        category=None,
+        status=ProjectStatus.DRAFT,
+        **kwargs
     ):
         """
-        Create or get a project with optional custom fields.
-        Ensures startup and category are never None.
+        Create or get a Project. Startup and category are ensured.
+        Email is randomly generated if not provided.
         """
         if startup is None:
             startup = getattr(cls, "startup", None)
@@ -170,11 +219,16 @@ class TestDataMixin:
 
     @classmethod
     def setup_project(cls):
+        """Create main test project."""
         cls.setup_category()
         cls.project = cls.get_or_create_project()
 
+    # ------------------------
+    # Subscription creation
+    # ------------------------
     @classmethod
     def get_or_create_subscription(cls, investor, project, amount, investment_share=None):
+        """Create or fetch a Subscription."""
         data = {
             "investor": investor,
             "project": project,
@@ -189,27 +243,21 @@ class TestDataMixin:
     @staticmethod
     def get_subscription_data(investor, project, amount) -> dict:
         """
-        Prepare a dictionary payload representing a subscription, useful for API testing.
-
-        Args:
-            investor (Investor or None): Investor instance or None.
-            project (Project or None): Project instance or None.
-            amount (float): Amount invested.
-
-        Returns:
-            dict: Dictionary containing subscription data with IDs for investor and project.
+        Prepare dictionary payload for API subscription tests.
         """
-        data = {
-            "amount": str(amount)
-        }
+        data = {"amount": str(amount)}
         if investor is not None:
             data["investor"] = investor.pk
         if project is not None:
             data["project"] = project.pk
         return data
 
+    # ------------------------
+    # Full test data setup
+    # ------------------------
     @classmethod
     def setup_all(cls):
+        """Setup all required test data in proper order."""
         cls.setup_users()
         cls.setup_industries()
         cls.setup_locations()
@@ -219,6 +267,7 @@ class TestDataMixin:
 
     @classmethod
     def tear_down(cls):
+        """Cleanup all test data after tests."""
         Subscription.objects.all().delete()
         Project.objects.all().delete()
         Category.objects.all().delete()
@@ -227,3 +276,6 @@ class TestDataMixin:
         Industry.objects.all().delete()
         Location.objects.all().delete()
         User.objects.all().delete()
+
+
+

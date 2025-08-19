@@ -1,12 +1,15 @@
 from rest_framework.test import APITestCase, APIClient
-from tests.test_disable_signal_mixin import DisableSignalMixin
+from tests.test_disable_signal_mixin import DisableElasticsearchSignalsMixin
 from tests.setup_tests_data import TestDataMixin
 
-class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
-    """Generic base API case with automatic signal disabling."""
+class BaseAPITestCase(DisableElasticsearchSignalsMixin, TestDataMixin, APITestCase):
+    """Generic base API case with automatic signal disabling and test data setup."""
 
     @classmethod
-    def setUpTestData(cls):
+    def setUpClass(cls):
+        # Call superclass setUpClass first (includes signal disabling)
+        super().setUpClass()
+        # Create all test data AFTER signals are disabled
         cls.setup_all()
 
     def setUp(self):
@@ -14,9 +17,13 @@ class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
+
+
+
+
+
+
+
 
 
 

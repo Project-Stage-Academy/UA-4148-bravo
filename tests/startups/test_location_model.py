@@ -1,12 +1,24 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.test import TestCase
 from startups.models import Location
 from tests.test_base_case import BaseAPITestCase
-from tests.test_disable_signal_mixin import DisableSignalMixin
+from unittest.mock import patch
+from startups.documents import StartupDocument
 
 
-class LocationModelCleanTests(DisableSignalMixin, BaseAPITestCase):
+class LocationModelCleanTests(BaseAPITestCase):
     """Tests for Location model validation and constraints."""
+
+    @classmethod
+    def setUpClass(cls):
+        # Mock the update method of StartupDocument to prevent Elasticsearch calls
+        cls.update_patcher = patch.object(StartupDocument, 'update', lambda self, instance, **kwargs: None)
+        cls.update_patcher.start()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.update_patcher.stop()
+        super().tearDownClass()
 
     def test_create_location_success(self):
         """Location can be created successfully with valid data."""
@@ -95,6 +107,8 @@ class LocationModelCleanTests(DisableSignalMixin, BaseAPITestCase):
         pk = location.pk
         location.delete()
         self.assertFalse(Location.objects.filter(pk=pk).exists())
+
+
 
 
 

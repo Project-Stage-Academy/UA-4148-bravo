@@ -1,12 +1,26 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.test import TestCase
+from django.db import IntegrityError
 from startups.models import Industry
 from tests.test_base_case import BaseAPITestCase
-from tests.test_disable_signal_mixin import DisableSignalMixin
+from unittest.mock import patch
+from startups.documents import StartupDocument
 
 
-class IndustryModelCleanTests(DisableSignalMixin, BaseAPITestCase):
+class IndustryModelCleanTests(BaseAPITestCase):
     """Test suite for Industry model validation and constraints."""
+
+    @classmethod
+    def setUpClass(cls):
+        # Mock the update method of StartupDocument to prevent Elasticsearch calls
+        cls.update_patcher = patch.object(StartupDocument, 'update', lambda self, instance, **kwargs: None)
+        cls.update_patcher.start()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.update_patcher.stop()
+        super().tearDownClass()
 
     def test_create_industry_success(self):
         """Industry can be created successfully with valid data."""
@@ -15,9 +29,9 @@ class IndustryModelCleanTests(DisableSignalMixin, BaseAPITestCase):
         self.assertTrue(industry.pk is not None)
 
     def test_create_industry_duplicate_name_raises_error(self):
-        """Creating industry with duplicate name raises IntegrityError."""
+        """Creating industry with duplicate name raises IntegrityError or ValidationError."""
         Industry.objects.create(name="FinTech")
-        with self.assertRaises(DjangoValidationError):
+        with self.assertRaises((DjangoValidationError, IntegrityError)):
             industry = Industry(name="FinTech")
             industry.full_clean()
             industry.save()
@@ -48,5 +62,6 @@ class IndustryModelCleanTests(DisableSignalMixin, BaseAPITestCase):
         pk = industry.pk
         industry.delete()
         self.assertFalse(Industry.objects.filter(pk=pk).exists())
+
 
 

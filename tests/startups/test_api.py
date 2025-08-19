@@ -5,19 +5,30 @@ from tests.test_base_case import BaseAPITestCase
 from unittest.mock import patch
 from rest_framework.test import APIClient
 from django.core.exceptions import ValidationError as DjangoValidationError
+from startups.documents import StartupDocument
 
-from tests.test_disable_signal_mixin import DisableSignalMixin
 
-
-class StartupAPITests(DisableSignalMixin, BaseAPITestCase):
+class StartupAPITests(BaseAPITestCase):
     """Test suite for Startup API endpoints, including creation and retrieval of startups."""
+
+    @classmethod
+    def setUpClass(cls):
+        # Mock the update method of StartupDocument to disable Elasticsearch calls
+        cls.update_patcher = patch.object(StartupDocument, 'update', lambda self, instance, **kwargs: None)
+        cls.update_patcher.start()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.update_patcher.stop()
+        super().tearDownClass()
 
     def setUp(self):
         super().setUp()
         self.startup_data = {
             'company_name': 'Great',
             'team_size': 25,
-            'user': self.user.pk,  # Request.user is always used
+            'user': self.user.pk,
             'industry': self.industry.pk,
             'location': self.location.pk,
             'founded_year': 2020,
@@ -202,6 +213,8 @@ class StartupAPITests(DisableSignalMixin, BaseAPITestCase):
         self.assertEqual(response.data['team_size'], 30)
         self.assertEqual(response.data['founded_year'], 2021)
         self.assertEqual(response.data['email'], 'new@example.com')
+
+
 
 
 

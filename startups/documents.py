@@ -2,7 +2,6 @@ from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 from startups.models import Startup
 
-
 @registry.register_document
 class StartupDocument(Document):
 
@@ -69,14 +68,9 @@ class StartupDocument(Document):
         return {}
 
     def get_instances_from_related(self, related_instance):
-        """
-        Given a related instance (Industry or Location),
-        return the queryset of Startup instances that should be updated.
-        """
         if isinstance(related_instance, Startup.industry.field.related_model):
-            # Industry → related_name="startups"
             return related_instance.startups.all()
         elif isinstance(related_instance, Startup.location.field.related_model):
-            # Location → related_name="startups"
             return related_instance.startups.all()
         return []
+
