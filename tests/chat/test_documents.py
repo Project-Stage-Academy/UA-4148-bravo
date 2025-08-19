@@ -1,10 +1,14 @@
+import os
 from django.test import TestCase
 from mongoengine import connect, disconnect, ValidationError
 from datetime import datetime, timezone
 from chat.documents import Room, Message
 from users.documents import UserDocument, UserRoleDocument, UserRoleEnum
-from core.settings import FORBIDDEN_WORDS
+from core.settings import FORBIDDEN_WORDS_SET
 import mongomock
+
+os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.chat.setup_test_env.'
+TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "testpassword123")
 
 
 class MongoEngineTestCase(TestCase):
@@ -37,7 +41,7 @@ class MongoEngineTestCase(TestCase):
             email="test@example.com",
             first_name="John",
             last_name="Doe",
-            password="secret",
+            password=TEST_USER_PASSWORD,
             role=self.user_role
         )
         self.user.save()
@@ -65,7 +69,7 @@ class MongoEngineTestCase(TestCase):
                 email=f"user{i}@example.com",
                 first_name=f"User{i}",
                 last_name="Test",
-                password="pass",
+                password=TEST_USER_PASSWORD,
                 role=self.user_role
             )
             u.save()
@@ -89,7 +93,7 @@ class MongoEngineTestCase(TestCase):
         """Test that a Message containing forbidden words raises ValidationError."""
         room = Room(name="SpamRoom", participants=[self.user])
         room.save()
-        forbidden_word = next(iter(FORBIDDEN_WORDS)) if FORBIDDEN_WORDS else "forbidden"
+        forbidden_word = next(iter(FORBIDDEN_WORDS_SET)) if FORBIDDEN_WORDS_SET else "forbidden"
         message = Message(room=room, sender=self.user, text=f"This contains {forbidden_word}")
         with self.assertRaises(ValidationError):
             message.clean()
@@ -100,7 +104,7 @@ class MongoEngineTestCase(TestCase):
             email="other@example.com",
             first_name="Other",
             last_name="User",
-            password="pass",
+            password=TEST_USER_PASSWORD,
             role=self.user_role
         )
         sender.save()

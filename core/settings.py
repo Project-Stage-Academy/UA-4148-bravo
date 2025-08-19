@@ -349,7 +349,7 @@ COMMUNICATIONS_NOTIFICATION_TYPES = [
     },
 ]
 
-FORBIDDEN_WORDS = {
+FORBIDDEN_WORDS_SET = {
     "spam", "scam", "xxx", "viagra", "free money", "lottery", "bitcoin",
     "crypto", "click here", "subscribe", "buy now", "offer", "promotion",
     "gamble", "casino", "adult", "nsfw", "sex", "porn", "nude"
