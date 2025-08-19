@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Chat Room</title>
+</head>
+<body>
+    <textarea id="chat-log" cols="100" rows="20" readonly></textarea><br>
+    <input id="chat-message-input" type="text" size="100"><br>
+    <input id="chat-message-submit" type="button" value="Send">
+    {{ room_name|json_script:"room-name" }}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const roomNameElement = document.getElementById('room-name');
+        if (!roomNameElement) {
+            console.error("Room name element not found");
+            return;
+        }
+
+        let roomName;
+        try {
+            roomName = JSON.parse(roomNameElement.textContent);
+        } catch (e) {
+            console.error("Failed to parse room name JSON:", e);
+            alert("Invalid room name. Please go back and try again.");
+            window.location.href = '/';
+            return;
+        }
+
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        window.chatSocket = new WebSocket(
+            protocol + '://' + window.location.host + '/ws/chat/' + encodeURIComponent(roomName) + '/'
+        );
+
+        const chatLog = document.querySelector('#chat-log');
+        const messageInput = document.querySelector('#chat-message-input');
+        const messageSubmit = document.querySelector('#chat-message-submit');
+
+        messageInput.focus();
+
+        chatSocket.addEventListener("open", function() {
+            console.log("Connected to chat room:", roomName);
+        });
+
+        chatSocket.addEventListener("message", function(e) {
+            let data;
+            try {
+                data = JSON.parse(e.data);
+            } catch (err) {
+                console.error("Malformed message received:", err, e.data);
+                return;
+            }
+
+            if (data && data.message) {
+                chatLog.value += (data.message + '\n');
+            } else {
+                console.warn("Unexpected message format:", data);
+            }
+
+            messageInput.disabled = false;
+            messageSubmit.disabled = false;
+            messageInput.focus();
+        });
+
+        chatSocket.addEventListener("close", function() {
+            console.error('Chat socket closed unexpectedly');
+            chatLog.value += "\n⚠️ Connection to the chat server was lost. Please refresh the page or try again later.\n";
+        });
+
+        messageInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                messageSubmit.click();
+            }
+        });
+
+        messageSubmit.addEventListener('click', function() {
+            let message = messageInput.value.trim();
+            if (!message) {
+                alert("Cannot send an empty message.");
+                return;
+            }
+
+            messageInput.disabled = true;
+            messageSubmit.disabled = true;
+
+            try {
+                if (chatSocket.readyState === WebSocket.OPEN) {
+                    chatSocket.send(JSON.stringify({ 'message': message }));
+                    messageInput.value = '';
+                } else {
+                    alert("Connection is not open. Please wait a moment and try again.");
+                    messageInput.disabled = false;
+                    messageSubmit.disabled = false;
+                }
+            } catch (err) {
+                console.error("Failed to send message:", err);
+                alert("Message could not be sent. Please try again.");
+                messageInput.disabled = false;
+                messageSubmit.disabled = false;
+            }
+        });
+    });
+    </script>
+</body>
+</html>

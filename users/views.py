@@ -302,7 +302,7 @@ class ResendEmailView(APIView):
         This view validates the input data, retrieves the user by `user_id`,
         updates the `pending_email` if a new one is provided, generates a new
         verification token if not supplied, constructs the verification URL,
-        renders HTML and plain text email templates, sends the email, and returns
+        renders HTML and plain text email chat, sends the email, and returns
         a generic success response regardless of whether the user exists.
 
         The email is sent to `pending_email` if it exists; otherwise, the user's
