@@ -1,10 +1,11 @@
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APITestCase, APIRequestFactory
+from investments.serializers.subscription_create import SubscriptionCreateSerializer
 
 from tests.test_disable_signal_mixin import DisableSignalMixin
 from tests.setup_tests_data import TestDataMixin
 
 
-class BaseAPITestCase(TestDataMixin, DisableSignalMixin):
+class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
     """Generic base users case with automatic signal disabling."""
 
     @classmethod
@@ -14,6 +15,12 @@ class BaseAPITestCase(TestDataMixin, DisableSignalMixin):
     def setUp(self):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
+    
+    def serializer_with_user(self, data, user):
+        factory = APIRequestFactory()
+        request = factory.get('/')
+        request.user = user
+        return SubscriptionCreateSerializer(data=data, context={'request': request})
 
     @classmethod
     def tearDownClass(cls):
