@@ -3,48 +3,65 @@ from startups.models import Startup
 from startups.signals import update_startup_document, delete_startup_document
 from unittest.mock import patch
 
+# Import all Elasticsearch documents that may be triggered during test data creation
+from startups.documents import StartupDocument
+from projects.documents import ProjectDocument
+# Add other documents here if needed:
+# from investors.documents import InvestorDocument
+# from investments.documents import SubscriptionDocument
+
 class DisableElasticsearchSignalsMixin:
     """
-    Mixin to disable Elasticsearch-related signals during tests.
-    Patches StartupDocument update and delete methods to avoid connection errors.
+    Mixin to disable Elasticsearch indexing during tests.
+    Disconnects Django signals and mocks update/delete methods of all registered documents.
     """
 
     @classmethod
     def setUpClass(cls):
-        # Disconnect real signal handlers to prevent ES updates
+        # Disconnect signals to prevent automatic indexing
         post_save.disconnect(update_startup_document, sender=Startup)
         post_delete.disconnect(delete_startup_document, sender=Startup)
 
-        # Patch Elasticsearch document methods to no-op
-        cls.es_update_patcher = patch(
-            "startups.documents.StartupDocument.update", lambda *a, **kw: None
-        )
-        cls.es_delete_patcher = patch(
-            "startups.documents.StartupDocument.delete", lambda *a, **kw: None
-        )
-        cls.es_update_patcher.start()
-        cls.es_delete_patcher.start()
+        # Patch update/delete methods of all relevant documents
+        cls.es_patchers = [
+            patch.object(StartupDocument, 'update', lambda self, instance, **kwargs: None),
+            patch.object(StartupDocument, 'delete', lambda self, instance, **kwargs: None),
+            patch.object(ProjectDocument, 'update', lambda self, instance, **kwargs: None),
+            patch.object(ProjectDocument, 'delete', lambda self, instance, **kwargs: None),
+            # Add more patchers here if needed
+        ]
 
+        for patcher in cls.es_patchers:
+            patcher.start()
+
+        # Create test data after disabling signals and patching documents
+        if hasattr(cls, "setup_all"):
+            cls.setup_all()
+
+        # Call parent setUpClass if defined
         super_method = getattr(super(), "setUpClass", None)
         if super_method:
             super_method()
 
     @classmethod
     def tearDownClass(cls):
-        # Stop the patches
-        try:
-            cls.es_update_patcher.stop()
-            cls.es_delete_patcher.stop()
-        except AttributeError:
-            pass
+        # Stop all active patches
+        for patcher in getattr(cls, "es_patchers", []):
+            try:
+                patcher.stop()
+            except Exception:
+                pass
 
-        # Reconnect the real signal handlers
+        # Reconnect signals after tests
         post_save.connect(update_startup_document, sender=Startup)
         post_delete.connect(delete_startup_document, sender=Startup)
 
+        # Call parent tearDownClass if defined
         super_method = getattr(super(), "tearDownClass", None)
         if super_method:
             super_method()
+
+
 
 
 
