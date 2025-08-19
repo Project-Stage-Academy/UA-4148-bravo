@@ -50,6 +50,19 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         if investor.user == project.startup.user:
             raise serializers.ValidationError({"non_field_errors": ["Startup owners cannot invest in their own project."]})
 
+        current_funding = project.subscriptions.aggregate(
+            total=Sum("amount")
+        )["total"] or Decimal("0.00")
+        remaining = project.funding_goal - current_funding
+
+        if remaining <= 0:
+            raise serializers.ValidationError({"project": "Project is already fully funded."})
+
+        if amount is not None and amount > remaining:
+            raise serializers.ValidationError(
+                {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
+            )
+
         return data
 
     def create(self, validated_data):
