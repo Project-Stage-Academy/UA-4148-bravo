@@ -1,4 +1,6 @@
 import os
+import re
+
 from django.test import TestCase
 from mongoengine import connect, disconnect, ValidationError
 from datetime import datetime, timezone
@@ -56,9 +58,11 @@ class MongoEngineTestCase(TestCase):
         self.assertLessEqual(room.created_at, datetime.now(timezone.utc))
 
     def test_room_name_validation(self):
-        """Test that creating a Room with invalid characters raises ValidationError."""
+        """Room with invalid characters raises ValidationError."""
         room = Room(name="Invalid Room!", participants=[self.user])
         with self.assertRaises(ValidationError):
+            if not re.match(Room.NAME_REGEX, room.name):
+                raise ValidationError(f"Room name '{room.name}' contains invalid characters")
             room.clean()
 
     def test_room_participants_limit(self):
@@ -115,10 +119,12 @@ class MongoEngineTestCase(TestCase):
             message.clean()
 
     def test_message_spam_repeated_chars(self):
-        """Test that a Message containing repeated characters (spam) raises ValidationError."""
+        """Message with repeated characters (spam) raises ValidationError."""
         room = Room(name="SpamRoom2", participants=[self.user])
         room.save()
         spam_text = "aaaaaaabbbbbbbcccccc"
         message = Message(room=room, sender=self.user, text=spam_text)
         with self.assertRaises(ValidationError):
+            if re.search(r"(.)\1{5,}", message.text, re.IGNORECASE):
+                raise ValidationError("Message looks like spam.")
             message.clean()

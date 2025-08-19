@@ -98,108 +98,87 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             except Exception as e:
                 logger.error("Error removing channel from group %s: %s", self.room_group_name, e)
 
+    @staticmethod
+    def message_is_valid(message: str) -> tuple[bool, str | None]:
+        """
+        Validate message against length, forbidden words, and spam rules.
+        Returns (is_valid, error_message).
+        """
+        if not message.strip():
+            return False, "Message cannot be empty."
+        if len(message) < MIN_MESSAGE_LENGTH or len(message) > MAX_MESSAGE_LENGTH:
+            return False, f"Message must be between {MIN_MESSAGE_LENGTH} and {MAX_MESSAGE_LENGTH} characters."
+        lowered = message.lower()
+        if any(word in lowered for word in FORBIDDEN_WORDS_SET):
+            return False, "Message contains forbidden content."
+        if re.search(r"([^aeiou\s])\1{10,}", message, re.IGNORECASE):
+            return False, "Message looks like spam."
+        return True, None
+
     async def receive(self, text_data=None, bytes_data=None):
         """
         Handle incoming WebSocket messages from clients.
-
-        Steps:
-          1. Validates that the incoming message exists and is a string.
-          2. Enforces length constraints and blocks forbidden words or spam patterns.
-          3. Applies rate limiting per user/channel.
-          4. Retrieves the authenticated MongoDB user.
-          5. Saves the message to the database with detailed logging.
-          6. Broadcasts the message to the room group.
-
-        Logs errors and audit information if user lookup or message saving fails.
-
-        Args:
-            text_data (str | None): JSON string containing the message payload.
-            bytes_data (bytes | None): Not used (for binary messages).
         """
+        if not text_data:
+            return
+
         try:
-            if not text_data:
-                return
+            payload = json.loads(text_data)
+        except json.JSONDecodeError as e:
+            logger.error("Invalid JSON in room %s by %s: %s | Error: %s",
+                         self.room_name, self.channel_name, text_data, e)
+            return
 
-            try:
-                payload = json.loads(text_data)
-            except json.JSONDecodeError as e:
-                logger.error("Invalid JSON received in room %s by %s: %s | Error: %s",
-                             self.room_name, self.channel_name, text_data, e)
-                return
+        message = payload.get("message")
+        if not isinstance(message, str):
+            await self.send(text_data=json.dumps({"error": "Invalid or missing 'message' field."}))
+            return
 
-            message = payload.get("message")
-            if not message or not isinstance(message, str):
-                logger.warning("Invalid payload (missing/invalid 'message') in room %s by %s: %s",
-                               self.room_name, self.channel_name, text_data)
-                return
+        message = message.strip()
+        valid, error_msg = self.message_is_valid(message)
+        if not valid:
+            logger.warning("Blocked message in room %s by %s: %s | Reason: %s",
+                           self.room_name, self.channel_name, message, error_msg)
+            await self.send(text_data=json.dumps({"error": error_msg}))
+            return
 
-            message = message.strip()
-            if len(message) < MIN_MESSAGE_LENGTH or len(message) > MAX_MESSAGE_LENGTH:
-                await self.send(text_data=json.dumps({
-                    "error": f"Message must be between {MIN_MESSAGE_LENGTH} and {MAX_MESSAGE_LENGTH} characters."
-                }))
-                return
+        # Rate limiting
+        now = time.time()
+        times = [t for t in user_message_times[self.channel_name] if now - t < RATE_LIMIT_WINDOW]
+        times.append(now)
+        user_message_times[self.channel_name] = times
+        if len(times) > MESSAGE_RATE_LIMIT:
+            logger.warning("Rate limit exceeded in room %s by %s", self.room_name, self.channel_name)
+            await self.send(text_data=json.dumps({"error": "Too many messages, slow down."}))
+            return
 
-            lowered = message.lower()
-            if any(word in lowered for word in FORBIDDEN_WORDS_SET):
-                logger.warning("Blocked forbidden content in room %s by %s: %s",
-                               self.room_name, self.channel_name, message)
-                await self.send(text_data=json.dumps({"error": "Message contains forbidden content."}))
-                return
+        # User lookup
+        user_email = getattr(self.scope.get("user"), "email", None)
+        if not user_email:
+            await self.send(text_data=json.dumps({"error": "Authentication required."}))
+            return
 
-            if re.search(r"([^aeiou\s])\1{10,}", message, re.IGNORECASE):
-                logger.warning(
-                    "Blocked spammy message in room %s by %s: %s",
-                    self.room_name,
-                    self.channel_name,
-                    message[:50] + ("..." if len(message) > 50 else "")
-                )
-                await self.send(text_data=json.dumps({"error": "Message looks like spam."}))
-                return
+        user = await self.get_mongo_user(user_email)
+        if not user:
+            await self.send(text_data=json.dumps({"error": "User not found in MongoDB."}))
+            return
 
-            now = time.time()
-            times = user_message_times[self.channel_name]
-            times = [t for t in times if now - t < RATE_LIMIT_WINDOW]
-            times.append(now)
-            user_message_times[self.channel_name] = times
-
-            if len(times) > MESSAGE_RATE_LIMIT:
-                logger.warning("Rate limit exceeded in room %s by %s", self.room_name, self.channel_name)
-                await self.send(text_data=json.dumps({"error": "Too many messages, slow down."}))
-                return
-
-            user_email = getattr(self.scope.get("user"), "email", None)
-            if not user_email:
-                logger.warning("Unauthenticated user attempted to send message in room %s: %s",
-                               self.room_name, message)
-                await self.send(text_data=json.dumps({"error": "Authentication required."}))
-                return
-
-            user = await self.get_mongo_user(user_email)
-            if not user:
-                logger.warning("MongoDB user not found for email %s in room %s. Message not saved: %s",
-                               user_email, self.room_name, message)
-                await self.send(text_data=json.dumps({"error": "User not found in MongoDB."}))
-                return
-
-            try:
-                await self.save_message(self.room_name, user, message)
-                logger.info("Message saved in room %s by %s: %s",
-                            self.room_name, user_email, message[:50] + ("..." if len(message) > 50 else ""))
-            except Exception as e:
-                logger.error("Failed to save message in room %s by %s: %s | Error: %s",
-                             self.room_name, user_email, message, e)
-                await self.send(text_data=json.dumps({"error": "Failed to save message."}))
-                return
-
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {"type": "receive_chat_message", "message": message}
-            )
-
+        # Save message
+        try:
+            await self.save_message(self.room_name, user, message)
+            logger.info("Message saved in room %s by %s: %s",
+                        self.room_name, user_email, message[:50] + ("..." if len(message) > 50 else ""))
         except Exception as e:
-            logger.error("Unexpected error processing message in room %s by %s: %s",
-                         self.room_name, self.channel_name, e)
+            logger.error("Failed to save message in room %s by %s: %s | Error: %s",
+                         self.room_name, user_email, message, e)
+            await self.send(text_data=json.dumps({"error": "Failed to save message."}))
+            return
+
+        # Broadcast
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {"type": "receive_chat_message", "message": message}
+        )
 
     async def receive_chat_message(self, event):
         """

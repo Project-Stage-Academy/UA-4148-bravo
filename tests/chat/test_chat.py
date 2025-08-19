@@ -16,7 +16,7 @@ from users.documents import UserDocument, UserRoleDocument, UserRoleEnum
 from mongoengine.errors import NotUniqueError
 from typing import Callable, Optional
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.chat.setup_test_env.'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.chat.setup_test_env'
 TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "testpassword123")
 MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", 1000))
 
