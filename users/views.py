@@ -36,6 +36,11 @@ from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import (
+    TokenRefreshView as SimpleJWTRefreshView,
+    TokenBlacklistView as SimpleJWTBlacklistView,
+)
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 
 # Local application imports
 from .constants import (
@@ -63,6 +68,15 @@ class RegisterThrottle(AnonRateThrottle):
     """Rate limiting for registration endpoint."""
     rate = '5/hour'
 
+@extend_schema(
+    tags=["Auth"],
+    summary="Obtain JWT access/refresh tokens",
+    request=CustomTokenObtainPairSerializer,
+    responses={
+        200: CustomTokenObtainPairSerializer,
+        401: OpenApiResponse(description="Invalid credentials"),
+    },
+)
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     Custom view for obtaining JWT tokens.
@@ -70,6 +84,31 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     """
     serializer_class = CustomTokenObtainPairSerializer
 
+
+@extend_schema(
+    tags=["Auth"],
+    summary="Refresh JWT access token",
+)
+class JWTRefreshView(SimpleJWTRefreshView):
+    pass
+
+
+@extend_schema(
+    tags=["Auth"],
+    summary="Logout (blacklist refresh token)",
+)
+class JWTLogoutView(SimpleJWTBlacklistView):
+    pass
+
+@extend_schema(
+    tags=["Auth"],
+    summary="Register a new user",
+    request=CustomUserCreateSerializer,
+    responses={
+        201: OpenApiResponse(description="User created and verification email sent"),
+        400: OpenApiResponse(description="Validation errors"),
+    },
+)
 class UserRegistrationView(APIView):
     """
     Handle user registration with email verification.
@@ -156,6 +195,14 @@ class UserRegistrationView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+@extend_schema(
+    tags=["Auth"],
+    summary="Verify email address",
+    responses={
+        200: OpenApiResponse(description="Email verified"),
+        400: OpenApiResponse(description="Invalid or expired verification link"),
+    },
+)
 class VerifyEmailView(APIView):
     """Handle email verification."""
     permission_classes = [AllowAny]
@@ -228,6 +275,15 @@ class VerifyEmailView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+@extend_schema(
+    tags=["Auth"],
+    summary="Resend verification email",
+    request=ResendEmailSerializer,
+    responses={
+        202: OpenApiResponse(description="If the account exists, a verification email has been sent"),
+        400: OpenApiResponse(description="Missing or invalid data"),
+    },
+)
 class ResendEmailView(APIView):
     """
     API view to resend the email verification link.
@@ -245,6 +301,7 @@ class ResendEmailView(APIView):
     permission_classes = [AllowAny]
     throttle_scope = "resend_email"
     throttle_classes = [ScopedRateThrottle]
+    serializer_class = ResendEmailSerializer
 
     def post(self, request):
         """
@@ -376,6 +433,16 @@ def error_response(message, status_code):
         data = message
     return Response(data, status=status_code)
 
+@extend_schema(
+    tags=["Auth"],
+    summary="Request password reset",
+    request=PasswordResetSerializer,
+    responses={
+        200: OpenApiResponse(description="Password reset email sent"),
+        400: OpenApiResponse(description="Validation error"),
+        404: OpenApiResponse(description="User not found"),
+    },
+)
 class CustomPasswordResetView(APIView):
     """
     Handle password reset requests by sending reset instructions via email.
@@ -389,6 +456,7 @@ class CustomPasswordResetView(APIView):
     Returns:
         Response: DRF Response with success message or error details.
     """
+    serializer_class = PasswordResetSerializer
     def post(self, request, *args, **kwargs):
         """
         Process password reset request.
@@ -420,6 +488,15 @@ class CustomPasswordResetView(APIView):
         return Response({"detail": "Password reset instructions have been sent to the provided email."}, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=["Auth"],
+    summary="Confirm password reset",
+    request=PasswordResetConfirmSerializer,
+    responses={
+        200: OpenApiResponse(description="Password changed successfully"),
+        400: OpenApiResponse(description="Invalid token, UID, or password"),
+    },
+)
 class CustomPasswordResetConfirmView(APIView):
     """
     Handle confirmation of password reset using UID and token.
@@ -435,6 +512,7 @@ class CustomPasswordResetConfirmView(APIView):
             - 200 OK if password changed successfully.
             - 400 Bad Request for missing fields, invalid token, invalid UID, or invalid password.
     """
+    serializer_class = PasswordResetConfirmSerializer
     def post(self, request, *args, **kwargs):
         """
         Process password reset confirmation.
@@ -491,6 +569,15 @@ def get_default_user_role():
     
     return default_role
 
+@extend_schema(
+    tags=["Auth"],
+    summary="Login with OAuth provider to obtain JWT",
+    responses={
+        200: CustomTokenObtainPairSerializer,
+        400: OpenApiResponse(description="Invalid request or provider token"),
+        403: OpenApiResponse(description="Email not provided/verified by provider"),
+    },
+)
 class OAuthTokenObtainPairView(TokenObtainPairView):
     """
     Extended token authentication endpoint that supports both traditional email/password
