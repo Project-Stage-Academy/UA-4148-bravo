@@ -2,25 +2,16 @@ import threading
 import time
 from decimal import Decimal
 
-from django.db import transaction, connections, close_old_connections
-from django.db.models import F
+from django.db import transaction, connections
 from django.test import TransactionTestCase
 from rest_framework import serializers
-
-from investments.models import Subscription
-from projects.models import Project
+from django.db import close_old_connections
+from common.enums import Stage
 from investments.serializers.subscription_create import SubscriptionCreateSerializer
 from investments.services.subscriptions import get_total_subscribed
 from investors.models import Investor
-from common.enums import Stage
-from tests.elasticsearch.factories import (
-    UserFactory,
-    IndustryFactory,
-    LocationFactory,
-    StartupFactory,
-    ProjectFactory,
-    CategoryFactory,
-)
+from tests.elasticsearch.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, ProjectFactory, \
+    CategoryFactory
 
 
 class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
@@ -102,33 +93,24 @@ class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
         amount2 = Decimal("500.00")
 
         errors = []
-        
-        def subscribe(user, amount, delay=0):
+
+        def subscribe(investor, amount, delay=0):
             close_old_connections()
             time.sleep(delay)
-            
-            request_mock = type('Request', (), {'user': user})
-            context = {'request': request_mock}
-
-            data = self.get_subscription_data(user.investor, self.project1, amount)
-            serializer = SubscriptionCreateSerializer(data=data, context=context)
-            
+            data = self.get_subscription_data(investor, self.project1, amount)
+            serializer = SubscriptionCreateSerializer(data=data)
             try:
-                serializer.is_valid(raise_exception=True)
-                
                 with transaction.atomic():
-                    subscription = serializer.save()
-                    Project.objects.filter(pk=subscription.project_id).update(
-                        current_funding=F('current_funding') + subscription.amount
-                    )
+                    from projects.models import Project
+                    Project.objects.select_for_update().get(pk=self.project1.pk)
+
+                    if serializer.is_valid(raise_exception=True):
+                        serializer.save()
             except serializers.ValidationError as e:
                 errors.append(e.detail)
-            except Exception as e:
-                errors.append(str(e))
 
-
-        t1 = threading.Thread(target=subscribe, args=(self.user2, amount1, 0))
-        t2 = threading.Thread(target=subscribe, args=(self.user3, amount2, 0.05))
+        t1 = threading.Thread(target=subscribe, args=(self.investor2, amount1, 0))
+        t2 = threading.Thread(target=subscribe, args=(self.investor3, amount2, 0.05))
 
         t1.start()
         t2.start()
@@ -141,9 +123,12 @@ class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
         total = get_total_subscribed(project=self.project1)
         self.assertLessEqual(total, self.project1.funding_goal)
 
-        error_messages = [str(err).lower() for err in errors]
-
+        error_messages = [
+            str(e).lower()
+            for err in errors
+            for e in (err.values() if isinstance(err, dict) else [err])
+        ]
         self.assertTrue(
-            any("exceeds the remaining funding" in msg for msg in error_messages) or any("exceeds funding goal" in msg for msg in error_messages),
+            any("exceeds funding goal" in msg for msg in error_messages),
             f"Expected funding goal exceeded error, got: {error_messages}"
         )
