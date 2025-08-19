@@ -322,3 +322,11 @@ class OAuthTokenObtainPairViewTests(TestCase):
                 'access_token': 'valid'
             }, format='json')
         self.assertIn(res.status_code, [400, 502])
+
+    # Celery for Welcom Email
+    def test_send_email_task_eager(self):
+        from users.tasks import send_email_task
+        recipient_list = ["you@example.com"]
+        result = send_email_task.delay("Subject", "Hello", recipient_list)
+        self.assertEqual(result.status, "SUCCESS")
+        self.assertEqual(result.result, f"Email sent to {recipient_list}")
