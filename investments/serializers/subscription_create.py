@@ -2,10 +2,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models import Sum
 from rest_framework import serializers
-
 from investments.models import Subscription
 from projects.models import Project
-from investors.models import Investor
 
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
@@ -13,6 +11,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     Serializer for creating a new investment subscription.
 
     Fields:
+        investor (Investor): The investor making the subscription.
         project (Project): The project to invest in.
         amount (Decimal): Investment amount, required and must be >= 0.01.
 
@@ -27,6 +26,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     Creation:
         - Uses database transactions with row-level locking to prevent race conditions.
         - Recalculates funding based on committed subscriptions at creation time.
+        - Updates the project's current_funding field after saving the subscription.
     """
 
     class Meta:
@@ -38,62 +38,49 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         investor = data.get("investor")
         amount = data.get("amount")
 
-        if not isinstance(project, Project):
-            raise serializers.ValidationError({"project": "Project does not exist."})
+        if project is None or not isinstance(project, Project):
+            raise serializers.ValidationError({"project": "Invalid project."})
 
-        if not getattr(investor, "user", None):
+        if investor is None or not hasattr(investor, "user"):
             raise serializers.ValidationError({"investor": "Invalid investor."})
 
-        if amount is None:
-            raise serializers.ValidationError({"amount": "This field is required."})
-
-        if amount < Decimal("0.01"):
-            raise serializers.ValidationError({"amount": "Amount must be at least 0.01."})
-
-        startup_user = getattr(project.startup, "user", None)
-        if startup_user and startup_user == investor.user:
-            raise serializers.ValidationError(
-                {"non_field_errors": "A startup owner cannot invest in their own project."}
-            )
-
-        current_total = (
-            project.subscriptions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
-        )
-
-        project.current_funding = current_total
-        project.save(update_fields=["current_funding"])
+        if amount is None or amount < Decimal("0.01"):
+            raise serializers.ValidationError({"amount": "Investment amount must be at least 0.01."})
 
         if project.current_funding >= project.funding_goal:
-            raise serializers.ValidationError(
-                {"project": "This project is already fully funded."}
-            )
+            raise serializers.ValidationError({"project": "Project is already fully funded."})
 
-        if project.current_funding + amount > project.funding_goal:
-            raise serializers.ValidationError(
-                {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
-            )
+        remaining = project.funding_goal - project.current_funding
+        if amount > remaining:
+            raise serializers.ValidationError({"amount": "Amount exceeds funding goal — exceeds the remaining funding."})
+
+        if investor.user == project.startup.user:
+            raise serializers.ValidationError({"non_field_errors": ["Startup owners cannot invest in their own project."]})
 
         return data
 
     def create(self, validated_data):
-        amount = validated_data["amount"]
         project = validated_data["project"]
+        amount = validated_data["amount"]
 
         with transaction.atomic():
             project_locked = Project.objects.select_for_update().get(pk=project.pk)
 
-            subscription = Subscription.objects.create(
-                project=project_locked,
-                amount=amount,
-                investor=validated_data["investor"],
-            )
+            current_funding = project_locked.subscriptions.aggregate(
+                total=Sum("amount")
+            )["total"] or Decimal("0.00")
 
-            total = (
-                Subscription.objects.filter(project=project_locked).aggregate(total=Sum("amount"))["total"]
-                or Decimal("0.00")
-            )
+            if current_funding >= project_locked.funding_goal:
+                raise serializers.ValidationError({"project": "Project is already fully funded."})
 
-            project_locked.current_funding = total
+            if current_funding + amount > project_locked.funding_goal:
+                raise serializers.ValidationError(
+                    {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
+                )
+
+            subscription = Subscription.objects.create(**validated_data)
+
+            project_locked.current_funding = current_funding + amount
             project_locked.save(update_fields=["current_funding"])
 
         return subscription
