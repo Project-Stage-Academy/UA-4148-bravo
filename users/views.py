@@ -959,8 +959,18 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
 
 @extend_schema(
     operation_id="auth_me",
-    summary="Get current user",
-    responses={200: CurrentUserSerializer, 401: OpenApiResponse(description="Unauthorized")},
+    summary="Retrieve the currently authenticated user",
+    description=(
+        "Returns the profile information of the currently authenticated user. "
+        "Requires a valid JWT access token. "
+        "If the token is missing or invalid, returns 401 Unauthorized."
+    ),
+    responses={
+        200: CurrentUserSerializer,
+        401: OpenApiResponse(description="Unauthorized - missing or invalid token"),
+        403: OpenApiResponse(description="Forbidden - user account is inactive"),
+        404: OpenApiResponse(description="Not Found - user no longer exists"),
+    },
     tags=["Auth"],
 )
 class MeView(APIView):

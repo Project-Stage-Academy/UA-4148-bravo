@@ -250,12 +250,15 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CurrentUserSerializer(serializers.ModelSerializer):
     """Public serializer for the currently logged-in user."""
-    role = serializers.CharField(source='role.role', read_only=True)
+    role = serializers.SerializerMethodField()
+
+    def get_role(self, obj):
+        return obj.role.role if obj.role else None
 
     class Meta:
         model = User
         fields = ("user_id", "email", "first_name", "last_name", "user_phone", "title", "role")
-        read_only_fields = fields
+        read_only_fields = ("user_id", "email", "first_name", "last_name", "user_phone", "title", "role")
 
 
     
