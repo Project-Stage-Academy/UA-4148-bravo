@@ -1,6 +1,6 @@
 import './emailConfirmationHandler.css';
 import {useNavigate, useParams} from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Loading from '../../components/Loading/loading';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 
@@ -17,7 +17,11 @@ function EmailConfirmationHandler() {
     const [status, setStatus] = useState('processing');
     const { confirmEmail } = useAuthContext();
 
+    const didRun = useRef(false);
     useEffect(() => {
+        if (didRun.current) return;
+        didRun.current = true;
+
         if (token) {
             const id = Number(user_id);
             if (isNaN(id)) {
@@ -30,11 +34,21 @@ function EmailConfirmationHandler() {
         } else {
             setStatus('error');
         }
-    }, [user_id, token]);
+    }, [user_id, token, confirmEmail]);
 
-    if (status === 'processing') return <Loading className={'email-confirmation-handler'}/>;
-    else if (status === 'success') navigate('/auth/register/done');
-    else navigate('/auth/register/error');
+    useEffect(() => {
+        if (status === 'success') {
+            navigate('/auth/register/user-confirmed');
+        } else if (status === 'error') {
+            navigate('/auth/register/error');
+        }
+    }, [status, navigate]);
+
+    if (status === 'processing') {
+        return <Loading className={'email-confirmation-handler'}/>;
+    }
+    
+    return null;
 }
 
 export default EmailConfirmationHandler;

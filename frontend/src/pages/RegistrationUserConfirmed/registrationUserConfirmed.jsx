@@ -1,20 +1,20 @@
-import "./registration.css";
+import "./registrationUserConfirmed.css";
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button/button';
 import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 
-function RegistrationDone() {
+function RegistrationUserConfirmed() {
     // This component handles user registration
     const navigate = useNavigate();
 
     // Function to handle the submission of the registration form
     function handleSubmit() {
-        navigate("/");
+        navigate("/auth/register/user-represent");
     }
 
     return (
         <Panel className={"panel__margin-large"}>
-            <PanelTitle>Реєстрація завершена!</PanelTitle>
+            <PanelTitle>Залишилось декілька кроків</PanelTitle>
             <PanelBody>
                 <div>
                     <p className={"panel--font-size"}>
@@ -27,11 +27,11 @@ function RegistrationDone() {
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
                 >
-                    Повернутися до входу
+                    Продовжити реєстрацію
                 </Button>
             </PanelNavigation>
         </Panel>
     );
 }
 
-export default RegistrationDone;
+export default RegistrationUserConfirmed;

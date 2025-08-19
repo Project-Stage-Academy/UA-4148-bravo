@@ -96,12 +96,15 @@ function AuthProvider({ children }) {
 
     const confirmEmail = useCallback(
         async (user_id, token) => {
-            await api.post(`/api/v1/auth/verify-email/${user_id}/${token}/`, {})
-                .catch((err) => {
+            try {
+                console.log("Calling confirmEmail..."); // debug
+                await api.get(`/api/v1/auth/verify-email/${user_id}/${token}/`);
+            } catch (err) {
                 console.error(err);
                 throw err;
-            });
-        }, []
+            }
+        },
+        []
     );
 
     /**

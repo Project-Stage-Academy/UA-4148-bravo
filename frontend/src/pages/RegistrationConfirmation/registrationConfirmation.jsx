@@ -19,7 +19,7 @@ function RegistrationConfirmation() {
 
     return (
         <Panel className={"panel__margin-large"}>
-            <PanelTitle>Реєстрація  майже завершена</PanelTitle>
+            <PanelTitle>Реєстрація майже завершена</PanelTitle>
             <PanelBody>
                 <div>
                     <p className={"panel--font-size"}>

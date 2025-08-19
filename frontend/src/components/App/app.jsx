@@ -14,14 +14,15 @@ import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
 import RegistrationPage from '../../pages/Registration/registration';
-import RequireAuth from '../RequireAuth/requireAuth';
 import AuthorizationWrapper from '../../pages/AuthorizationWrapper/authorizationWrapper';
 import RegistrationConfirmation from '../../pages/RegistrationConfirmation/registrationConfirmation';
 import RegisterReconfirmation from '../../pages/RegisterReconfirmation/registerReconfirmation';
 import RegistrationError from '../../pages/RegistrationError/registrationError';
-import RegistrationDone from '../../pages/RegistrationDone/registrationDone';
+import RegistrationUserConfirmed from '../../pages/RegistrationUserConfirmed/registrationUserConfirmed';
 import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/emailConfirmationHandler';
 import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
+import RegistrationUserRepresent from '../../pages/RegistrationUserRepresent/registrationUserRepresent';
+import RegistrationEntityRepresent from '../../pages/RegistrationEntityRepresent/registrationEntityRepresent';
 
 /**
  * Main application component that sets up routing and provider providers.
@@ -77,7 +78,9 @@ function App() {
                             <Route path="register/confirm" element={<RegistrationConfirmation />} />
                             <Route path="register/re-confirm" element={<RegisterReconfirmation />} />
                             <Route path="register/error" element={<RegistrationError />} />
-                            <Route path="register/done" element={<RegistrationDone />} />
+                            <Route path="register/user-confirmed" element={<RegistrationUserConfirmed />} />
+                            <Route path="register/user-represent" element={<RegistrationUserRepresent />} />
+                            <Route path="register/entity-represent" element={<RegistrationEntityRepresent />} />
 
                             {/* Forgot password */}
                             <Route path="forgot" element={<ForgotPassword />} />
@@ -88,7 +91,7 @@ function App() {
                         </Route>
 
                         {/* Profile */}
-                        <Route path="profile" element={<RequireAuth />}>
+                        <Route path="profile">
 
                             {/* Company profile */}
                             <Route path="company/:uid" element={<ProfilePage />}>
