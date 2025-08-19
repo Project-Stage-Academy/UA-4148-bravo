@@ -54,7 +54,10 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         remaining = project.funding_goal - effective_current
 
         if remaining <= 0:
-            raise serializers.ValidationError({"project": "Project is already fully funded."})
+            raise serializers.ValidationError(
+                {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
+    )
+
 
         if amount is not None and amount > remaining:
             raise serializers.ValidationError(
