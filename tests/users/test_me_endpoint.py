@@ -88,18 +88,5 @@ class MeEndpointTests(APITestCase):
         resp = self.client.get(self.url)
 
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+    
 
-    '''def test_me_user_without_role(self):
-        """
-        Ensure that the 'me' endpoint works even if the user has no role assigned.
-        """
-        self.user.role = None
-        self.user.save(update_fields=['role'])
-
-        token = self.get_token_for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-        resp = self.client.get(self.url)
-
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        body = resp.json()
-        self.assertIsNone(body["role"])
