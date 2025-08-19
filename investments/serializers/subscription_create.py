@@ -25,13 +25,16 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
     Creation:
         - Uses database transactions with row-level locking to prevent race conditions.
-        - Recalculates funding based on committed subscriptions at creation time.
+        - Recalculates effective funding using both DB aggregate and project's current_funding to avoid drift.
         - Updates the project's current_funding field after saving the subscription.
     """
 
     class Meta:
         model = Subscription
         fields = ["id", "investor", "project", "amount"]
+        extra_kwargs = {
+            "amount": {"required": True},
+        }
 
     def validate(self, data):
         project = data.get("project")
@@ -44,16 +47,14 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         if investor is None or not hasattr(investor, "user"):
             raise serializers.ValidationError({"investor": "Invalid investor."})
 
-        if amount is not None and amount < Decimal("0.01"):
-            raise serializers.ValidationError({"amount": "Investment amount must be at least 0.01."})
-
         if investor.user == project.startup.user:
-            raise serializers.ValidationError({"non_field_errors": ["Startup owners cannot invest in their own project."]})
+            raise serializers.ValidationError(
+                {"non_field_errors": ["Startup owners cannot invest in their own project."]}
+            )
 
-        current_funding = project.subscriptions.aggregate(
-            total=Sum("amount")
-        )["total"] or Decimal("0.00")
-        remaining = project.funding_goal - current_funding
+        aggregated = project.subscriptions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        effective_current = max(project.current_funding or Decimal("0.00"), aggregated)
+        remaining = project.funding_goal - effective_current
 
         if remaining <= 0:
             raise serializers.ValidationError({"project": "Project is already fully funded."})
@@ -72,26 +73,20 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             project_locked = Project.objects.select_for_update().get(pk=project.pk)
 
-            current_funding = project_locked.subscriptions.aggregate(
-                total=Sum("amount")
-            )["total"] or Decimal("0.00")
-
-            remaining = project_locked.funding_goal - current_funding
-
-            if remaining <= 0:
-                raise serializers.ValidationError({"project": "Project is already fully funded."})
+            aggregated = project_locked.subscriptions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+            effective_current = max(project_locked.current_funding or Decimal("0.00"), aggregated)
+            remaining = project_locked.funding_goal - effective_current
 
             if amount > remaining:
                 raise serializers.ValidationError(
                     {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
                 )
+            if remaining <= 0:
+                raise serializers.ValidationError({"project": "Project is already fully funded."})
 
             subscription = Subscription.objects.create(**validated_data)
-            new_total = project_locked.subscriptions.aggregate(
-                total=Sum("amount")
-            )["total"] or Decimal("0.00")
 
-            project_locked.current_funding = new_total
+            project_locked.current_funding = effective_current + amount
             project_locked.save(update_fields=["current_funding"])
 
         return subscription
