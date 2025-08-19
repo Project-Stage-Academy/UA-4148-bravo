@@ -44,6 +44,9 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         if not getattr(investor, "user", None):
             raise serializers.ValidationError({"investor": "Invalid investor."})
 
+        if amount is None:
+            raise serializers.ValidationError({"amount": "This field is required."})
+
         if amount < Decimal("0.01"):
             raise serializers.ValidationError({"amount": "Amount must be at least 0.01."})
 
@@ -51,6 +54,21 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         if startup_user and startup_user == investor.user:
             raise serializers.ValidationError(
                 {"non_field_errors": "A startup owner cannot invest in their own project."}
+            )
+
+        current_funding = (
+            project.subscriptions.aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+
+        if current_funding >= project.funding_goal:
+            raise serializers.ValidationError(
+                {"project": "This project is already fully funded."}
+            )
+
+        if current_funding + amount > project.funding_goal:
+            raise serializers.ValidationError(
+                {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
             )
 
         return data
@@ -61,21 +79,6 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             project_locked = Project.objects.select_for_update().get(pk=project.pk)
-
-            current_funding = (
-                project_locked.subscriptions.aggregate(total=Sum("amount"))["total"]
-                or Decimal("0.00")
-            )
-
-            if current_funding + amount > project_locked.funding_goal:
-                raise serializers.ValidationError(
-                    {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
-                )
-
-            if current_funding >= project_locked.funding_goal:
-                raise serializers.ValidationError(
-                    {"project": "This project is already fully funded."}
-                )
 
             subscription = Subscription.objects.create(
                 project=project_locked,
