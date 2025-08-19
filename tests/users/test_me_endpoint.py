@@ -21,7 +21,8 @@ class MeEndpointTests(APITestCase):
     @classmethod
     def setUpTestData(cls):
         """
-        Create a default user role and a test user with that role.
+        Set up test data for the entire TestCase.
+        Creates a user role and a test user assigned to that role.
         """
         role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
         cls.user = User.objects.create_user(
@@ -32,7 +33,7 @@ class MeEndpointTests(APITestCase):
             user_phone="+123456789",
             title="Developer",
             role=role,
-            is_active=True,
+            is_active=True
         )
         cls.url = reverse("auth-me")
 
@@ -41,21 +42,20 @@ class MeEndpointTests(APITestCase):
         Generate a JWT access token for the given user.
 
         Args:
-            user (User): The user instance.
+            user (User): The user instance to generate a token for.
 
         Returns:
-            str: A valid JWT access token.
+            str: JWT access token.
         """
         return str(AccessToken.for_user(user))
 
     def test_me_returns_current_user(self):
         """
-        Authenticated request returns 200 with correct user details
-        and excludes sensitive fields (e.g., password).
+        Ensure that the 'me' endpoint returns the current authenticated user's details
+        and does not expose the password.
         """
         token = self.get_token_for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-
         resp = self.client.get(self.url)
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -65,39 +65,39 @@ class MeEndpointTests(APITestCase):
         self.assertEqual(body["last_name"], self.user.last_name)
         self.assertEqual(body["user_phone"], self.user.user_phone)
         self.assertEqual(body["title"], self.user.title)
-        self.assertEqual(body["role"], self.user.role.role)
+        self.assertEqual(body["role"], getattr(self.user.role, 'role', None))
         self.assertNotIn("password", body)
 
     def test_me_requires_auth(self):
         """
-        Unauthenticated request should return 401 Unauthorized.
+        Ensure that the 'me' endpoint requires authentication and returns 401 if no token is provided.
         """
         resp = self.client.get(self.url)
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_me_inactive_user(self):
         """
-        Inactive users cannot access the endpoint (expect 403 Forbidden).
+        Ensure that inactive users cannot access the 'me' endpoint.
+        DRF returns 401 Unauthorized for inactive users by default.
         """
         self.user.is_active = False
         self.user.save()
 
         token = self.get_token_for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-
         resp = self.client.get(self.url)
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_me_user_without_role(self):
         """
-        Endpoint still works if the user has no role (role should be null).
+        Ensure that the 'me' endpoint works even if the user has no role assigned.
         """
         self.user.role = None
-        self.user.save()
+        self.user.save(update_fields=['role'])
 
         token = self.get_token_for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-
         resp = self.client.get(self.url)
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
