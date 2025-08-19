@@ -198,18 +198,6 @@ DJOSER = {
     },
     'USER_ID_FIELD': 'user_id',
 }
-
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
-    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp.sendgrid.net'
-    EMAIL_PORT = 587
-    EMAIL_HOST_USER = 'apikey'
-    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-    EMAIL_USE_TLS = True
-    DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
     
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
