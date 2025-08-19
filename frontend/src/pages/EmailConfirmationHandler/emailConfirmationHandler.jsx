@@ -2,6 +2,7 @@ import './emailConfirmationHandler.css';
 import {useNavigate, useParams} from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Loading from '../../components/Loading/loading';
+import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 
 /**
  * Email confirmation handler
@@ -14,13 +15,18 @@ function EmailConfirmationHandler() {
     const { user_id, token } = useParams();
     const navigate = useNavigate();
     const [status, setStatus] = useState('processing');
-    //const {  } = useAuthContext();
+    const { confirmEmail } = useAuthContext();
 
     useEffect(() => {
         if (token) {
-            // confirmUser(token)
-            //     .then(() => setStatus('success'))
-            //     .catch(() => setStatus('error'));
+            const id = Number(user_id);
+            if (isNaN(id)) {
+                setStatus("error");
+            } else {
+                confirmEmail(id, token)
+                    .then(() => setStatus('success'))
+                    .catch(() => setStatus('error'));
+            }
         } else {
             setStatus('error');
         }

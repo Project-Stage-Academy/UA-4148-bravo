@@ -1,6 +1,7 @@
-import {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
-import { api, setAccessToken } from "../../api/client";
+import {createContext, useCallback, useContext, useMemo, useState} from 'react';
+import { api, getAccessToken, setAccessToken } from '../../api/client';
 import PropTypes from 'prop-types';
+import useProactiveRefresh from '../../hooks/useProactiveRefresh/useProactiveRefresh';
 
 /**
  * @typedef {Object} User - Represents a user in the application
@@ -18,6 +19,7 @@ import PropTypes from 'prop-types';
  * @property {(email: string, first_name: string | null, last_name: string | null, password: string, confirmPassword: string)
  * => Promise<void>} register
  * @property {(email: string, userId: number) => Promise<void>} resendRegisterEmail
+ * @property {(user_id: number, token: string) => Promise<void>} confirmEmail
  * @property {() => void} logout
  * @property {(email: string) => Promise<void>} requestReset
  * @property {(uid: string, token: string, newPassword: string) => Promise<void>} confirmReset
@@ -86,6 +88,16 @@ function AuthProvider({ children }) {
                 email: email,
                 user_id: userId,
             }).catch((err) => {
+                console.error(err);
+                throw err;
+            });
+        }, []
+    );
+
+    const confirmEmail = useCallback(
+        async (user_id, token) => {
+            await api.post(`/api/v1/auth/verify-email/${user_id}/${token}/`, {})
+                .catch((err) => {
                 console.error(err);
                 throw err;
             });
@@ -205,43 +217,30 @@ function AuthProvider({ children }) {
      * Req: { refresh }
      * Res: 200 { access }
      */
-    async function refreshToken(isMounted) {
-        try {
-            const { data } = await api.post("/api/v1/auth/jwt/refresh/");
-            if (!isMounted) return;
+    const refreshToken = useCallback(
+        async () => {
+            try {
+                const { data } = await api.post("/api/v1/auth/jwt/refresh/");
+                setAccessToken(data.access || null);
+                /*
+                * TODO
+                * await loadUser();
+                */
+            } catch (err) {
+                if (err.response) {
+                    console.log("Refresh token missing or invalid:", err.response.status);
+                } else {
+                    console.error(err);
+                }
 
-            setAccessToken(data.access || null);
-            /*
-            * TODO
-            * await loadUser();
-            */
-        } catch (err) {
-            if (err.response) {
-                console.log("Refresh token missing or invalid:", err.response.status);
-            } else {
-                console.error(err);
+                if (err.response?.status === 401) {
+                    await logout();
+                }
             }
+        }, [setAccessToken, logout]
+    );
 
-            if (err.response?.status === 401) {
-                await logout();
-            }
-        }
-    }
-
-    /**
-     * Try to restore session on mount
-     */
-    useEffect(() => {
-        let isMounted = true;
-
-        (async () => {
-            await refreshToken(isMounted);
-        })();
-
-        return () => {
-            isMounted = false;
-        };
-    });
+    useProactiveRefresh(getAccessToken(), refreshToken);
 
     return (
         <AuthCtx.Provider
@@ -252,6 +251,7 @@ function AuthProvider({ children }) {
                     login,
                     register,
                     resendRegisterEmail,
+                    confirmEmail,
                     logout,
                     requestReset,
                     confirmReset
@@ -262,6 +262,7 @@ function AuthProvider({ children }) {
                     login,
                     register,
                     resendRegisterEmail,
+                    confirmEmail,
                     logout,
                     requestReset,
                     confirmReset

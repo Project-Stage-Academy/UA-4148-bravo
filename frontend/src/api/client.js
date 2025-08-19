@@ -1,15 +1,12 @@
 import axios from "axios";
 
-/**
- * @type {string | null}
- */
-let accessTokenMemory = null;
+let accessToken = null;
 
-/**
- * @param {string | null} t
- * @returns {void}
- */
-export const setAccessToken = (t) => { accessTokenMemory = t };
+export const setAccessToken = (value) => {
+    accessToken = value;
+}
+
+export const getAccessToken = () => accessToken
 
 /**
  * Creates an isolated API instance with support for single-flight refresh
@@ -52,7 +49,7 @@ function createApiClient() {
 
     // Request interceptor
     instance.interceptors.request.use((cfg) => {
-        if (accessTokenMemory) cfg.headers.Authorization = `Bearer ${accessTokenMemory}`;
+        if (accessToken) cfg.headers.Authorization = `Bearer ${accessToken}`;
         return cfg;
     });
 

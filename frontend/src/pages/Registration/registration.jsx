@@ -28,20 +28,11 @@ function Registration() {
     // State to hold form data
     const [formData, setFormData] = useState(
         {
-            companyName: "",
             email: "",
             password: "",
             confirmPassword: "",
             lastName: "",
             firstName: "",
-            representation: {
-                company: false,
-                startup: false
-            },
-            businessType: {
-                individual: false,
-                legal: false
-            },
             unexpected: ""
         });
 
@@ -108,20 +99,6 @@ function Registration() {
                 <PanelTitle>Реєстрація</PanelTitle>
                 <PanelBody>
                     <PanelBodyTitle title={'Обов’язкові поля позначені зірочкою'} />
-                    <div>
-                        <PanelBodyTitle title={'Назва компанії'} className={'content--text-container__margin'} />
-                        <TextInput
-                            name="companyName"
-                            autoComplete="off"
-                            autoCorrect="off"
-                            spellCheck="false"
-                            value={formData.companyName}
-                            onChange={handleChange}
-                            placeholder={'Введіть назву вашої компанії'}
-                            className={errors['companyName'] && 'input__error-border-color'}
-                        />
-                        { errors['companyName'] ? <p className={"panel--danger-text"}>{ errors['companyName'] }</p> : "" }
-                    </div>
                     <div>
                         <PanelBodyTitle title={'Електронна пошта'} className={'content--text-container__margin'} />
                         <TextInput
@@ -193,40 +170,6 @@ function Registration() {
                             className={errors['firstName'] && 'input__error-border-color'}
                         />
                         { errors['firstName'] ? <p className={"panel--danger-text"}>{ errors["firstName"] }</p> : "" }
-                    </div>
-                    <div>
-                        <PanelBodyTitle title={'Кого ви представляєте?'} className={'content--text-container__margin'} />
-                        <Checkbox
-                            groupKey={"representation"}
-                            values={formData.representation}
-                            labels={{
-                                company: "Зареєстрована компанія",
-                                startup: "Стартап проєкт, який шукає інвестиції"
-                            }}
-                            errors={errors}
-                            handleChange={handleChange}
-                        />
-                        { errors['representation'] ? <p className={"panel--danger-text"}>{ errors["representation"] }</p> : "" }
-                    </div>
-                    <div>
-                        <PanelBodyTitle title={'Який суб’єкт господарювання ви представляєте?'} className={'content--text-container__margin'} />
-                        <Checkbox
-                            groupKey={"businessType"}
-                            values={formData.businessType}
-                            labels={{
-                                individual: "Фізична особа-підприємець",
-                                legal: "Юридична особа"
-                            }}
-                            errors={errors}
-                            handleChange={handleChange}
-                        />
-                        { errors['businessType'] ? <p className={"panel--danger-text"}>{ errors["businessType"] }</p> : "" }
-                    </div>
-                    { errors['unexpected'] ? <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> : ""}
-                    <div>
-                        <span className={"panel--font-size"}>Реєструючись, я погоджуюсь з </span>
-                        <Link className={"panel--font-size text-underline text-bold"} to={"/policy"}>правилами використання</Link>
-                        <span className={"panel--font-size"}> сайту Craftmerge</span>
                     </div>
                 </PanelBody>
                 <PanelNavigation>

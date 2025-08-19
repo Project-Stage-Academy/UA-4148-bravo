@@ -18,7 +18,7 @@ function Loading({ quantity = 4, className }) {
         let index = 0;
 
         const interval = setInterval(() => {
-            setDots(prev => {
+            setDots(() => {
                 const newDots = Array(quantity).fill(false);
                 newDots[index] = true;
                 return newDots;
