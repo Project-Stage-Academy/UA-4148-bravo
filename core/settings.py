@@ -157,17 +157,6 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
-    DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp.sendgrid.net'
-    EMAIL_PORT = 587
-    EMAIL_HOST_USER = 'apikey'
-    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-    EMAIL_USE_TLS = True
-    DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
     
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
@@ -474,10 +463,10 @@ LOGGING = {
 }
 
 # Celery
-CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
-CELERY_RESULT_BACKEND = 'rpc://'
+CELERY_BROKER_URL = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 
-if 'users' in sys.argv:
+if 'test' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
