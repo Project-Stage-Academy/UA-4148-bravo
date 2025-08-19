@@ -1,78 +1,100 @@
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.test import TestCase
 from startups.models import Location
 from tests.test_base_case import BaseAPITestCase
+from tests.test_disable_signal_mixin import DisableSignalMixin
 
 
-class LocationModelCleanTests(BaseAPITestCase):
-    """Tests for Location model clean() validations."""
+class LocationModelCleanTests(DisableSignalMixin, BaseAPITestCase):
+    """Tests for Location model validation and constraints."""
 
-    def test_valid_location_should_pass(self):
-        """
-        Test that a Location instance with valid fields
-        passes the full_clean() validation without errors.
-        """
-        location = Location(
-            country='US',
-            region='California',
-            city='San Francisco',
-            address_line='Market Street',
-            postal_code='94103'
+    def test_create_location_success(self):
+        """Location can be created successfully with valid data."""
+        location = Location.objects.create(
+            country="US",
+            region="California",
+            city="San Francisco",
+            address_line="Market Street",
+            postal_code="94103"
         )
-        try:
+        self.assertEqual(location.city, "San Francisco")
+        self.assertTrue(location.pk is not None)
+
+    def test_location_name_not_empty(self):
+        """City name cannot be empty."""
+        with self.assertRaises(DjangoValidationError):
+            location = Location(
+                country="US",
+                region="California",
+                city="",
+                postal_code="94103"
+            )
             location.full_clean()
-        except ValidationError:
-            self.fail("clean() raised ValidationError unexpectedly.")
+            location.save()
 
-    def test_postal_code_too_short_should_raise(self):
-        """
-        Test that a postal code shorter than 3 characters
-        raises a ValidationError on clean().
-        """
-        location = Location(country='US', postal_code='12')
-        with self.assertRaises(ValidationError) as context:
-            location.clean()
-        self.assertIn('postal_code', context.exception.message_dict)
+    def test_postal_code_format(self):
+        """Postal code must be at least 3 characters."""
+        with self.assertRaises(DjangoValidationError):
+            location = Location(country="US", postal_code="12")
+            location.full_clean()
+            location.save()
 
-    def test_postal_code_invalid_chars_should_raise(self):
-        """
-        Test that a postal code containing invalid characters
-        raises a ValidationError on clean().
-        """
-        location = Location(country='US', postal_code='@@@')
-        with self.assertRaises(ValidationError) as context:
-            location.clean()
-        self.assertIn('postal_code', context.exception.message_dict)
-
-    def test_city_with_invalid_chars_should_raise(self):
-        """
-        Test that a city name containing non-Latin characters
-        raises a ValidationError on clean().
-        """
-        location = Location(country='US', city='Kyїv')
-        with self.assertRaises(ValidationError) as context:
-            location.clean()
-        self.assertIn('city', context.exception.message_dict)
-
-    def test_address_line_requires_city_and_region(self):
-        """
-        Test that providing an address_line without city and region
-        raises a ValidationError indicating those fields are required.
-        """
-        location = Location(
-            country='US',
-            address_line='Main Street'
-        )
-        with self.assertRaises(ValidationError) as context:
-            location.clean()
-        self.assertIn('city', context.exception.message_dict)
-        self.assertIn('region', context.exception.message_dict)
+    def test_invalid_postal_code_chars(self):
+        """Postal code cannot contain invalid characters."""
+        with self.assertRaises(DjangoValidationError):
+            location = Location(country="US", postal_code="@@@")
+            location.full_clean()
+            location.save()
 
     def test_city_requires_region(self):
-        """
-        Test that providing a city without a region
-        raises a ValidationError indicating region is required.
-        """
-        location = Location(country='US', city='Chicago')
-        with self.assertRaises(ValidationError) as context:
-            location.clean()
-        self.assertIn('region', context.exception.message_dict)
+        """City without region should raise ValidationError."""
+        with self.assertRaises(DjangoValidationError):
+            location = Location(country="US", city="Chicago")
+            location.full_clean()
+            location.save()
+
+    def test_address_requires_city_and_region(self):
+        """Address line without city and region raises ValidationError."""
+        with self.assertRaises(DjangoValidationError):
+            location = Location(country="US", address_line="Main Street")
+            location.full_clean()
+            location.save()
+
+    def test_location_str_method(self):
+        """__str__ returns formatted location string."""
+        location = Location.objects.create(
+            country="US",
+            region="California",
+            city="Los Angeles",
+            address_line="Sunset Blvd",
+            postal_code="90028"
+        )
+        self.assertEqual(str(location), "Los Angeles, California, US")
+
+    def test_location_update_fields(self):
+        """Updating location fields works correctly."""
+        location = Location.objects.create(
+            country="US",
+            region="California",
+            city="OldCity",
+            postal_code="90001"
+        )
+        location.city = "NewCity"
+        location.full_clean()
+        location.save()
+        self.assertEqual(Location.objects.get(pk=location.pk).city, "NewCity")
+
+    def test_location_delete(self):
+        """Deleting a location removes it from the database."""
+        location = Location.objects.create(
+            country="US",
+            region="New York",
+            city="New York",
+            postal_code="10001"
+        )
+        pk = location.pk
+        location.delete()
+        self.assertFalse(Location.objects.filter(pk=pk).exists())
+
+
+

@@ -11,7 +11,11 @@ class StartupDocumentSerializer(DocumentSerializer):
 
     class Meta:
         document = StartupDocument
-        fields = ('id', 'company_name', 'description', 'location', 'stage', 'industry')
+        fields = (
+            'id', 'company_name', 'description', 'location',
+            'stage', 'industry', 'funding_needed', 'team_size'
+        )
 
     def get_industry(self, obj):
         return obj.industry.name if obj.industry else None
+

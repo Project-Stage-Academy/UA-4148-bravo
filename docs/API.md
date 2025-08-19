@@ -34,15 +34,59 @@ Content-Type: application/json
 }
 ```
 
+---
+
 ## Startup API
 
 ### Endpoints
 
-- `GET /api/profiles/startups/` — Retrieve a list of all startup profiles
-- `POST /api/profiles/startups/` — Create a new startup profile
-- `GET /api/profiles/startups/{id}/` — Retrieve details of a specific startup profile
-- `PATCH /api/profiles/startups/{id}/` — Update an existing startup profile
-- `DELETE /api/profiles/startups/{id}/` — Delete a startup profile
+- `GET /api/v1/startups/` — Retrieve a list of all startup profiles (investor only)
+- `GET /api/v1/startups/{id}/` — Retrieve details of a specific startup profile (investor only)
+- `GET /api/v1/startups/search/?q=<keyword>` — Search startup profiles by keyword (investor only)
+
+### Filtering
+
+You can filter startup profiles using query parameters:
+
+- `industry` — Filter by industry (e.g., `industry=Fintech`)
+- `min_team_size` — Minimum team size (e.g., `min_team_size=10`)
+- `funding_needed__lte` — Maximum funding needed (e.g., `funding_needed__lte=500000`)
+
+### Permissions
+
+- Only authenticated users with the **investor role** can access these endpoints.
+
+### Example Request: List Startups
+
+```http
+GET /api/v1/startups/?industry=Fintech&funding_needed__lte=500000
+Authorization: Bearer <access_token>
+```
+
+### Example Response: List Startups (200 OK)
+
+```json
+[
+  {
+    "id": 1,
+    "name": "GreenTech",
+    "industry": "Fintech",
+    "stage": "Seed",
+    "funding_needed": 300000,
+    "team_size": 12
+  },
+  {
+    "id": 2,
+    "name": "AIHealth",
+    "industry": "HealthTech",
+    "stage": "Series A",
+    "funding_needed": 500000,
+    "team_size": 20
+  }
+]
+```
+
+---
 
 ## Investor API
 
@@ -139,10 +183,11 @@ Content-Type: application/json
 
 ### Startup Profile
 
-- company_name: required, unique
-- description: required
-- website: optional
-- startup_logo: optional
+- name: required, unique
+- industry: required
+- stage: required
+- funding_needed: required, numeric
+- team_size: required, integer
 
 ### Project
 
@@ -253,5 +298,3 @@ The OAuth callback URLs are configured to handle redirects after successful auth
 
 4. **ExchangeCode for Token**:
   -Send the authorization code to your backend API `/users/oauth/login/` to exchange it for an access token.
-=======
-

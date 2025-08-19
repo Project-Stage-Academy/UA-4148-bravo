@@ -2,6 +2,23 @@
 
 This guide explains how to contribute new API documentation to the `docs/API.md` file in a consistent and maintainable way.
 
+## Recent Updates (Startup Investor API)
+
+The following functionality has been implemented and documented:
+
+- **Startup Model Enhancements**: Added fields `name`, `industry`, `stage`, `funding_needed`, `team_size`.
+- **Startup Serializer**: Controls which fields are visible to investors.
+- **Startup API Endpoints**:
+  - `GET /api/v1/startups/` — list of startups (with filtering support).
+  - `GET /api/v1/startups/{id}/` — details of a specific startup.
+  - `GET /api/v1/startups/search/?q=<keyword>` — keyword search in startup profiles.
+- **Filtering**: Implemented using `django-filters`. Available filters include `industry`, `min_team_size`, `funding_needed__lte`.
+- **Permissions**: Access restricted to authenticated users with the `investor` role.
+- **Tests**: Unit tests cover list, detail, filtering, and access rules.
+- **Documentation**: Swagger and `API.md` updated with new endpoints.
+
+---
+
 ## Where to Add
 
 All API documentation is maintained in `docs/API.md`. Each endpoint should be documented as a separate section using the following structure.

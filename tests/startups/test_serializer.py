@@ -1,8 +1,10 @@
 from startups.serializers.startup_full import StartupSerializer
 from tests.test_base_case import BaseAPITestCase
+from tests.test_disable_signal_mixin import DisableSignalMixin
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 
-class StartupSerializerTests(BaseAPITestCase):
+class StartupSerializerTests(DisableSignalMixin, BaseAPITestCase):
     """
     Tests for StartupSerializer to validate proper serialization and validation
     of Startup data, including required fields, field constraints, and nested data.
@@ -103,3 +105,23 @@ class StartupSerializerTests(BaseAPITestCase):
         errors = serializer.errors['social_links']
         self.assertIn("Invalid domain for platform 'linkedin'", errors.get('linkedin', ''))
         self.assertIn("Platform 'unknown' is not supported.", errors.get('unknown', ''))
+
+    def test_partial_data_valid(self):
+        """
+        Serializer accepts partial valid data for update.
+        """
+        startup = self.get_or_create_startup(
+            user=self.user,
+            company_name='PartialTech',
+            industry=self.industry,
+            location=self.location
+        )
+        data = {
+            'company_name': 'PartialTechUpdated'
+        }
+        serializer = StartupSerializer(instance=startup, data=data, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        updated = serializer.save()
+        self.assertEqual(updated.company_name, 'PartialTechUpdated')
+
+

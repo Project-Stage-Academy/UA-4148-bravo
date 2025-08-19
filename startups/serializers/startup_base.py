@@ -16,7 +16,7 @@ class StartupBaseSerializer(SocialLinksValidationMixin, serializers.ModelSeriali
         fields = [
             'id', 'company_name', 'description', 'industry',
             'location', 'website', 'email', 'founded_year',
-            'team_size', 'stage', 'social_links', 'user',
+            'team_size', 'funding_needed', 'stage', 'social_links', 'user',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

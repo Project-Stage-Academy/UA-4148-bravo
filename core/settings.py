@@ -74,7 +74,7 @@ SOCIALACCOUNT_PROVIDERS = {
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {
             'access_type': 'offline',
-            'prompt': 'consent', 
+            'prompt': 'consent',
         },
         'FETCH_USERINFO': True,
     },
@@ -97,10 +97,22 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
+    # Authentication
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',
     ),
+    # Permissions
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    # Filtering and searching
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    # Throttling
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.AnonRateThrottle',
@@ -109,7 +121,6 @@ REST_FRAMEWORK = {
         'user': '5/minute',
         'anon': '2/minute',
         'resend_email': '5/minute',
-        
     },
 }
 
@@ -159,7 +170,7 @@ DJOSER = {
 }
 
 if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Email Configuration (for development)
     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -169,9 +180,9 @@ else:
     EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
     EMAIL_USE_TLS = True
     DEFAULT_FROM_EMAIL = 'pbeinner@gmail.com'
-    
+
 if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Email Configuration (for development)
     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -225,9 +236,6 @@ DATABASES = {
     }
 }
 
-# if DEBUG:
-#    AUTH_PASSWORD_VALIDATORS = []
-# else:
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -248,8 +256,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='UTC')
 USE_I18N = True

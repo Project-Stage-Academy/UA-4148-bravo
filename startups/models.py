@@ -52,16 +52,6 @@ class Location(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
     def clean(self):
-        """
-        Validates the Location instance.
-
-        - Postal code must be at least 3 characters and contain only Latin characters.
-        - City, region, and address line must not be empty or contain only spaces and must be Latin characters only.
-        - Enforces logical dependencies: address_line requires city and region, city requires region.
-
-        Raises:
-            ValidationError: If any validation rules fail.
-        """
         errors = {}
 
         if self.postal_code:
@@ -148,12 +138,6 @@ class Industry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
 
     def clean(self):
-        """
-        Validates the Industry name to ensure it does not contain forbidden terms.
-
-        Raises:
-            ValidationError: If forbidden names are detected.
-        """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")
 
@@ -173,7 +157,7 @@ class Industry(models.Model):
 class Startup(Company):
     """
     Represents a startup company linked to a user.
-    Includes stage of development and social links validation.
+    Includes stage of development, funding details, team size, industry, and social links.
     """
     user = models.OneToOneField(
         'users.User',
@@ -189,6 +173,34 @@ class Startup(Company):
         verbose_name="Development Stage",
         help_text="Current development stage of the startup"
     )
+    industry = models.ForeignKey(
+        Industry,
+        on_delete=models.PROTECT,
+        related_name="startups",
+        verbose_name="Industry",
+        help_text="Industry in which the startup operates"
+    )
+    funding_needed = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,  # Default value to prevent migration issues
+        verbose_name="Funding Needed",
+        help_text="Amount of funding required by the startup"
+    )
+    team_size = models.PositiveIntegerField(
+        default=0,  # Default value to prevent migration issues
+        verbose_name="Team Size",
+        help_text="Number of team members in the startup"
+    )
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="startups",
+        verbose_name="Location",
+        help_text="Location of the startup"
+    )
     social_links = models.JSONField(
         blank=True,
         default=dict,
@@ -197,15 +209,6 @@ class Startup(Company):
     )
 
     def clean(self):
-        """
-        Validates the Startup instance.
-
-        - Ensures social_links only contain allowed platforms.
-        - Validates URLs for the platforms.
-
-        Raises:
-            ValidationError: If social_links are invalid.
-        """
         super().clean()
         social_links = cast(dict, self.social_links)
         validate_social_links_dict(
@@ -225,4 +228,7 @@ class Startup(Company):
         indexes = [
             models.Index(fields=['company_name']),
             models.Index(fields=['stage']),
+            models.Index(fields=['industry']),
+            models.Index(fields=['funding_needed']),
+            models.Index(fields=['team_size']),
         ]

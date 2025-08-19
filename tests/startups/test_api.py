@@ -6,18 +6,18 @@ from unittest.mock import patch
 from rest_framework.test import APIClient
 from django.core.exceptions import ValidationError as DjangoValidationError
 
+from tests.test_disable_signal_mixin import DisableSignalMixin
 
-class StartupAPITests(BaseAPITestCase):
-    """
-    Test suite for Startup API endpoints, including creation and retrieval of startups.
-    """
+
+class StartupAPITests(DisableSignalMixin, BaseAPITestCase):
+    """Test suite for Startup API endpoints, including creation and retrieval of startups."""
 
     def setUp(self):
         super().setUp()
         self.startup_data = {
             'company_name': 'Great',
             'team_size': 25,
-            'user': self.user.pk,
+            'user': self.user.pk,  # Request.user is always used
             'industry': self.industry.pk,
             'location': self.location.pk,
             'founded_year': 2020,
@@ -26,44 +26,31 @@ class StartupAPITests(BaseAPITestCase):
         self.url = reverse('startup-list')
 
     def test_create_startup_success(self):
-        """
-        Test that a startup can be successfully created via POST request to the startup-list endpoint.
-        Verifies that the response status is HTTP 201 Created and the returned data matches the input.
-        """
+        """Test successful creation of a startup via POST request."""
         response = self.client.post(self.url, self.startup_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
         data = response.data
         self.assertEqual(data['company_name'], 'Great')
         self.assertEqual(data['team_size'], 25)
         self.assertEqual(data['founded_year'], 2020)
         self.assertEqual(data['email'], 'great@example.com')
-
         startup = Startup.objects.get(pk=data['id'])
         self.assertEqual(startup.user, self.user)
 
     def test_get_startup_list(self):
-        """
-        Test that the GET request to startup-list endpoint returns a list of startups,
-        including at least one startup created in the test setup.
-        Verifies response status is HTTP 200 OK and that at least one startup is returned.
-        """
+        """GET request returns list of startups including at least one from setup."""
         self.get_or_create_startup(
             user=self.user,
             company_name='ListStartup',
             industry=self.industry,
             location=self.location
         )
-        url = reverse('startup-list')
-        response = self.client.get(url)
+        response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
     def test_create_startup_validation_error(self):
-        """
-        Ensure that creating a startup with invalid data (empty company_name)
-        returns HTTP 400 Bad Request and includes the relevant validation error.
-        """
+        """Creating a startup with empty company_name returns 400."""
         data = self.startup_data.copy()
         data['company_name'] = ''
         response = self.client.post(self.url, data, format='json')
@@ -71,10 +58,7 @@ class StartupAPITests(BaseAPITestCase):
         self.assertIn('company_name', response.data)
 
     def test_filter_by_industry(self):
-        """
-        Verify that the industry filter correctly returns startups only
-        within the specified industry and excludes others.
-        """
+        """Filter startups by industry returns only relevant startups."""
         startup1 = self.get_or_create_startup(
             user=self.user, industry=self.industry, location=self.location,
             company_name='IndustryA'
@@ -94,9 +78,7 @@ class StartupAPITests(BaseAPITestCase):
         self.assertNotIn(startup2.company_name, returned_names)
 
     def test_search_by_company_name(self):
-        """
-        Ensure that searching by a partial company name returns the matching startups.
-        """
+        """Searching by partial company name returns correct startups."""
         self.get_or_create_startup(
             user=self.user, company_name='Searchable Startup',
             industry=self.industry, location=self.location
@@ -106,10 +88,7 @@ class StartupAPITests(BaseAPITestCase):
         self.assertTrue(any('Searchable' in s['company_name'] for s in response.data))
 
     def test_retrieve_startup_detail(self):
-        """
-        Verify that retrieving a single startup by its ID returns
-        the correct details and HTTP 200 OK.
-        """
+        """Retrieving a single startup returns correct details."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='DetailStartup',
             industry=self.industry, location=self.location
@@ -120,10 +99,7 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.data['company_name'], 'DetailStartup')
 
     def test_update_startup_success(self):
-        """
-        Ensure that a full update (PUT) to a startup works and
-        returns HTTP 200 OK with the updated data.
-        """
+        """Full update of a startup works and returns updated data."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='OldName',
             industry=self.industry, location=self.location
@@ -143,10 +119,7 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.data['company_name'], 'UpdatedName')
 
     def test_partial_update_startup(self):
-        """
-        Ensure that a partial update (PATCH) to a startup works and
-        returns HTTP 200 OK with the updated field.
-        """
+        """Partial update works correctly."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='PartialUpdate',
             industry=self.industry, location=self.location
@@ -158,10 +131,7 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.data['company_name'], 'PartialUpdatedName')
 
     def test_update_startup_validation_error(self):
-        """
-        Verify that updating a startup with invalid data
-        (empty company_name) returns HTTP 400 Bad Request with errors.
-        """
+        """Updating startup with invalid data returns 400."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='ValidName',
             industry=self.industry, location=self.location
@@ -173,10 +143,7 @@ class StartupAPITests(BaseAPITestCase):
         self.assertIn('company_name', response.data)
 
     def test_delete_startup(self):
-        """
-        Ensure that deleting a startup works, returns HTTP 204 No Content,
-        and removes the object from the database.
-        """
+        """Deleting a startup removes it and returns 204."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='ToDelete',
             industry=self.industry, location=self.location
@@ -187,44 +154,32 @@ class StartupAPITests(BaseAPITestCase):
         self.assertFalse(Startup.objects.filter(pk=startup.pk).exists())
 
     def test_create_startup_user_is_ignored(self):
-        """
-        Even if a different user ID is passed in request,
-        Startup should be created with request.user.
-        """
+        """Passed user is ignored; request.user is used."""
         other_user = self.get_or_create_user("fake@example.com", "Fake", "User")
         data = self.startup_data.copy()
-        data['user'] = other_user.pk  # Підміна користувача
+        data['user'] = other_user.pk
         response = self.client.post(self.url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         startup = Startup.objects.get(pk=response.data['id'])
-        self.assertEqual(startup.user, self.user)  # Має бути request.user
+        self.assertEqual(startup.user, self.user)
 
     @patch('startups.models.Startup.clean', side_effect=Exception("Invalid data"))
     def test_create_startup_model_clean_error(self, mock_clean):
-        """
-        Simulate model validation error during creation.
-        Should return HTTP 400.
-        """
+        """Simulate model validation error during creation, should return 400."""
         mock_clean.side_effect = DjangoValidationError({'non_field_errors': ['Invalid data']})
-
         response = self.client.post(self.url, self.startup_data, format='json')
-
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('non_field_errors', response.data)
         self.assertEqual(response.data['non_field_errors'][0], 'Invalid data')
 
     def test_get_list_unauthenticated(self):
-        """
-        Unauthenticated request should return HTTP 401.
-        """
+        """Unauthenticated GET returns 401."""
         client = APIClient()
         response = client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_update_startup_returns_updated_fields(self):
-        """
-        After update, API should return all updated fields correctly.
-        """
+        """After update, all updated fields are returned correctly."""
         startup = self.get_or_create_startup(
             user=self.user,
             company_name='InitialName',
@@ -247,3 +202,8 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.data['team_size'], 30)
         self.assertEqual(response.data['founded_year'], 2021)
         self.assertEqual(response.data['email'], 'new@example.com')
+
+
+
+
+

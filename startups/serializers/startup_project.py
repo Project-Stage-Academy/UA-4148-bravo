@@ -7,4 +7,7 @@ class StartupProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Startup
-        fields = ['id', 'company_name', 'stage', 'website']
+        fields = [
+            'id', 'company_name', 'stage', 'website',
+            'funding_needed', 'team_size'
+        ]
