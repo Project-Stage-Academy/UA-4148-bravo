@@ -56,17 +56,19 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
                 {"non_field_errors": "A startup owner cannot invest in their own project."}
             )
 
-        current_funding = (
-            project.subscriptions.aggregate(total=Sum("amount"))["total"]
-            or Decimal("0.00")
+        current_total = (
+            project.subscriptions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
         )
 
-        if current_funding >= project.funding_goal:
+        project.current_funding = current_total
+        project.save(update_fields=["current_funding"])
+
+        if project.current_funding >= project.funding_goal:
             raise serializers.ValidationError(
                 {"project": "This project is already fully funded."}
             )
 
-        if current_funding + amount > project.funding_goal:
+        if project.current_funding + amount > project.funding_goal:
             raise serializers.ValidationError(
                 {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
             )
