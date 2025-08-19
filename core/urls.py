@@ -27,6 +27,7 @@ from users.views import (
 urlpatterns = [
     path('admin/', admin.site.urls),
 
+
     # Versioned API
     path('api/v1/users/', include('users.urls')),
 
@@ -53,11 +54,14 @@ urlpatterns = [
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
-    # Health & third-party
     path('health/elasticsearch/', elasticsearch_healthcheck),
     path('accounts/', include('allauth.urls')),
     path("chat/", include("chat.urls")),
 ]
+
+# Interactive API docs (Swagger/ReDoc) and machine-readable OpenAPI schema
+if getattr(settings, 'DOCS_ENABLED', True):
+    urlpatterns += [path('api/', include('core.urls_docs'))]
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
