@@ -28,6 +28,8 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         - Recalculates effective funding using both DB aggregate and project's current_funding to avoid drift.
         - Updates the project's current_funding field after saving the subscription.
     """
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+
     class Meta:
         model = Subscription
         fields = ["id", "investor", "project", "amount"]
@@ -51,11 +53,10 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         effective_current = max(project.current_funding or Decimal("0.00"), aggregated)
         remaining = project.funding_goal - effective_current
 
-        if amount is not None and amount > remaining:
-            raise serializers.ValidationError(
-                {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
-            )
         if remaining <= 0:
+            raise serializers.ValidationError({"project": "Project is already fully funded."})
+
+        if amount is not None and amount > remaining:
             raise serializers.ValidationError(
                 {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
             )
