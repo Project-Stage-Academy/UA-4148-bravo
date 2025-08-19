@@ -15,20 +15,20 @@ services:
     networks:
       - forum
     
-  fastapi:
-    build: .
-    command: uvicorn core.asgi:application --host 0.0.0.0 --port 8001 --reload
-    ports:
-      - "8001:8001"
-    env_file:
-      - .env
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-      - elasticsearch
-    networks:
-      - forum
+  # fastapi:
+  #   build: .
+  #   command: uvicorn core.asgi:application --host 0.0.0.0 --port 8001 --reload
+  #   ports:
+  #     - "8001:8001"
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - .:/app
+  #   depends_on:
+  #     - db
+  #     - elasticsearch
+  #   networks:
+  #     - forum
 
   elasticsearch:
     image: elasticsearch:7.17.12
@@ -59,7 +59,22 @@ services:
     image: redis:7
     ports:
       - "6379:6379"
+    networks:
+      - forum
 
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile_celery
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - .env  
+    networks:
+      - forum    
   db:
     image: postgres:14
     container_name: db
