@@ -58,6 +58,10 @@ from .serializers import (
     UserSerializer,
 )
 
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from .serializers import CurrentUserSerializer
+from rest_framework.permissions import IsAuthenticated
+
 logger = logging.getLogger(__name__)
 
 class RegisterThrottle(AnonRateThrottle):
@@ -1035,3 +1039,28 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
             "access": str(refresh.access_token),
             "user": UserSerializer(user).data
         })    
+
+@extend_schema(
+    operation_id="auth_me",
+    summary="Retrieve the currently authenticated user",
+    description=(
+        "Returns the profile information of the currently authenticated user. "
+        "Requires a valid JWT access token. "
+        "If the token is missing or invalid, returns 401 Unauthorized."
+    ),
+    responses={
+        200: CurrentUserSerializer,
+        401: OpenApiResponse(description="Unauthorized - missing or invalid token"),
+        403: OpenApiResponse(description="Forbidden - user account is inactive"),
+        404: OpenApiResponse(description="Not Found - user no longer exists"),
+    },
+    tags=["Auth"],
+)
+class MeView(APIView):
+    """Returns profile info of the currently authenticated user."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = CurrentUserSerializer(request.user)
+        return Response(serializer.data)
+

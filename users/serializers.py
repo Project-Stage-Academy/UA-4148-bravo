@@ -242,11 +242,25 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
     
         return user
 
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['user_id', 'email', 'first_name', 'last_name', 'user_phone', 'title', 'role']    
+
+
+class CurrentUserSerializer(serializers.ModelSerializer):
+    """Public serializer for the currently logged-in user."""
+    role = serializers.SerializerMethodField()
+
+    def get_role(self, obj):
+        return obj.role.role if obj.role else None
+
+    class Meta:
+        model = User
+        fields = ("user_id", "email", "first_name", "last_name", "user_phone", "title", "role")
+        read_only_fields = ("user_id", "email", "first_name", "last_name", "user_phone", "title", "role")
+
+
     
 class ResendEmailSerializer(serializers.Serializer):
     """
@@ -280,3 +294,4 @@ class ResendEmailSerializer(serializers.Serializer):
             str: The normalized (lowercased) email address.
         """
         return value.lower()
+
