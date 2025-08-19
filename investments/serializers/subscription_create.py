@@ -47,11 +47,8 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         investor = data.get("investor")
         amount = data.get("amount")
 
-        if project is None or not isinstance(project, Project):
-            raise serializers.ValidationError({"project": "Invalid project."})
-        if investor is None or not hasattr(investor, "user"):
-            raise serializers.ValidationError({"investor": "Invalid investor."})
-        if investor.user == project.startup.user:
+        startup = getattr(project, 'startup', None)
+        if startup and getattr(investor, 'user', None) and getattr(startup, 'user', None) and investor.user.pk == startup.user.pk:
             raise serializers.ValidationError(
                 {"non_field_errors": ["Startup owners cannot invest in their own project."]}
             )
