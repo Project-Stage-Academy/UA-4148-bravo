@@ -1,13 +1,14 @@
 import tempfile
 import time
+import mongomock
 from channels.testing import ChannelsLiveServerTestCase
+from mongoengine import connect, disconnect
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
-
 from users.documents import UserDocument, UserRoleDocument, UserRoleEnum
 
 
@@ -24,6 +25,12 @@ class ChatTests(ChannelsLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        disconnect()
+        connect(
+            db='mongoenginetest',
+            host='mongodb://localhost',
+            mongo_client_class=mongomock.MongoClient
+        )
         role = UserRoleDocument.objects(role=UserRoleEnum.USER).first()
         if not role:
             role = UserRoleDocument(role=UserRoleEnum.USER)
