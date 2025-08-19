@@ -4,6 +4,7 @@ from django.db.models import Sum
 from rest_framework import serializers
 from investments.models import Subscription
 from projects.models import Project
+from ..services.investment_share_service import calculate_investment_share
 
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
@@ -29,7 +30,13 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         - Updates the project's current_funding field after saving the subscription.
     """
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
-
+    
+    project = serializers.PrimaryKeyRelatedField(
+        queryset=Project.objects.all(),
+        error_messages={
+            'does_not_exist': 'Project does not exist or is not available for investment.'
+        }
+    )
     class Meta:
         model = Subscription
         fields = ["id", "investor", "project", "amount"]
@@ -53,15 +60,15 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         effective_current = max(project.current_funding or Decimal("0.00"), aggregated)
         remaining = project.funding_goal - effective_current
 
-        if remaining <= 0:
+        if effective_current >= project.funding_goal:
             raise serializers.ValidationError(
-                {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
-    )
+                {"project": "Project is fully funded."}
+            )
 
-
+        remaining = project.funding_goal - effective_current
         if amount is not None and amount > remaining:
             raise serializers.ValidationError(
-                {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
+                {"amount": f"Amount exceeds funding goal — exceeds the remaining funding. Max allowed: {remaining:.2f}"}
             )
 
         return data
@@ -82,6 +89,10 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
                     {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
                 )
 
+            validated_data['investment_share'] = calculate_investment_share(
+                amount, project_locked.funding_goal
+            )
+            
             subscription = Subscription.objects.create(**validated_data)
             project_locked.current_funding = effective_current + amount
             project_locked.save(update_fields=["current_funding"])
