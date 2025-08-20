@@ -5,6 +5,7 @@ from decouple import config
 from pathlib import Path
 from datetime import timedelta
 import mongoengine
+import mongomock
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -293,7 +294,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS configuration for local development
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+]
 
 # Elasticsearch DSL Configuration
 ELASTICSEARCH_DSL = {
@@ -535,15 +540,23 @@ CHANNEL_LAYERS = {
     },
 }
 
-MONGO_DB = os.getenv("MONGO_DB", "my_database")
-MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
+MONGO_DB = os.getenv("MONGO_DB", "chat")
+MONGO_HOST = os.getenv("MONGO_HOST", "127.0.0.1")
 MONGO_PORT = int(os.getenv("MONGO_PORT") or 27017)
 
-mongoengine.connect(
-    db=MONGO_DB,
-    host=MONGO_HOST,
-    port=MONGO_PORT
-)
+if 'test' in sys.argv:
+    mongoengine.connect(
+        db="chat_test",
+        host="mongodb://localhost",
+        mongo_client_class=mongomock.MongoClient
+    )
+else:
+    mongoengine.connect(
+        db=MONGO_DB,
+        host=MONGO_HOST,
+        port=MONGO_PORT,
+        serverSelectionTimeoutMS=5000
+    )
 
 # Tests
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'

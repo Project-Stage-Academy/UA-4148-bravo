@@ -58,8 +58,11 @@ services:
 
   redis:
     image: redis:7
+    container_name: redis
     ports:
-      - "6379:6379"
+      - 6379:6379
+    networks:
+      - forum
 
   db:
     image: postgres:14

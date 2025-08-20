@@ -40,14 +40,12 @@ jobs:
       EMAIL_USE_TLS: true
       DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
 
-      REDIS_HOST: localhost
+      REDIS_HOST: redis
       REDIS_PORT: 6379
 
-      MONGO_DB: ${{ secrets.MONGO_DB }}
-      MONGO_HOST: ${{ secrets.MONGO_HOST }}
-      MONGO_PORT: ${{ secrets.PORT }}
-      MONGO_INITDB_ROOT_USERNAME: ${{ secrets.MONGO_INITDB_ROOT_USERNAME }}
-      MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}
+      MONGO_DB: test_chat
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
 
     services:
       db:
@@ -87,19 +85,6 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-      mongo:
-        image: mongo:6
-        ports:
-          - 27017:27017
-        env:
-          MONGO_INITDB_ROOT_USERNAME: root
-          MONGO_INITDB_ROOT_PASSWORD: example
-        options: >-
-          --health-cmd="mongosh --username root --password example --eval 'db.adminCommand(\"ping\")'"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -121,11 +106,19 @@ jobs:
           timeout 60 bash -c 'until curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s > /dev/null; do sleep 2; done'
           echo "Elasticsearch is ready!"
 
+      - name: Wait for Redis
+        run: |
+          echo "Waiting for Redis to be ready..."
+          timeout 30 bash -c 'until nc -z localhost 6379; do sleep 2; done'
+          echo "Redis is ready!"
+
       - name: Run Migrations
         run: |
           python manage.py migrate
 
       - name: Run Tests
+        env:
+          DJANGO_MONGO_USE_MOCK: "1"
         run: |
           python manage.py test --keepdb
 
