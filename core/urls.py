@@ -29,31 +29,14 @@ urlpatterns = [
 
 
     # Versioned API
-    path('api/v1/users/', include('users.urls')),
-
-    # Authentication & registration
-    path('api/v1/auth/register/', UserRegistrationView.as_view(), name='user_register'),
-    path('api/v1/auth/jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
-    path('api/v1/auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
-    path('api/v1/auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
-    path('api/v1/auth/verify-email/<int:user_id>/<str:token>/', VerifyEmailView.as_view(), name='verify-email'),
-    path('api/v1/auth/resend-email/', ResendEmailView.as_view(), name='resend-email'),
-    path('api/v1/oauth/login/', OAuthTokenObtainPairView.as_view(), name="oauth_login"),
-    path('api/v1/auth/password/reset/', CustomPasswordResetView.as_view(), name="password-reset"),
-    path('api/v1/auth/password/reset/confirm/', CustomPasswordResetConfirmView.as_view(), name="password-reset-confirm"),
-
-    # Domain apps
+    path('api/v1/auth/', include('users.urls')),
     path('api/v1/projects/', include('projects.urls')),
     path('api/v1/startups/', include('startups.urls')),
     path('api/v1/investors/', include('investors.urls')),
     path('api/v1/investments/', include('investments.urls')),
     path('api/v1/communications/', include('communications.urls')),
 
-    # Docs
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-
+    # Health & allauth
     path('health/elasticsearch/', elasticsearch_healthcheck),
     path('accounts/', include('allauth.urls')),
 
