@@ -63,9 +63,9 @@ services:
       - forum
 
   celery:
-    build:
-      context: .
-      dockerfile: Dockerfile_celery
+    build: .
+    entrypoint: []
+    command: celery -A core worker -l info
     volumes:
       - .:/app
     depends_on:
