@@ -1,5 +1,6 @@
 import os
 import sys
+
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
@@ -8,6 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
+DOCS_ENABLED = config('DOCS_ENABLED', default=True, cast=bool)
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
@@ -43,6 +45,10 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'corsheaders',
+
+    # API schema / docs
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
 
     # Elasticsearch
     'django_elasticsearch_dsl',
@@ -112,8 +118,43 @@ REST_FRAMEWORK = {
     },
 }
 
+# drf-spectacular: use AutoSchema for OpenAPI generation
+REST_FRAMEWORK.update({
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+})
+
 if 'test' in sys.argv:
     REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
+
+# drf-spectacular settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Your API',
+    'DESCRIPTION': 'REST API for authentication and account management (and more).',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # gated by URLConf/env using DOCS_ENABLED
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SECURITY': [{'bearerAuth': []}],
+    'AUTHENTICATION_WHITELIST': [],
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    'POSTPROCESSING_HOOKS': [],
+    'CONTACT': {'name': 'Team', 'email': 'support@example.com'},
+    'LICENSE': {'name': 'Proprietary'},
+    'SCHEMA_PATH_PREFIX': r'/api/v1',
+    'SERVE_URLCONF': None,
+    'ENUM_NAME_OVERRIDES': {},
+    'SCHEMA_EXTENSIONS': [],
+    'SECURITY_SCHEMES': {
+        'bearerAuth': {
+            'type': 'http',
+            'scheme': 'bearer',
+            'bearerFormat': 'JWT',
+        }
+    },
+}
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
@@ -157,7 +198,6 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
-    
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
@@ -252,7 +292,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS configuration for local development
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+]
 
 # Elasticsearch DSL Configuration
 ELASTICSEARCH_DSL = {
@@ -371,6 +415,7 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
         'file_apps': {
             'level': 'DEBUG',
@@ -380,6 +425,7 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
         'file_errors': {
             'level': 'ERROR',
@@ -389,6 +435,7 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
         'db_file': {
             'level': 'INFO',
@@ -398,6 +445,7 @@ LOGGING = {
             'formatter': 'verbose',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
         'file_json': {
             'class': 'concurrent_log_handler.ConcurrentRotatingFileHandler',
@@ -407,6 +455,7 @@ LOGGING = {
             'level': 'INFO',
             'encoding': 'utf-8',
             'mode': 'a',
+            'delay': True,
         },
     },
     'loggers': {

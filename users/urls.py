@@ -1,5 +1,5 @@
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
+from rest_framework_simplejwt.views import TokenBlacklistView
 from .views import (
     CustomTokenObtainPairView,
     UserRegistrationView,
@@ -8,6 +8,9 @@ from .views import (
     CustomPasswordResetView,
     CustomPasswordResetConfirmView,
     ResendEmailView,
+    MeView,
+    JWTRefreshView,
+    JWTLogoutView,
 )
 
 
@@ -17,12 +20,20 @@ urlpatterns = [
 
     # JWT Auth
     path('jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
-    path('jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
-    path('jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
+    path('jwt/refresh/', JWTRefreshView.as_view(), name='jwt-refresh'),
+    path('jwt/logout/', JWTLogoutView.as_view(), name='token_blacklist'),
 
     # Password reset
     path('password/reset/', CustomPasswordResetView.as_view(), name='custom_reset_password'),
     path('password/reset/confirm/', CustomPasswordResetConfirmView.as_view(), name='custom_reset_password_confirm'),
+
+    # ----------------------------------------
+    # JWT Logout endpoint
+    # ----------------------------------------
+    path('auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
+
+    # Get current user
+    path("me/", MeView.as_view(), name="auth-me"),
 
     # Email verification
     path('verify-email/<int:user_id>/<str:token>/', VerifyEmailView.as_view(), name='verify-email'),
@@ -32,4 +43,5 @@ urlpatterns = [
 
     # OAuth
     path('oauth/login/', OAuthTokenObtainPairView.as_view(), name='oauth_login'),
+
 ]
