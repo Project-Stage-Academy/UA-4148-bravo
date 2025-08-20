@@ -885,7 +885,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 - user_object: The retrieved or created user instance
                 - created_bool: Boolean indicating if user was created
         """
-        from users.tasks import send_email_task
+        from users.tasks import send_welcome_oauth_email_task
         
         user, created = User.objects.get_or_create(
             email=email,
@@ -933,10 +933,20 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                         'changed_fields': list(update_fields.keys())
                     }
                 )
-        provider_name = "Google" if provider.lower() == "google" else "GitHub"
-        send_email_task.delay(
-            subject="Welcome to Forum 🚀 — your space for innovation!",
-            message=f"Hello,\n\n You have successfully {'registered' if created else 'logged in'} using {provider_name}.\n Now you can access Forum — the platform where startups meet investors and ideas become reality.",
+        PROVIDER_MAP = {
+            "google": "Google",
+            "github": "GitHub",
+        }
+
+        provider_name = PROVIDER_MAP.get(provider.lower(), provider)
+        subject="Welcome to Forum — your space for innovation!"
+        message = render_to_string(
+            "email/welcome_oauth_email.txt",
+            {"action": "registered" if created else "logged in", "provider_name": provider_name},
+        )
+        send_welcome_oauth_email_task.delay(
+            subject=subject,
+            message=message,
             recipient_list=[email],
         )
         return user, created
