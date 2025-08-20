@@ -12,7 +12,7 @@ services:
     depends_on:
       - db
       - elasticsearch
-      - mongodb
+#      - mongodb
     networks:
       - forum
     

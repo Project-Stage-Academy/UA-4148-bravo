@@ -5,7 +5,6 @@ from decouple import config
 from pathlib import Path
 from datetime import timedelta
 import mongoengine
-import mongomock
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -81,7 +80,7 @@ SOCIALACCOUNT_PROVIDERS = {
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {
             'access_type': 'offline',
-            'prompt': 'consent', 
+            'prompt': 'consent',
         },
         'FETCH_USERINFO': True,
     },
@@ -116,7 +115,7 @@ REST_FRAMEWORK = {
         'user': '5/minute',
         'anon': '2/minute',
         'resend_email': '5/minute',
-        
+
     },
 }
 
@@ -199,9 +198,9 @@ DJOSER = {
     },
     'USER_ID_FIELD': 'user_id',
 }
-    
+
 if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Email Configuration (for development)
     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -544,19 +543,12 @@ MONGO_DB = os.getenv("MONGO_DB", "chat")
 MONGO_HOST = os.getenv("MONGO_HOST", "127.0.0.1")
 MONGO_PORT = int(os.getenv("MONGO_PORT") or 27017)
 
-if 'test' in sys.argv:
-    mongoengine.connect(
-        db="chat_test",
-        host="mongodb://localhost",
-        mongo_client_class=mongomock.MongoClient
-    )
-else:
-    mongoengine.connect(
-        db=MONGO_DB,
-        host=MONGO_HOST,
-        port=MONGO_PORT,
-        serverSelectionTimeoutMS=5000
-    )
+mongoengine.connect(
+    db=MONGO_DB,
+    host=MONGO_HOST,
+    port=MONGO_PORT,
+    serverSelectionTimeoutMS=5000
+)
 
 # Tests
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'

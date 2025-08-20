@@ -40,11 +40,11 @@ jobs:
       EMAIL_USE_TLS: true
       DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
 
-      REDIS_HOST: redis
+      REDIS_HOST: localhost
       REDIS_PORT: 6379
 
       MONGO_DB: test_chat
-      MONGO_HOST: mongo
+      MONGO_HOST: localhost
       MONGO_PORT: 27017
 
     services:
@@ -117,8 +117,6 @@ jobs:
           python manage.py migrate
 
       - name: Run Tests
-        env:
-          DJANGO_MONGO_USE_MOCK: "1"
         run: |
           python manage.py test --keepdb
 
