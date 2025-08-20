@@ -18,18 +18,21 @@ def cleanup_email_tokens():
 
 
 @shared_task
-def send_email_task(subject, message, recipient_list):
-    try:
-        send_mail(
-            subject,
-            message,
-            None,  # uses DEFAULT_FROM_EMAIL
-            recipient_list,
-            fail_silently=False,
-        )
-        return f"Email sent to {recipient_list}"
-    except Exception as e:
-        logger.critical(
-            "Email was not sent",
-            extra={'error': str(e)}
-        )
+def send_welcome_oauth_email_task(subject, message, recipient_list):
+    if subject and message and recipient_list:
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL, 
+                recipient_list,
+                fail_silently=False,
+            )
+            logger.info(f"Email was successfully sent to {recipient_list}")
+            return f"Email sent to {recipient_list}"
+        except Exception:
+            logger.exception("Email was not sent")
+            return "Failed to send email"
+    else:
+        logger.error("Subject, message, and recipient_list must not be empty")
+        return "Invalid email parameters"        
