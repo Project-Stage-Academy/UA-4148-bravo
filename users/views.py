@@ -972,6 +972,8 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 - user_object: The retrieved or created user instance
                 - created_bool: Boolean indicating if user was created
         """
+        from users.tasks import send_welcome_oauth_email_task
+        
         user, created = User.objects.get_or_create(
             email=email,
             defaults=defaults
@@ -1018,6 +1020,22 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                         'changed_fields': list(update_fields.keys())
                     }
                 )
+        PROVIDER_MAP = {
+            "google": "Google",
+            "github": "GitHub",
+        }
+
+        provider_name = PROVIDER_MAP.get(provider.lower(), provider)
+        subject="Welcome to Forum — your space for innovation!"
+        message = render_to_string(
+            "email/welcome_oauth_email.txt",
+            {"action": "registered" if created else "logged in", "provider_name": provider_name},
+        )
+        send_welcome_oauth_email_task.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[email],
+        )
         return user, created
     
     def generate_jwt_response(self, user):
