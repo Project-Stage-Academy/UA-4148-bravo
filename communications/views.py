@@ -29,7 +29,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'notification_id'
-    http_method_names = ['get', 'patch', 'head', 'options']
+    http_method_names = ['get', 'patch', 'head', 'options', 'post',]
 
     def get_queryset(self):
         """Return only the authenticated user's notifications."""

@@ -1,8 +1,19 @@
 import logging
-from django.db.models.signals import post_save, post_migrate
-from django.dispatch import receiver
 from django.conf import settings
-from .models import UserNotificationPreference, NotificationType, UserNotificationTypePreference
+from django.db import transaction
+from django.db.models.signals import post_save, post_migrate
+from django.apps import apps
+
+from django.dispatch import receiver
+
+from .models import (
+    UserNotificationPreference,
+    NotificationType,
+    UserNotificationTypePreference,
+    Notification,               
+    NotificationTrigger,       
+    NotificationPriority,       
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,3 +78,57 @@ def create_initial_notification_types(sender, **kwargs):
                 NotificationType.objects.bulk_create(objs, ignore_conflicts=True)
 
         _types_seeded = True
+
+def _get_or_create_ntype(code: str, name: str | None = None) -> NotificationType:
+    ntype = NotificationType.objects.filter(code=code).first()
+    if ntype:
+        return ntype
+    ntype, _ = NotificationType.objects.get_or_create(
+        code=code,
+        defaults={
+            "name": name or code.replace("_", " ").title(),
+            "description": "",
+        },
+    )
+    return ntype
+
+def _connect_saved_startup_signal():
+    try:
+        SavedStartup = apps.get_model("investors", "SavedStartup")
+    except Exception:
+        logger.warning("Could not resolve investors.SavedStartup")
+        return
+
+    @receiver(post_save, sender=SavedStartup, dispatch_uid="comm_saved_startup_created")
+    def notify_startup_followed(sender, instance, created, **kwargs):
+        if not created:
+            return
+
+        startup = getattr(instance, "startup", None)
+        investor = getattr(instance, "investor", None)
+        startup_user = getattr(startup, "user", None) if startup else None
+        investor_user = getattr(investor, "user", None) if investor else None
+        if not startup_user or not investor_user:
+            return
+
+        inv_name = getattr(investor_user, "get_full_name", lambda: "")() or getattr(investor_user, "email", "")
+        title = "New follower"
+        message = f"{inv_name} followed your startup."
+
+        def _create():
+            ntype = _get_or_create_ntype("startup_followed", "Startup Followed")
+            Notification.objects.create(
+                user=startup_user,
+                notification_type=ntype,
+                title=title,
+                message=message,
+                triggered_by_user=investor_user,
+                triggered_by_type=NotificationTrigger.INVESTOR,
+                priority=NotificationPriority.LOW,
+                related_startup_id=getattr(startup, "id", None),
+                action_link=f"/startups/{getattr(startup, 'id', '')}/followers",
+            )
+
+        transaction.on_commit(_create)
+
+_connect_saved_startup_signal()
