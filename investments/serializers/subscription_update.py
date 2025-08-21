@@ -3,8 +3,8 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from projects.models import Project
 from ..models import Subscription
-from ..services.investment_share_service import calculate_investment_share
 from ..services.subscription_validation_service import validate_subscription_business_rules
+from ..services.investment_share_service import recalculate_investment_shares
 
 
 class SubscriptionUpdateSerializer(serializers.ModelSerializer):
@@ -37,10 +37,13 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
             validate_subscription_business_rules(
                 instance.investor, project, new_amount, exclude_amount=instance.amount
             )
-            validated_data['investment_share'] = calculate_investment_share(new_amount, project.funding_goal)
 
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
 
             instance.save()
+
+            # Recalculate all shares after update
+            recalculate_investment_shares(project)
             return instance
+

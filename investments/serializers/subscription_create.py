@@ -7,8 +7,8 @@ from rest_framework import serializers
 from investors.models import Investor
 from projects.models import Project
 from ..models import Subscription
-from ..services.investment_share_service import calculate_investment_share
 from ..services.subscription_validation_service import validate_subscription_business_rules
+from ..services.investment_share_service import recalculate_investment_shares
 
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
@@ -47,5 +47,9 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             project_locked = Project.objects.select_for_update().get(pk=project.pk)
             validate_subscription_business_rules(validated_data['investor'], project_locked, amount)
-            validated_data['investment_share'] = calculate_investment_share(amount, project_locked.funding_goal)
-            return Subscription.objects.create(**validated_data)
+            subscription = Subscription.objects.create(**validated_data)
+
+            # Recalculate all shares after creation
+            recalculate_investment_shares(project_locked)
+            return subscription
+

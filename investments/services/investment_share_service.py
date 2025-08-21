@@ -1,4 +1,5 @@
 from decimal import Decimal, ROUND_HALF_UP
+from investments.models import Subscription
 
 
 def calculate_investment_share(amount, funding_goal) -> Decimal:
@@ -17,8 +18,6 @@ def recalculate_investment_shares(project):
     Recalculates and updates the 'investment_share' field for all Subscription instances
     based on the project's funding goal.
     """
-    from investments.models import Subscription
-
     funding_goal = project.funding_goal or Decimal("0.00")
     investments = Subscription.objects.filter(project=project)
 
@@ -31,3 +30,12 @@ def recalculate_investment_shares(project):
 
     if to_update:
         Subscription.objects.bulk_update(to_update, ['investment_share'])
+
+
+def update_project_investment_shares_if_needed(project):
+    """
+    Wrapper to safely recalculate investment shares only if funding goal > 0.
+    """
+    if project.funding_goal and project.funding_goal > 0:
+        recalculate_investment_shares(project)
+

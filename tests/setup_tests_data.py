@@ -87,23 +87,20 @@ class TestDataMixin:
         Ensures uniqueness on company_name to avoid IntegrityError.
         Email is randomly generated to prevent duplicates.
         """
-        try:
-            investor, created = Investor.objects.get_or_create(
-                company_name=company_name,  # unique field
-                defaults={
-                    "user": user,
-                    "industry": cls.industry,
-                    "location": cls.location,
-                    "email": f"investor_{uuid.uuid4().hex[:6]}@example.com",
-                    "founded_year": 2010,
-                    "team_size": 5,
-                    "stage": stage,
-                    "fund_size": fund_size
-                }
-            )
-        except Exception:
-            # Fallback: fetch the existing one if duplicate occurs
-            investor = Investor.objects.get(company_name=company_name)
+        unique_company = f"{company_name} {uuid.uuid4().hex[:6]}"
+        investor, _ = Investor.objects.get_or_create(
+            company_name=unique_company,
+            defaults={
+                "user": user,
+                "industry": cls.industry,
+                "location": cls.location,
+                "email": f"investor_{uuid.uuid4().hex[:6]}@example.com",
+                "founded_year": 2010,
+                "team_size": 5,
+                "stage": stage,
+                "fund_size": fund_size
+            }
+        )
         return investor
 
     @classmethod
@@ -151,8 +148,10 @@ class TestDataMixin:
     # Category creation
     # ------------------------
     @classmethod
-    def get_or_create_category(cls, name="FinTech"):
+    def get_or_create_category(cls, name=None):
         """Create or fetch a project Category."""
+        if name is None:
+            name = f"Category {uuid.uuid4().hex[:6]}"
         category, _ = Category.objects.get_or_create(name=name)
         return category
 
@@ -167,7 +166,7 @@ class TestDataMixin:
     @classmethod
     def get_or_create_project(
         cls,
-        title="Test Project",
+        title=None,
         email=None,
         funding_goal=Decimal("1000000.00"),
         current_funding=Decimal("0.00"),
@@ -178,7 +177,7 @@ class TestDataMixin:
     ):
         """
         Create or get a Project. Startup and category are ensured.
-        Email is randomly generated if not provided.
+        Email and title are randomly generated if not provided.
         """
         if startup is None:
             startup = getattr(cls, "startup", None)
@@ -200,6 +199,9 @@ class TestDataMixin:
 
         if email is None:
             email = f"project_{uuid.uuid4().hex[:6]}@example.com"
+
+        if title is None:
+            title = f"Test Project {uuid.uuid4().hex[:6]}"
 
         project, _ = Project.objects.get_or_create(
             startup=startup,
@@ -276,6 +278,7 @@ class TestDataMixin:
         Industry.objects.all().delete()
         Location.objects.all().delete()
         User.objects.all().delete()
+
 
 
 

@@ -28,10 +28,10 @@ class Category(models.Model):
         return self.name
 
     class Meta:
-        ordering = ['name']
-        verbose_name = 'Category'
-        verbose_name_plural = 'Categories'
-        db_table = 'categories'
+        ordering = ["name"]
+        verbose_name = "Category"
+        verbose_name_plural = "Categories"
+        db_table = "categories"
 
 
 class Project(models.Model):
@@ -40,23 +40,23 @@ class Project(models.Model):
     """
 
     startup = models.ForeignKey(
-        'startups.Startup',
+        "startups.Startup",
         on_delete=models.CASCADE,
-        related_name='projects'
+        related_name="projects"
     )
 
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, default="")
 
     business_plan = models.FileField(
-        upload_to='projects/business_plans/',
+        upload_to="projects/business_plans/",
         blank=True,
         null=True,
         validators=[validate_document_file]
     )
 
     media_files = models.FileField(
-        upload_to='projects/media/',
+        upload_to="projects/media/",
         blank=True,
         null=True,
         validators=[validate_document_file]
@@ -78,17 +78,17 @@ class Project(models.Model):
     funding_goal = models.DecimalField(
         max_digits=20,
         decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))]
+        validators=[MinValueValidator(Decimal("0.01"))]
     )
 
     current_funding = models.DecimalField(
         max_digits=20,
         decimal_places=2,
-        default=Decimal('0.00'),
-        validators=[MinValueValidator(Decimal('0.00'))]
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))]
     )
 
-    category = models.ForeignKey('Category', on_delete=models.PROTECT)
+    category = models.ForeignKey("Category", on_delete=models.PROTECT)
     website = models.URLField(blank=True, default="")
     email = models.EmailField(
         max_length=255,
@@ -117,13 +117,13 @@ class Project(models.Model):
         errors = {}
 
         if self.funding_goal is not None and self.current_funding > self.funding_goal:
-            errors['current_funding'] = 'Current funding cannot exceed funding goal.'
+            errors["current_funding"] = "Current funding cannot exceed funding goal."
 
         if self.status in [ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED] and not self.business_plan:
-            errors['business_plan'] = 'Business plan is required for projects in progress or completed.'
+            errors["business_plan"] = "Business plan is required for projects in progress or completed."
 
         if self.is_participant and not self.funding_goal:
-            errors['funding_goal'] = 'Funding goal is required for participant projects.'
+            errors["funding_goal"] = "Funding goal is required for participant projects."
 
         if errors:
             raise ValidationError(errors)
@@ -132,15 +132,15 @@ class Project(models.Model):
         return f"Project '{self.title}' by {self.startup}"
 
     class Meta:
-        db_table = 'projects'
-        ordering = ['-created_at']
-        verbose_name = 'Project'
-        verbose_name_plural = 'Projects'
+        db_table = "projects"
+        ordering = ["-created_at"]
+        verbose_name = "Project"
+        verbose_name_plural = "Projects"
         indexes = [
-            models.Index(fields=['status'], name='project_status_idx'),
-            models.Index(fields=['created_at'], name='project_created_at_idx'),
-            models.Index(fields=['startup'], name='project_startup_idx'),
+            models.Index(fields=["status"], name="project_status_idx"),
+            models.Index(fields=["created_at"], name="project_created_at_idx"),
+            models.Index(fields=["startup"], name="project_startup_idx"),
         ]
         constraints = [
-            models.UniqueConstraint(fields=['title', 'startup'], name='unique_startup_project_title')
+            models.UniqueConstraint(fields=["title", "startup"], name="unique_startup_project_title")
         ]
