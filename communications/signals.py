@@ -17,7 +17,7 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 _types_seeded = False
-_handlers: list = []  # тримаємо сильні посилання на локальні хендлери
+_handlers: list = []
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
