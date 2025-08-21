@@ -63,6 +63,19 @@ services:
     networks:
       - forum
 
+  celery:
+    build: .
+    entrypoint: []
+    command: celery -A core worker -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - .env  
+    networks:
+      - forum    
   db:
     image: postgres:14
     container_name: db
