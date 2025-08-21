@@ -320,8 +320,9 @@ class OAuthTokenObtainPairViewTests(TestCase):
         """
         google_response = {
             "email": "jwt_test@example.com",
+            "email_verified": True,
             "given_name": "JWT",
-            "family_name": "Test"
+            "family_name": "Test",
         }
 
         with requests_mock.Mocker() as m:
@@ -363,8 +364,9 @@ class OAuthTokenObtainPairViewTests(TestCase):
         # First get tokens via OAuth
         google_response = {
             "email": "refresh_test@example.com",
+            "email_verified": True,
             "given_name": "Refresh",
-            "family_name": "Test"
+            "family_name": "Test",
         }
 
         with requests_mock.Mocker() as m:
@@ -390,7 +392,56 @@ class OAuthTokenObtainPairViewTests(TestCase):
         
         self.assertEqual(refresh_response.status_code, 200)
         self.assertIn('access', refresh_response.data)
+
+    def test_not_verified_email(self):
+        """
+        Test GitHub OAuth authentication with an unverified email address.
+        
+        This test ensures security by preventing access from users whose
+        email addresses have not been verified by the OAuth provider.
+        """        
+        github_user_response = {
+            "login": "testusername",
+            "name": "Test Full Name",
+            "email": "test@example.com"
+        }
+
+        with requests_mock.Mocker() as m:
+            m.get('https://api.github.com/user', json=github_user_response)
             
+            m.get(
+                'https://api.github.com/user/emails',
+                json=[
+                    {
+                        "email": "test@example.com",
+                        "verified": False,
+                        "primary": True
+                    }
+                ]
+            )
+
+            response = self.client.post(
+                self.auth_url,
+                {
+                    'provider': 'github',
+                    'access_token': 'valid_github_token'
+                },
+                format='json'
+            )
+
+        access_token = response.data["access"]
+
+        user = User.objects.get(email="test@example.com")
+        self.assertFalse(user.is_active)
+
+        # Test token can be used for authentication
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+        
+        # Test protected endpoint
+        protected_response = client.get('/api/v1/auth/me/')
+        self.assertEqual(protected_response.status_code, 401)
+
     def test_provider_unexpected_shape(self):
         """
         Test failure when OAuth provider response JSON is not a dictionary.
