@@ -19,7 +19,7 @@ ALLOWED_HOSTS = config(
 
 # Application definition
 
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000/')
 
 INSTALLED_APPS = [
     'daphne',
@@ -157,7 +157,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'BLACKLIST_AFTER_ROTATION': True,
     'ROTATE_REFRESH_TOKENS': True,
@@ -296,7 +296,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
+
+# Allow cookies/credentials to be sent with cross-origin requests
+CORS_ALLOW_CREDENTIALS = True
 
 # Elasticsearch DSL Configuration
 ELASTICSEARCH_DSL = {

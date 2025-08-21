@@ -98,7 +98,9 @@ class JWTRefreshView(SimpleJWTRefreshView):
     summary="Logout (blacklist refresh token)",
 )
 class JWTLogoutView(SimpleJWTBlacklistView):
-    pass
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        return Response({"detail": "Successfully logged out."}, status=response.status_code)
 
 @extend_schema(
     tags=["Auth"],
@@ -123,8 +125,9 @@ class UserRegistrationView(APIView):
     
     def _send_verification_email(self, request, user, token):
         """Send verification email to the user."""
-        verification_relative_url = reverse('verify-email', kwargs={'user_id': user.user_id, 'token': token})
-        verification_url = f"{request.scheme}://{request.get_host()}{verification_relative_url}"
+        full_path = reverse("verify-email", kwargs={"user_id": user.user_id, "token": token})
+        verification_relative_url = full_path.replace("/api/v1/", "", 1)
+        verification_url = f"{settings.FRONTEND_URL}{verification_relative_url}"
         
         context = {
             'user': user,
@@ -359,9 +362,8 @@ class ResendEmailView(APIView):
         if not token:
             token = EMAIL_VERIFICATION_TOKEN.make_token(user)
 
-        verification_relative_url = reverse(
-            'verify-email', kwargs={'user_id': user.user_id, 'token': token}
-        )
+        full_path = reverse("verify-email", kwargs={"user_id": user.user_id, "token": token})
+        verification_relative_url = full_path.replace("/api/v1/", "", 1)
         verify_url = f"{settings.FRONTEND_URL}{verification_relative_url}"
 
         context = {
@@ -477,9 +479,26 @@ class CustomPasswordResetView(APIView):
         except User.DoesNotExist:
             return error_response({"email": "User with this email was not found."}, status.HTTP_404_NOT_FOUND)
 
-        context = {"user": user}
-        to = [getattr(user, User.EMAIL_FIELD)]
-        PasswordResetEmail(request, context).send(to)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_relative_url = f"/password/reset/confirm/{uid}/{token}/"
+        reset_url = f"{settings.FRONTEND_URL}{reset_relative_url}"
+
+        subject = "Reset your password"
+        context = {
+            "user": user,
+            "reset_url": reset_url,
+        }
+        html_message = render_to_string("email/password_reset.html", context)
+        plain_message = f"Use this link to reset your password: {reset_url}"
+
+        send_mail(
+            subject,
+            plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            html_message=html_message,
+        )
 
         return Response({"detail": "Password reset instructions have been sent to the provided email."}, status=status.HTTP_200_OK)
 
