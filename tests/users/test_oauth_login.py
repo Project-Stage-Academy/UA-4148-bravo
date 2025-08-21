@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import UserRole
 from django.test import override_settings
 from django.conf import settings
+from django.core.cache import cache
 
 from users.tasks import send_welcome_oauth_email_task
 
@@ -436,8 +437,13 @@ class TestSendWelcomeEmail(TestCase):
         Restores original Celery settings to avoid affecting other tests.
         """
         settings.CELERY_TASK_ALWAYS_EAGER = self._orig_always_eager
-        settings.CELERY_TASK_EAGER_PROPAGATES = self._orig_eager_propagates    
+        settings.CELERY_TASK_EAGER_PROPAGATES = self._orig_eager_propagates 
 
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        cache.clear()
+        
     @patch("users.tasks.send_mail")
     def test_send_email_task_success(self, mock_send_mail):
         """
