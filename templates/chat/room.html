@@ -5,114 +5,125 @@
     <title>Chat Room</title>
 </head>
 <body>
-    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
-    <input id="chat-message-input" type="text" size="100"><br>
-    <input id="chat-message-submit" type="button" value="Send">
-    {{ room_name|json_script:"room-name" }}
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const roomNameElement = document.getElementById('room-name');
-        if (!roomNameElement) {
-            console.error("Room name element not found");
-            return;
-        }
+<textarea id="chat-log" cols="100" rows="20" readonly></textarea><br>
+<input id="chat-message-input" type="text" size="100" placeholder="Type your message..." disabled><br>
+<input id="chat-message-submit" type="button" value="Send" disabled>
+{{ room_name|json_script:"room-name" }}
 
-        let roomName;
+<script>
+document.addEventListener('DOMContentLoaded', async function () {
+    let MAX_MESSAGE_LENGTH = 1000;
+    let FORBIDDEN_WORDS = [];
+
+    async function loadChatConfig() {
         try {
-            roomName = JSON.parse(roomNameElement.textContent);
+            const resp = await fetch("/chat/config/");
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (data.MAX_MESSAGE_LENGTH) MAX_MESSAGE_LENGTH = data.MAX_MESSAGE_LENGTH;
+            if (Array.isArray(data.FORBIDDEN_WORDS)) FORBIDDEN_WORDS = data.FORBIDDEN_WORDS;
         } catch (e) {
-            console.error("Failed to parse room name JSON:", e);
-            alert("Invalid room name. Please go back and try again.");
-            window.location.href = '/';
-            return;
+            console.error("Failed to load chat config", e);
+        }
+    }
+
+    await loadChatConfig();
+
+    const chatLog = document.querySelector('#chat-log');
+    const messageInput = document.querySelector('#chat-message-input');
+    const messageSubmit = document.querySelector('#chat-message-submit');
+
+    // ---- Get room name ----
+    const roomNameElement = document.getElementById('room-name');
+    if (!roomNameElement) {
+        alert("Invalid chat room. Please go back.");
+        window.location.href = '/';
+        return;
+    }
+
+    let roomName;
+    try {
+        roomName = JSON.parse(roomNameElement.textContent);
+    } catch (e) {
+        alert("Invalid room name. Please go back and try again.");
+        window.location.href = '/';
+        return;
+    }
+
+    // ---- Open WebSocket ----
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const chatSocket = new WebSocket(
+        protocol + '://' + window.location.host + '/ws/chat/' + encodeURIComponent(roomName) + '/'
+    );
+
+    chatSocket.onopen = function () {
+        console.log("WebSocket connected to room:", roomName);
+        messageInput.disabled = false;
+        messageSubmit.disabled = false;
+        messageInput.focus();
+    };
+
+    chatSocket.onclose = function () {
+        console.error("Chat socket closed unexpectedly");
+        chatLog.value += "\n⚠️ Connection lost. Please refresh.\n";
+        messageInput.disabled = true;
+        messageSubmit.disabled = true;
+    };
+
+    chatSocket.onmessage = function (e) {
+        try {
+            const data = JSON.parse(e.data);
+            if (data && data.message) {
+                chatLog.value += data.message + "\n";
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
+        } catch (err) {
+            console.error("Malformed message:", err, e.data);
+        }
+    };
+
+    // ---- Send message ----
+    function sendMessage() {
+        let message = messageInput.value.trim();
+
+        // Empty or too long checks
+        if (!message) { alert("Cannot send an empty message."); return; }
+        if (message.length > MAX_MESSAGE_LENGTH) {
+            alert(`Message must be at most ${MAX_MESSAGE_LENGTH} characters.`); return;
         }
 
-        const chatSocket = new WebSocket(
-            'ws://' + window.location.host + '/ws/chat/' + encodeURIComponent(roomName) + '/'
-        );
-
-        chatSocket.onmessage = function(e) {
-            let data;
-            try {
-                data = JSON.parse(e.data);
-            } catch (err) {
-                console.error("Received malformed JSON from server:", err, e.data);
-                return; // Ignore malformed message
-            }
-
-            if (data && data.message) {
-                document.querySelector('#chat-log').value += (data.message + '\n');
-            } else {
-                console.warn("Received unexpected message format:", data);
-            }
-        };
-
-        chatSocket.onclose = function(e) {
-            console.error('Chat socket closed unexpectedly');
-
-            // Show a user-friendly message in the chat UI
-            const chatLog = document.querySelector('#chat-log');
-            if (chatLog) {
-                chatLog.value += "\n⚠️ Connection to the chat server was lost. Please refresh the page or try again later.\n";
-            } else {
-                alert("⚠️ Connection to the chat server was lost. Please refresh the page.");
-            }
-        };
-
-        const messageInput = document.querySelector('#chat-message-input');
-        const messageSubmit = document.querySelector('#chat-message-submit');
-
-        messageInput.focus();
-
-        // Pressing Enter triggers send
-        messageInput.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') {
-                messageSubmit.click();
-            }
-        });
-
-        messageSubmit.addEventListener('click', function() {
-            let message = messageInput.value.trim();
-
-            if (!message) {
-                alert("Cannot send an empty message.");
+        // Forbidden words check
+        for (const word of FORBIDDEN_WORDS) {
+            const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            if (new RegExp(`\\b${safeWord}\\b`, "i").test(message)) {
+                alert("Your message contains forbidden content and cannot be sent.");
                 return;
             }
+        }
 
-            // Disable input and button to prevent sending until acknowledgment
-            messageInput.disabled = true;
-            messageSubmit.disabled = true;
+        // Disable input until send
+        messageInput.disabled = true;
+        messageSubmit.disabled = true;
 
-            try {
-                chatSocket.send(JSON.stringify({
-                    'message': message
-                }));
-                messageInput.value = '';
-            } catch (err) {
-                console.error("Failed to send message:", err);
-                alert("Message could not be sent. Please try again.");
-                // Re-enable on failure
-                messageInput.disabled = false;
-                messageSubmit.disabled = false;
-            }
-        });
+        try {
+            chatSocket.send(JSON.stringify({ message }));
+            messageInput.value = '';
+        } catch (err) {
+            console.error("Failed to send message:", err);
+            alert("Message could not be sent.");
+        } finally {
+            messageInput.disabled = false;
+            messageSubmit.disabled = false;
+            messageInput.focus();
+        }
+    }
 
-        // When server responds with a new message, re-enable input and button
-        chatSocket.onmessage = function(e) {
-            try {
-                const data = JSON.parse(e.data);
-                document.querySelector('#chat-log').value += (data.message + '\n');
-            } catch (err) {
-                console.error("Malformed message received:", err);
-                alert("Received invalid data from server.");
-            } finally {
-                // Always re-enable input & button after response
-                messageInput.disabled = false;
-                messageSubmit.disabled = false;
-                messageInput.focus();
-            }
-        };
+    // ---- Event bindings ----
+    messageInput.addEventListener('keyup', function (e) {
+        if (e.key === 'Enter') sendMessage();
     });
-    </script>
+    messageSubmit.addEventListener('click', sendMessage);
+});
+</script>
 </body>
 </html>
