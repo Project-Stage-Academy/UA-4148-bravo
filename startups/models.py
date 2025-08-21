@@ -198,7 +198,7 @@ class Startup(Company):
         help_text="Amount of funding required by the startup"
     )
     team_size = models.PositiveIntegerField(
-        default=0,
+        default=1,
         validators=[MinValueValidator(1)],
         verbose_name="Team Size",
         help_text="Number of team members in the startup"
@@ -246,3 +246,4 @@ class Startup(Company):
             models.Index(fields=['funding_needed']),
             models.Index(fields=['team_size']),
         ]
+

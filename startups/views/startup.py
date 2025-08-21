@@ -16,10 +16,11 @@ class StartupViewSet(BaseValidatedModelViewSet):
     serializer_class = StartupSerializer
 
     # Must be authenticated, and only owner or admin can update/delete
-    permission_classes = [IsAuthenticated, IsStartupOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated & IsStartupOwnerOrReadOnly]
 
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["industry", "stage", "location__country"]
     search_fields = ["company_name", "user__first_name", "user__last_name", "email"]
+
 
 
