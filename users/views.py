@@ -3,6 +3,7 @@ import logging
 import secrets
 from datetime import timedelta
 from smtplib import SMTPException
+from urllib.parse import urljoin
 
 # Django imports
 from django.conf import settings
@@ -127,7 +128,7 @@ class UserRegistrationView(APIView):
         """Send verification email to the user."""
         full_path = reverse("verify-email", kwargs={"user_id": user.user_id, "token": token})
         verification_relative_url = full_path.replace("/api/v1/", "", 1)
-        verification_url = f"{settings.FRONTEND_URL}{verification_relative_url}"
+        verification_url = urljoin(settings.FRONTEND_URL, verification_relative_url)
         
         context = {
             'user': user,
@@ -364,7 +365,7 @@ class ResendEmailView(APIView):
 
         full_path = reverse("verify-email", kwargs={"user_id": user.user_id, "token": token})
         verification_relative_url = full_path.replace("/api/v1/", "", 1)
-        verify_url = f"{settings.FRONTEND_URL}{verification_relative_url}"
+        verify_url = urljoin(settings.FRONTEND_URL, verification_relative_url)
 
         context = {
             'user': user,
@@ -482,7 +483,7 @@ class CustomPasswordResetView(APIView):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
         reset_relative_url = f"password/reset/confirm/{uid}/{token}/"
-        reset_url = f"{settings.FRONTEND_URL}{reset_relative_url}"
+        reset_url = urljoin(settings.FRONTEND_URL, reset_relative_url)
 
         subject = "Reset your password"
         context = {
