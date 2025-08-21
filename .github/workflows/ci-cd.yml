@@ -43,6 +43,10 @@ jobs:
       REDIS_HOST: localhost
       REDIS_PORT: 6379
 
+      MONGO_DB: test_chat
+      MONGO_HOST: localhost
+      MONGO_PORT: 27017
+
     services:
       db:
         image: postgres:15
@@ -101,6 +105,12 @@ jobs:
           echo "Waiting for Elasticsearch to be ready..."
           timeout 60 bash -c 'until curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s > /dev/null; do sleep 2; done'
           echo "Elasticsearch is ready!"
+
+      - name: Wait for Redis
+        run: |
+          echo "Waiting for Redis to be ready..."
+          timeout 30 bash -c 'until nc -z localhost 6379; do sleep 2; done'
+          echo "Redis is ready!"
 
       - name: Run Migrations
         run: |
