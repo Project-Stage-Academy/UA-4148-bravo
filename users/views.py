@@ -481,7 +481,7 @@ class CustomPasswordResetView(APIView):
 
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        reset_relative_url = f"/password/reset/confirm/{uid}/{token}/"
+        reset_relative_url = f"password/reset/confirm/{uid}/{token}/"
         reset_url = f"{settings.FRONTEND_URL}{reset_relative_url}"
 
         subject = "Reset your password"
