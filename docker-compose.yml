@@ -104,6 +104,12 @@ services:
   test:
     build: .
     container_name: test-runner
+    env_file:
+      - .env
+    environment:
+      # - DJANGO_SETTINGS_MODULE=./core/test_settings
+      - DB_HOST=db 
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
     depends_on:
       db:
         condition: service_healthy
@@ -111,7 +117,7 @@ services:
         condition: service_healthy
     volumes:
       - .:/app
-    command: test
+    command: ["db", "python", "manage.py", "test"]
     networks:
       - forum
 

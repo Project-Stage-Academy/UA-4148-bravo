@@ -9,6 +9,31 @@ info:
   license:
     name: Proprietary
 paths:
+  /api/v1/auth/auth/jwt/logout/:
+    post:
+      operationId: auth_auth_jwt_logout_create
+      description: |-
+        Takes a token and blacklists it. Must be used with the
+        `rest_framework_simplejwt.token_blacklist` app installed.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
   /api/v1/auth/jwt/create/:
     post:
       operationId: auth_jwt_create_create
@@ -93,6 +118,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
           description: ''
+  /api/v1/auth/me/:
+    get:
+      operationId: auth_me
+      description: Returns the profile information of the currently authenticated
+        user. Requires a valid JWT access token. If the token is missing or invalid,
+        returns 401 Unauthorized.
+      summary: Retrieve the currently authenticated user
+      tags:
+      - Auth
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+          description: ''
+        '401':
+          description: Unauthorized - missing or invalid token
+        '403':
+          description: Forbidden - user account is inactive
+        '404':
+          description: Not Found - user no longer exists
   /api/v1/auth/oauth/login/:
     post:
       operationId: auth_oauth_login_create
@@ -482,6 +531,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserNotificationPreference'
+          description: ''
+  /api/v1/investments/api/v1/investments/subscriptions/create/:
+    post:
+      operationId: investments_api_v1_investments_subscriptions_create_create
+      description: |-
+        API endpoint for creating a new investment subscription.
+
+        - Requires authentication and investor role.
+        - Validates funding constraints and prevents invalid investments.
+        - Returns project funding status along with subscription details.
+      tags:
+      - investments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionCreate'
           description: ''
   /api/v1/investors/:
     get:
@@ -1172,35 +1253,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedProjectDocumentList'
-          description: ''
-  /api/v1/investments/subscriptions/create/:
-    post:
-      operationId: projects_subscriptions_create_create
-      description: |-
-        API endpoint for creating a new investment subscription.
-        Uses transaction management and F() expressions for safe concurrent updates.
-      tags:
-      - projects
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubscriptionCreateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/SubscriptionCreateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/SubscriptionCreateRequest'
-        required: true
-      security:
-      - bearerAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubscriptionCreate'
           description: ''
   /api/v1/startups/:
     get:
@@ -2010,6 +2062,42 @@ components:
           type: string
       required:
       - name
+    CurrentUser:
+      type: object
+      description: Public serializer for the currently logged-in user.
+      properties:
+        user_id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        user_phone:
+          type: string
+          readOnly: true
+          nullable: true
+        title:
+          type: string
+          readOnly: true
+          nullable: true
+        role:
+          type: string
+          readOnly: true
+      required:
+      - email
+      - first_name
+      - last_name
+      - role
+      - title
+      - user_id
+      - user_phone
     CustomTokenObtainPairRequest:
       type: object
       description: |-
@@ -3199,6 +3287,26 @@ components:
       - user
     SubscriptionCreate:
       type: object
+      description: |-
+        Serializer for creating a new investment subscription.
+
+        Fields:
+            investor (Investor): The investor making the subscription.
+            project (Project): The project to invest in.
+            amount (Decimal): Investment amount, required and must be >= 0.01.
+
+        Validation:
+            - Ensures project exists and is a valid instance.
+            - Ensures the requesting user is an investor.
+            - Prevents self-investment (investor cannot fund their own startup project).
+            - Prevents investments into fully funded projects.
+            - Prevents investment amounts that exceed remaining funding.
+            - Ensures amount is greater than or equal to 0.01.
+
+        Creation:
+            - Uses database transactions with row-level locking to prevent race conditions.
+            - Recalculates effective funding using both DB aggregate and project's current_funding to avoid drift.
+            - Updates the project's current_funding field after saving the subscription.
       properties:
         id:
           type: integer
@@ -3210,25 +3318,34 @@ components:
         amount:
           type: string
           format: decimal
-          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
-        investment_share:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
       required:
       - amount
-      - created_at
       - id
-      - investment_share
       - investor
       - project
     SubscriptionCreateRequest:
       type: object
+      description: |-
+        Serializer for creating a new investment subscription.
+
+        Fields:
+            investor (Investor): The investor making the subscription.
+            project (Project): The project to invest in.
+            amount (Decimal): Investment amount, required and must be >= 0.01.
+
+        Validation:
+            - Ensures project exists and is a valid instance.
+            - Ensures the requesting user is an investor.
+            - Prevents self-investment (investor cannot fund their own startup project).
+            - Prevents investments into fully funded projects.
+            - Prevents investment amounts that exceed remaining funding.
+            - Ensures amount is greater than or equal to 0.01.
+
+        Creation:
+            - Uses database transactions with row-level locking to prevent race conditions.
+            - Recalculates effective funding using both DB aggregate and project's current_funding to avoid drift.
+            - Updates the project's current_funding field after saving the subscription.
       properties:
         investor:
           type: integer
@@ -3237,7 +3354,7 @@ components:
         amount:
           type: string
           format: decimal
-          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
       required:
       - amount
       - investor
