@@ -70,3 +70,4 @@ class Subscription(models.Model):
             models.Index(fields=["investor"], name="idx_subscription_investor"),
         ]
 
+

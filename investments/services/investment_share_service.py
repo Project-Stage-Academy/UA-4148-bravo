@@ -1,13 +1,12 @@
 from decimal import Decimal, ROUND_HALF_UP
-from investments.models import Subscription
 
-
+# Local import to avoid circular dependency
 def calculate_investment_share(amount, funding_goal) -> Decimal:
     """
     Return the investment share as a percentage of the funding goal.
     """
     if funding_goal == 0:
-        return Decimal("0.00")
+        return Decimal("0.01")  # Minimum 0.01% for very small amounts
     share = (Decimal(amount) / Decimal(funding_goal) * Decimal("100"))
     return share.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
@@ -17,6 +16,8 @@ def recalculate_investment_shares(project):
     Recalculates and updates the 'investment_share' field for all Subscription instances
     based on the project's funding goal.
     """
+    from investments.models import Subscription  # local import to avoid circular import
+
     funding_goal = project.funding_goal or Decimal("0.00")
     investments = Subscription.objects.filter(project=project)
 
@@ -37,4 +38,5 @@ def update_project_investment_shares_if_needed(project):
     """
     if project.funding_goal and project.funding_goal > 0:
         recalculate_investment_shares(project)
+
 

@@ -57,3 +57,4 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
             update_project_investment_shares_if_needed(project_locked)
             return subscription
 
+
