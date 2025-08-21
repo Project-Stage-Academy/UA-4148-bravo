@@ -16,11 +16,12 @@ class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
     
-    def serializer_with_user(self, data, user):
+    def serializer_with_user(self, data, user, **extra_context):
         factory = APIRequestFactory()
         request = factory.get('/')
         request.user = user
-        return SubscriptionCreateSerializer(data=data, context={'request': request})
+        context = {'request': request, **extra_context}
+        return SubscriptionCreateSerializer(data=data, context=context)
 
     @classmethod
     def tearDownClass(cls):

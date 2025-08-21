@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import SubscriptionCreateView
+from investments.views import SubscriptionCreateView
 
 urlpatterns = [
-    path('subscriptions/create/', SubscriptionCreateView.as_view(), name='subscription-create'),
+    path("api/v1/investments/subscriptions/create/", SubscriptionCreateView.as_view(), name="subscription-create"),
 ]

@@ -1173,7 +1173,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedProjectDocumentList'
           description: ''
-  /api/v1/projects/subscriptions/create/:
+  /api/v1/investments/subscriptions/create/:
     post:
       operationId: projects_subscriptions_create_create
       description: |-

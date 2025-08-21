@@ -17,7 +17,7 @@ def recalculate_investment_shares(project):
     Recalculates and updates the 'investment_share' field for all Subscription instances
     based on the project's funding goal.
     """
-    from ..models import Subscription
+    from investments.models import Subscription
 
     funding_goal = project.funding_goal or Decimal("0.00")
     investments = Subscription.objects.filter(project=project)
