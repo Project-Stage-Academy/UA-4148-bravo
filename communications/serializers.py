@@ -1,12 +1,13 @@
-from django.db import models
+from django.db.models import Q
 from rest_framework import serializers
 from .models import (
     Notification, 
     UserNotificationPreference,
     NotificationType,
-    UserNotificationTypePreference
+    UserNotificationTypePreference,
+    NotificationTrigger,
 )
-
+from investors.models import Investor
 
 class NotificationTypeSerializer(serializers.ModelSerializer):
     """Serializer for notification types."""
@@ -50,10 +51,9 @@ class UserNotificationTypePreferenceSerializer(serializers.ModelSerializer):
         """
         fields = super().get_fields()
         
-        if self.instance and hasattr(self.instance, 'notification_type'):
+        if self.instance and getattr(self.instance, 'notification_type_id', None):
             queryset = NotificationType.objects.filter(
-                models.Q(is_active=True) | 
-                models.Q(id=self.instance.notification_type.id)
+                Q(is_active=True) | Q(pk=self.instance.notification_type_id)
             )
         else:
             queryset = NotificationType.objects.filter(is_active=True)
@@ -121,6 +121,8 @@ class NotificationSerializer(serializers.ModelSerializer):
         source='get_priority_display',
         read_only=True
     )
+    actor = serializers.SerializerMethodField(read_only=True)
+    redirect = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
         model = Notification
@@ -132,11 +134,60 @@ class NotificationSerializer(serializers.ModelSerializer):
             'is_read',
             'priority',
             'priority_display',
+            'actor',
+            'redirect',
             'created_at',
             'updated_at',
             'expires_at',
-            'action_link'
         ]
         read_only_fields = [
             'notification_id', 'created_at', 'updated_at'
         ]
+
+    def _get_investor_from_user(self, user):
+        """Return Investor instance for a user, if present, else None."""
+        investor = getattr(user, 'investor', None)
+        return investor if isinstance(investor, Investor) else None
+
+    def get_actor(self, obj):
+        """Return actor details for the notification trigger.
+        Includes investor details if the triggering user is an investor.
+        """
+        actor = {
+            'type': obj.triggered_by_type,
+            'user_id': getattr(obj, 'triggered_by_user_id', None),
+            'investor_id': None,
+            'display_name': None,
+        }
+        user = getattr(obj, 'triggered_by_user', None)
+        if user:
+            investor = self._get_investor_from_user(user)
+            if investor:
+                actor['investor_id'] = investor.pk
+                actor['display_name'] = getattr(investor, 'company_name', None)
+            else:
+                first = getattr(user, 'first_name', '') or ''
+                last = getattr(user, 'last_name', '') or ''
+                full = (first + ' ' + last).strip()
+                actor['display_name'] = full or None
+        return actor
+
+    def get_redirect(self, obj):
+        """Compute a redirect target the frontend can use to navigate users.
+        Priority order: message -> project -> startup -> investor -> none.
+        """
+        for field, kind, path in [
+            ('related_message_id', 'message', '/messages/'),
+            ('related_project_id', 'project', '/projects/'),
+            ('related_startup_id', 'startup', '/startups/'),
+        ]:
+            rid = getattr(obj, field, None)
+            if rid:
+                return {'kind': kind, 'id': rid, 'url': f"{path}{rid}"}
+
+        user = getattr(obj, 'triggered_by_user', None)
+        if user and getattr(obj, 'triggered_by_type', None) == NotificationTrigger.INVESTOR:
+            investor = self._get_investor_from_user(user)
+            if investor:
+                return {'kind': 'investor', 'id': investor.pk, 'url': f"/investors/{investor.pk}"}
+        return {'kind': 'none', 'id': None, 'url': None}
