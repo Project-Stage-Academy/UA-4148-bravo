@@ -8,7 +8,6 @@ def calculate_investment_share(amount, funding_goal) -> Decimal:
     """
     if funding_goal == 0:
         return Decimal("0.00")
-
     share = (Decimal(amount) / Decimal(funding_goal) * Decimal("100"))
     return share.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 

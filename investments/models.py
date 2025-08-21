@@ -1,8 +1,6 @@
 from decimal import Decimal
-
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-
 from validation.validate_self_investment import validate_self_investment
 
 
@@ -49,7 +47,7 @@ class Subscription(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        """ Custom validation to prevent investors from investing in their own projects. """
+        """Custom validation to prevent investors from investing in their own projects."""
         validate_self_investment(self.investor, self.project)
 
     def __str__(self):
@@ -71,3 +69,4 @@ class Subscription(models.Model):
             models.Index(fields=["project"], name="idx_subscription_project"),
             models.Index(fields=["investor"], name="idx_subscription_investor"),
         ]
+

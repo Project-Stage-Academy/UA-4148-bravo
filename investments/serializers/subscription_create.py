@@ -1,17 +1,19 @@
 from decimal import Decimal
-
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-
 from investors.models import Investor
 from projects.models import Project
 from ..models import Subscription
 from ..services.subscription_validation_service import validate_subscription_business_rules
-from ..services.investment_share_service import recalculate_investment_shares
+from ..services.investment_share_service import update_project_investment_shares_if_needed
 
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating subscriptions.
+    Validates business rules and recalculates investment shares after creation.
+    """
     investor = serializers.IntegerField()
     project = serializers.IntegerField()
     amount = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=Decimal("0.01"))
@@ -22,6 +24,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ['investment_share', 'created_at']
 
     def validate(self, data):
+        """Ensure that investor and project exist and validate business rules."""
         try:
             investor = Investor.objects.get(pk=data['investor'])
         except Investor.DoesNotExist:
@@ -41,6 +44,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        """Create a subscription and recalculate investment shares."""
         project = validated_data['project']
         amount = validated_data['amount']
 
@@ -50,6 +54,6 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
             subscription = Subscription.objects.create(**validated_data)
 
             # Recalculate all shares after creation
-            recalculate_investment_shares(project_locked)
+            update_project_investment_shares_if_needed(project_locked)
             return subscription
 

@@ -4,12 +4,13 @@ from rest_framework import serializers
 from projects.models import Project
 from ..models import Subscription
 from ..services.subscription_validation_service import validate_subscription_business_rules
-from ..services.investment_share_service import recalculate_investment_shares
+from ..services.investment_share_service import update_project_investment_shares_if_needed
 
 
 class SubscriptionUpdateSerializer(serializers.ModelSerializer):
     """
-    Handles subscription updates, ensuring rules are respected.
+    Serializer for updating subscriptions.
+    Ensures business rules are respected and recalculates investment shares after updates.
     """
 
     class Meta:
@@ -18,6 +19,7 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['investment_share', 'created_at']
 
     def validate(self, data):
+        """Prevent changing project or investor for an existing subscription."""
         instance = getattr(self, 'instance', None)
 
         if instance:
@@ -30,6 +32,7 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
+        """Update subscription and recalculate investment shares."""
         new_amount = validated_data.get('amount', instance.amount)
 
         with transaction.atomic():
@@ -44,6 +47,7 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
             instance.save()
 
             # Recalculate all shares after update
-            recalculate_investment_shares(project)
+            update_project_investment_shares_if_needed(project)
             return instance
+
 

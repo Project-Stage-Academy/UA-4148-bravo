@@ -1,4 +1,5 @@
 from decimal import Decimal
+from decimal import Decimal
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 

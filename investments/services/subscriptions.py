@@ -38,3 +38,4 @@ def validate_project_funding_limit(project: Project, amount, current_subscriptio
         raise ValidationError({
             "amount": _(f"Amount exceeds funding goal. Max allowed: {max_allowed:.2f}")
         })
+
