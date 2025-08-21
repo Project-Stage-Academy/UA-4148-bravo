@@ -779,6 +779,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 "password": "",
                 "user_phone": "",
                 "title": "",
+                'is_active': True,
                 "role": get_default_user_role()
             },
             provider = "google"
