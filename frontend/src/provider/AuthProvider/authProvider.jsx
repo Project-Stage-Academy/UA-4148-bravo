@@ -19,7 +19,8 @@ import useProactiveRefresh from '../../hooks/useProactiveRefresh/useProactiveRef
  * @property {(email: string, first_name: string | null, last_name: string | null, password: string, confirmPassword: string)
  * => Promise<void>} register
  * @property {(email: string, userId: number) => Promise<void>} resendRegisterEmail
- * @property {(user_id: number, token: string) => Promise<void>} confirmEmail
+ @property {(user_id: number, token: string) => Promise<void>} confirmEmail
+ * @property {(company_name:string,company_type:'startup'|'investor') => Promise<void>} bindCompanyToUser
  * @property {() => void} logout
  * @property {(email: string) => Promise<void>} requestReset
  * @property {(uid: string, token: string, newPassword: string) => Promise<void>} confirmReset
@@ -106,6 +107,27 @@ function AuthProvider({ children }) {
     const confirmEmail = useCallback(async (user_id, token) => {
         try {
             await api.get(`/api/v1/auth/verify-email/${user_id}/${token}/`);
+        } catch (err) {
+            console.error(err);
+            throw err;
+        }
+    }, []);
+
+    /**
+     * Enable newly registered users to bind themselves to an existing or new company
+     * URL: /api/v1/auth/bind-company/
+     * Req: { company_name, company_type }
+     * Res: 200
+     *
+     * @param {string} company_name
+     * @param {'startup'|'investor'} company_type
+     */
+    const bindCompanyToUser = useCallback(async (company_name, company_type) => {
+        try {
+            await api.post(`/api/v1/auth/bind-company/`, {
+                company_name,
+                company_type
+            });
         } catch (err) {
             console.error(err);
             throw err;
@@ -261,6 +283,7 @@ function AuthProvider({ children }) {
                     register,
                     resendRegisterEmail,
                     confirmEmail,
+                    bindCompanyToUser,
                     logout,
                     requestReset,
                     confirmReset,
@@ -272,6 +295,7 @@ function AuthProvider({ children }) {
                     register,
                     resendRegisterEmail,
                     confirmEmail,
+                    bindCompanyToUser,
                     logout,
                     requestReset,
                     confirmReset,

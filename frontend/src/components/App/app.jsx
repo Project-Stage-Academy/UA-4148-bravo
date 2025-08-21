@@ -22,7 +22,6 @@ import RegistrationUserConfirmed from '../../pages/RegistrationUserConfirmed/reg
 import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/emailConfirmationHandler';
 import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
 import RegistrationUserRepresent from '../../pages/RegistrationUserRepresent/registrationUserRepresent';
-import RegistrationEntityRepresent from '../../pages/RegistrationEntityRepresent/registrationEntityRepresent';
 import RegistrationCompleted from '../../pages/RegistrationCompleted/registrationCompleted';
 
 /**
@@ -74,7 +73,6 @@ function App() {
                             <Route path="register/error" element={<RegistrationError />} />
                             <Route path="register/user-confirmed" element={<RegistrationUserConfirmed />} />
                             <Route path="register/user-represent" element={<RegistrationUserRepresent />} />
-                            <Route path="register/entity-represent" element={<RegistrationEntityRepresent />} />
                             <Route path="register/completed" element={<RegistrationCompleted />} />
 
                             {/* Forgot password */}
