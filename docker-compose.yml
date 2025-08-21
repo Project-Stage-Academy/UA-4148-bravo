@@ -62,9 +62,25 @@ services:
 
   redis:
     image: redis:7
+    container_name: redis
     ports:
       - "6379:6379"
+    networks:
+      - forum
 
+  celery:
+    build: .
+    entrypoint: []
+    command: celery -A core worker -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - .env  
+    networks:
+      - forum    
   db:
     image: postgres:14
     container_name: db
@@ -118,6 +134,18 @@ services:
     volumes:
       - .:/app
     command: ["db", "python", "manage.py", "test"]
+    
+  mongo:
+    image: mongo:6
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
     networks:
       - forum
 
@@ -126,5 +154,6 @@ volumes:
   pgadmin_data:
   esdata:
     driver: local
+  mongo_data:
 networks:
   forum:

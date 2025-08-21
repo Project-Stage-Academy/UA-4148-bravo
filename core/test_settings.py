@@ -14,15 +14,6 @@ ELASTICSEARCH_DSL = {
     }
 }
 
-# ELASTICSEARCH_DSL = {
-#     'default': {
-#         'hosts': config('ELASTICSEARCH_HOST', default='http://elasticsearch:9200'),
-#     },
-#     'signals': {
-#         'auto_sync': False, 
-#     }
-# }
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
