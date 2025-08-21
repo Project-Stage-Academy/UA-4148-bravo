@@ -9,6 +9,9 @@ import { useAuthContext } from '../../provider/AuthProvider/authProvider';
  * Display loading while processing information
  * Navigate to done if token is fine
  * Else navigate to error
+ *
+ * @component
+ *
  * @returns {JSX.Element}
  */
 function EmailConfirmationHandler() {

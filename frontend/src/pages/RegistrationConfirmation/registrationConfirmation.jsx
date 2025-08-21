@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button/button';
 import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 
+/**
+ * Registration page that informs the user to
+ * check their email to confirm their account
+ *
+ * @component
+ *
+ * @returns {JSX.Element}
+ */
 function RegistrationConfirmation() {
     // This component handles user registration
     const navigate = useNavigate();

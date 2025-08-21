@@ -82,30 +82,35 @@ function AuthProvider({ children }) {
      * @param {string} email
      * @param {number} userId
      */
-    const resendRegisterEmail = useCallback(
-        async (email, userId) => {
-            await api.post('/api/v1/auth/resend-email/', {
+    const resendRegisterEmail = useCallback(async (email, userId) => {
+        await api
+            .post('/api/v1/auth/resend-email/', {
                 email: email,
                 user_id: userId,
-            }).catch((err) => {
+            })
+            .catch((err) => {
                 console.error(err);
                 throw err;
             });
-        }, []
-    );
+    }, []);
 
-    const confirmEmail = useCallback(
-        async (user_id, token) => {
-            try {
-                console.log("Calling confirmEmail..."); // debug
-                await api.get(`/api/v1/auth/verify-email/${user_id}/${token}/`);
-            } catch (err) {
-                console.error(err);
-                throw err;
-            }
-        },
-        []
-    );
+    /**
+     * Confirm register email
+     * URL: /api/v1/auth/verify-email/<int:user_id>/<string:token>/
+     * Req: { user_id, token }
+     * Res: 200
+     *
+     * @param {number} user_id
+     * @param {string} token
+     */
+    const confirmEmail = useCallback(async (user_id, token) => {
+        try {
+            await api.get(`/api/v1/auth/verify-email/${user_id}/${token}/`);
+        } catch (err) {
+            console.error(err);
+            throw err;
+        }
+    }, []);
 
     /**
      * Create
@@ -117,27 +122,27 @@ function AuthProvider({ children }) {
      * @param {string} password
      * @returns {Promise<void>}
      */
-    const login = useCallback(
-        async (email, password) => {
-            const { data } = await api.post('/api/v1/auth/jwt/create/', {
+    const login = useCallback(async (email, password) => {
+        const { data } = await api
+            .post('/api/v1/auth/jwt/create/', {
                 email,
                 password,
-            }).catch((err) => {
+            })
+            .catch((err) => {
                 console.error(err);
                 throw err;
             });
 
-            if (data.access) {
-                console.log('data.access is missing or null');
-            }
+        if (data.access) {
+            console.log('data.access is missing or null');
+        }
 
-            setAccessToken(data.access);
-            /*
+        setAccessToken(data.access);
+        /*
             TODO
             await loadUser();
             */
-        }, []
-    );
+    }, []);
 
     /**
      * Me
@@ -147,20 +152,18 @@ function AuthProvider({ children }) {
      *
      * @returns {Promise<void>}
      */
-    const loadUser = useCallback(
-        async () => {
-            try {
-                const { data } = await api.get("/api/v1/auth/me/")
-                    .catch((err) => {
-                        console.error(err);
-                    });
-                setUser(data);
-            } catch {
-                console.log('User not found');
-                setUser(null);
-            }
-        }, []
-    );
+    // eslint-disable-next-line
+    const loadUser = useCallback(async () => {
+        try {
+            const { data } = await api.get('/api/v1/auth/me/').catch((err) => {
+                console.error(err);
+            });
+            setUser(data);
+        } catch {
+            console.log('User not found');
+            setUser(null);
+        }
+    }, []);
 
     /**
      * Logout
@@ -168,15 +171,13 @@ function AuthProvider({ children }) {
      * Req: { refresh }
      * Res: 205
      */
-    const logout = useCallback(
-        async () => {
-            await api.post("/api/v1/auth/jwt/logout/").catch(() => {
-                console.log('Logout');
-            });
-            setAccessToken(null);
-            setUser(null);
-        }, []
-    );
+    const logout = useCallback(async () => {
+        await api.post('/api/v1/auth/jwt/logout/').catch(() => {
+            console.log('Logout');
+        });
+        setAccessToken(null);
+        setUser(null);
+    }, []);
 
     /**
      * Password reset
@@ -187,13 +188,13 @@ function AuthProvider({ children }) {
      * @param {string} email
      * @returns {Promise<void>}
      */
-    const requestReset = useCallback(
-        async (email) => {
-            await api.post("/api/v1/auth/password/reset/", { email }).catch((err) => {
+    const requestReset = useCallback(async (email) => {
+        await api
+            .post('/api/v1/auth/password/reset/', { email })
+            .catch((err) => {
                 console.error(err);
             });
-        }, []
-    );
+    }, []);
 
     /**
      * Password reset confirm
@@ -206,13 +207,17 @@ function AuthProvider({ children }) {
      * @param {string} new_password
      * @returns {Promise<void>}
      */
-    const confirmReset = useCallback(
-        async (uid, token, new_password) => {
-            await api.post("/api/v1/auth/password/reset/confirm/", { uid, token, new_password }).catch((err) => {
+    const confirmReset = useCallback(async (uid, token, new_password) => {
+        await api
+            .post('/api/v1/auth/password/reset/confirm/', {
+                uid,
+                token,
+                new_password,
+            })
+            .catch((err) => {
                 console.error(err);
             });
-        }, []
-    );
+    }, []);
 
     /**
      * Refresh
@@ -220,28 +225,29 @@ function AuthProvider({ children }) {
      * Req: { refresh }
      * Res: 200 { access }
      */
-    const refreshToken = useCallback(
-        async () => {
-            try {
-                const { data } = await api.post("/api/v1/auth/jwt/refresh/");
-                setAccessToken(data.access || null);
-                /*
-                * TODO
-                * await loadUser();
-                */
-            } catch (err) {
-                if (err.response) {
-                    console.log("Refresh token missing or invalid:", err.response.status);
-                } else {
-                    console.error(err);
-                }
-
-                if (err.response?.status === 401) {
-                    await logout();
-                }
+    const refreshToken = useCallback(async () => {
+        try {
+            const { data } = await api.post('/api/v1/auth/jwt/refresh/');
+            setAccessToken(data.access || null);
+            /*
+             * TODO
+             * await loadUser();
+             */
+        } catch (err) {
+            if (err.response) {
+                console.log(
+                    'Refresh token missing or invalid:',
+                    err.response.status
+                );
+            } else {
+                console.error(err);
             }
-        }, [setAccessToken, logout]
-    );
+
+            if (err.response?.status === 401) {
+                await logout();
+            }
+        }
+    }, [logout]);
 
     useProactiveRefresh(getAccessToken(), refreshToken);
 
@@ -257,7 +263,7 @@ function AuthProvider({ children }) {
                     confirmEmail,
                     logout,
                     requestReset,
-                    confirmReset
+                    confirmReset,
                 }),
                 [
                     user,
@@ -268,7 +274,7 @@ function AuthProvider({ children }) {
                     confirmEmail,
                     logout,
                     requestReset,
-                    confirmReset
+                    confirmReset,
                 ]
             )}
         >

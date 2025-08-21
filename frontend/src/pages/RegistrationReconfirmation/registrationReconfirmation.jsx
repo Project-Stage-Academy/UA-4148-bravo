@@ -1,4 +1,3 @@
-import "./registerReconfirmation.css";
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +15,7 @@ import { useAuthContext } from '../../provider/AuthProvider/authProvider';
  * the confirmation page upon success.
  * @returns {JSX.Element}
  */
-function RegisterReconfirmation() {
+function RegistrationReconfirmation() {
     const { user, setUser, resendRegisterEmail } = useAuthContext();
 
     // Hook to navigate programmatically
@@ -131,4 +130,4 @@ function RegisterReconfirmation() {
     );
 }
 
-export default RegisterReconfirmation;
+export default RegistrationReconfirmation;

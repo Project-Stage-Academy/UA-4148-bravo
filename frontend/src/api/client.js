@@ -1,11 +1,23 @@
 import axios from "axios";
 
+/**
+ * Access token is used to keep user session active
+ * @type {string|null}
+ */
 let accessToken = null;
 
+/**
+ * Setter for access token
+ * @param {string|null} value
+ */
 export const setAccessToken = (value) => {
     accessToken = value;
 }
 
+/**
+ * Getter for access token
+ * @returns {string|null}
+ */
 export const getAccessToken = () => accessToken
 
 /**

@@ -1,6 +1,13 @@
 import { jwtDecode } from 'jwt-decode';
 import { useEffect } from 'react';
+import PropTypes from 'prop-types';
 
+/**
+ * Refreshes access token
+ *
+ * @param {string|null} accessToken
+ * @param {() => Promise<void>} refreshToken
+ */
 function useProactiveRefresh(accessToken, refreshToken) {
     useEffect(() => {
         if (!accessToken || typeof accessToken !== "string") return;
@@ -34,6 +41,11 @@ function useProactiveRefresh(accessToken, refreshToken) {
             isMounted = false;
         };
     }, [accessToken, refreshToken]);
+}
+
+useProactiveRefresh.propTypes = {
+    accessToken: PropTypes.string,
+    refreshToken: PropTypes.func,
 }
 
 export default useProactiveRefresh;

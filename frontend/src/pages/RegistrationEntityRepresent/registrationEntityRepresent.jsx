@@ -3,18 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import Button from '../../components/Button/button';
 
+/**
+ * Registration page that asks the user to select
+ * who they represent: Individual entrepreneur or Legal entity
+ *
+ * @component
+ *
+ * @returns {JSX.Element}
+ */
 function RegistrationEntityRepresent() {
     // This component handles user registration
     const navigate = useNavigate();
 
     // The user selects the option that he represents the individual entrepreneur
     function handleSubmitIndividual() {
-        navigate("/auth/register/entity-represent");
+        navigate("/auth/register/completed");
     }
 
     // The user selects the option that he represents the legal entity
     function handleSubmitLegal() {
-        navigate("/auth/register/entity-represent");
+        navigate("/auth/register/completed");
     }
 
     return (

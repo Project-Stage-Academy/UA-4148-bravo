@@ -16,13 +16,14 @@ import LogInPage from '../../pages/LogIn/logIn';
 import RegistrationPage from '../../pages/Registration/registration';
 import AuthorizationWrapper from '../../pages/AuthorizationWrapper/authorizationWrapper';
 import RegistrationConfirmation from '../../pages/RegistrationConfirmation/registrationConfirmation';
-import RegisterReconfirmation from '../../pages/RegisterReconfirmation/registerReconfirmation';
+import RegistrationReconfirmation from '../../pages/RegistrationReconfirmation/registrationReconfirmation';
 import RegistrationError from '../../pages/RegistrationError/registrationError';
 import RegistrationUserConfirmed from '../../pages/RegistrationUserConfirmed/registrationUserConfirmed';
 import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/emailConfirmationHandler';
 import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
 import RegistrationUserRepresent from '../../pages/RegistrationUserRepresent/registrationUserRepresent';
 import RegistrationEntityRepresent from '../../pages/RegistrationEntityRepresent/registrationEntityRepresent';
+import RegistrationCompleted from '../../pages/RegistrationCompleted/registrationCompleted';
 
 /**
  * Main application component that sets up routing and provider providers.
@@ -31,16 +32,9 @@ import RegistrationEntityRepresent from '../../pages/RegistrationEntityRepresent
  * The main layout is defined in the Layout component, which includes
  * the header, sidebar, and footer.
  * The Routes define the various pages of the application, including:
- * - Home page
- * - Company list
- * - Feedback form
- * - Policy page
- * - Who we are page
- * - Log in page
- * - Registration page
- * - Password management (forgot and restore)
- * - User and company profile pages with editing capabilities
- * - A catch-all route for 404 Not Found
+ *
+ * @component
+ *
  * @returns {JSX.Element} The main application component.
  */
 function App() {
@@ -76,11 +70,12 @@ function App() {
                             <Route path="register" element={<RegistrationPage />} />
 
                             <Route path="register/confirm" element={<RegistrationConfirmation />} />
-                            <Route path="register/re-confirm" element={<RegisterReconfirmation />} />
+                            <Route path="register/re-confirm" element={<RegistrationReconfirmation />} />
                             <Route path="register/error" element={<RegistrationError />} />
                             <Route path="register/user-confirmed" element={<RegistrationUserConfirmed />} />
                             <Route path="register/user-represent" element={<RegistrationUserRepresent />} />
                             <Route path="register/entity-represent" element={<RegistrationEntityRepresent />} />
+                            <Route path="register/completed" element={<RegistrationCompleted />} />
 
                             {/* Forgot password */}
                             <Route path="forgot" element={<ForgotPassword />} />

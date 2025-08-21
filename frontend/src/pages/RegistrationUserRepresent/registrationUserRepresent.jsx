@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import Button from '../../components/Button/button';
 
+/**
+ * Registration page that asks the user to select
+ * who they represent: Company or Startup project
+ *
+ * @component
+ *
+ * @returns {JSX.Element}
+ */
 function RegistrationUserRepresent() {
     // This component handles user registration
     const navigate = useNavigate();

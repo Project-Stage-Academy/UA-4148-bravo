@@ -1,32 +1,35 @@
-import "./registrationUserConfirmed.css";
 import { useNavigate } from 'react-router-dom';
+import Panel, {
+    PanelBody,
+    PanelNavigation,
+    PanelTitle,
+} from '../../components/Panel/panel';
 import Button from '../../components/Button/button';
-import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 
 /**
- * A registration page that indicates that the
- * user has confirmed their email address
+ * Registration page that informs
+ * the user that registration is complete
  *
  * @component
  *
  * @returns {JSX.Element}
  */
-function RegistrationUserConfirmed() {
+function RegistrationCompleted() {
     // This component handles user registration
     const navigate = useNavigate();
 
-    // Function to handle the submission of the registration form
+    // Function to handle the submission
     function handleSubmit() {
-        navigate("/auth/register/user-represent");
+        navigate("/");
     }
 
     return (
         <Panel className={"panel__margin-large"}>
-            <PanelTitle>Залишилось декілька кроків</PanelTitle>
+            <PanelTitle>Реєстрація завершена!</PanelTitle>
             <PanelBody>
                 <div>
                     <p className={"panel--font-size"}>
-                        Ви успішно підтвердили вказану електронну адресу.
+                        Ви успішно завершили реєстрацію
                     </p>
                 </div>
             </PanelBody>
@@ -35,11 +38,11 @@ function RegistrationUserConfirmed() {
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
                 >
-                    Продовжити реєстрацію
+                    Повернутися до входу
                 </Button>
             </PanelNavigation>
         </Panel>
     );
 }
 
-export default RegistrationUserConfirmed;
+export default RegistrationCompleted;
