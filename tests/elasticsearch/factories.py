@@ -12,7 +12,7 @@ User = get_user_model()
 class UserRoleFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = UserRole
-        django_get_or_create = ('role',)  # <- ключ для get_or_create
+        django_get_or_create = ('role',)
 
     role = UserRole.Role.USER
 
