@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import NoAlertPresentException
 
 
 class ChatTests(ChannelsLiveServerTestCase):
@@ -74,11 +75,9 @@ class ChatTests(ChannelsLiveServerTestCase):
             self.wait_for_message("hello", window_index=0)
 
             self._switch_to_window(1)
-            # send a different message in room_2
             self._post_message("world")
             self.wait_for_message("world", window_index=1)
 
-            # Verify room_2 did NOT receive room_1 message
             self.assertTrue(
                 "hello" not in self._chat_log_value,
                 "Message from room_1 incorrectly received in room_2"
@@ -86,16 +85,13 @@ class ChatTests(ChannelsLiveServerTestCase):
         finally:
             self._close_all_new_windows()
 
-    # --- Helper Methods ---
     def _enter_chat_room(self, room_name):
         """Open chat page and enter room name."""
         self.driver.get(self.live_server_url + "/chat/")
         ActionChains(self.driver).send_keys(room_name, Keys.ENTER).perform()
-        # Wait until URL updates
         timeout = time.time() + 10
         while time.time() < timeout:
             if room_name in self.driver.current_url:
-                # Wait a moment for WebSocket to connect
                 time.sleep(2)
                 return
             time.sleep(0.2)
@@ -143,3 +139,58 @@ class ChatTests(ChannelsLiveServerTestCase):
         return self.driver.execute_script(
             "return document.querySelector('#chat-log').value;"
         )
+
+    def _dismiss_alert_if_present(self):
+        """Close alert if present and return its text."""
+        try:
+            alert = self.driver.switch_to.alert
+            text = alert.text
+            alert.dismiss()
+            return text
+        except NoAlertPresentException:
+            return None
+
+    def test_empty_message_not_sent(self):
+        """Empty messages should not be sent or appear in chat log."""
+        try:
+            self._enter_chat_room("room_edge")
+            self._post_message("")
+            time.sleep(1)
+            alert_text = self._dismiss_alert_if_present()
+            self.assertEqual(alert_text, "Cannot send an empty message.")
+
+            self.assertEqual(self._chat_log_value.strip(), "")
+        finally:
+            self._close_all_new_windows()
+
+    def test_forbidden_word_not_sent(self):
+        """Messages with forbidden content should not appear in chat log."""
+        try:
+            self._enter_chat_room("room_edge")
+            self.driver.execute_script("window.FORBIDDEN_WORDS_SET = ['casino'];")
+            self._post_message("this has a casino word")
+            time.sleep(1)
+
+            alert_text = self._dismiss_alert_if_present()
+            self.assertEqual(alert_text, "Your message contains forbidden content and cannot be sent.")
+
+            self.assertNotIn("casino", self._chat_log_value)
+        finally:
+            self._close_all_new_windows()
+
+    def test_too_long_message_not_sent(self):
+        """Messages exceeding MAX_MESSAGE_LENGTH should not appear."""
+        try:
+            self._enter_chat_room("room_edge")
+            self.driver.execute_script("window.MAX_MESSAGE_LENGTH = 10;")
+            long_message = "x" * 50
+            self._post_message(long_message)
+            time.sleep(1)
+
+            alert_text = self._dismiss_alert_if_present()
+            self.assertEqual(alert_text, "Message must be at most 10 characters.")
+
+            self.assertNotIn(long_message, self._chat_log_value,
+                             "Too long message should not be sent")
+        finally:
+            self._close_all_new_windows()

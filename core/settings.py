@@ -4,6 +4,7 @@ import sys
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
+import mongoengine
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -79,7 +80,7 @@ SOCIALACCOUNT_PROVIDERS = {
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {
             'access_type': 'offline',
-            'prompt': 'consent', 
+            'prompt': 'consent',
         },
         'FETCH_USERINFO': True,
     },
@@ -114,7 +115,7 @@ REST_FRAMEWORK = {
         'user': '5/minute',
         'anon': '2/minute',
         'resend_email': '5/minute',
-        
+
     },
 }
 
@@ -197,9 +198,9 @@ DJOSER = {
     },
     'USER_ID_FIELD': 'user_id',
 }
-    
+
 if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Email Configuration (for development)
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Email Configuration (for development)
     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -385,6 +386,12 @@ COMMUNICATIONS_NOTIFICATION_TYPES = [
     },
 ]
 
+FORBIDDEN_WORDS_SET = {
+    "spam", "scam", "xxx", "viagra", "free money", "lottery", "bitcoin",
+    "crypto", "click here", "subscribe", "buy now", "offer", "promotion",
+    "gamble", "casino", "adult", "nsfw", "sex", "porn", "nude"
+}
+
 # Logs
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
@@ -517,10 +524,10 @@ LOGGING = {
 }
 
 # Celery
-CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
-CELERY_RESULT_BACKEND = 'rpc://'
+CELERY_BROKER_URL = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 
-if 'users' in sys.argv:
+if 'test' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
@@ -537,4 +544,16 @@ CHANNEL_LAYERS = {
     },
 }
 
+MONGO_DB = os.getenv("MONGO_DB", "chat")
+MONGO_HOST = os.getenv("MONGO_HOST", "127.0.0.1")
+MONGO_PORT = int(os.getenv("MONGO_PORT") or 27017)
+
+mongoengine.connect(
+    db=MONGO_DB,
+    host=MONGO_HOST,
+    port=MONGO_PORT,
+    serverSelectionTimeoutMS=5000
+)
+
+# Tests
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
