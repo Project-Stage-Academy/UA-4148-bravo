@@ -25,7 +25,7 @@ class SubscriptionCreateView(CreateAPIView):
     permission_classes = [IsAuthenticated, IsInvestor]
 
     def create(self, request, *args, **kwargs):  
-        try:
+        # try:
             serializer = self.get_serializer(data=request.data)  
             serializer.is_valid(raise_exception=True)  
 
@@ -56,6 +56,6 @@ class SubscriptionCreateView(CreateAPIView):
                 },
                 status=status.HTTP_201_CREATED,
             )
-        except Exception as e:
-            logger.exception("Failed to create subscription for user %s", getattr(request.user, 'id', None))
-            return Response({"detail": "Failed to create subscription. Please try again."}, status=status.HTTP_400_BAD_REQUEST)
+        # except Exception as e:
+        #     logger.exception("Failed to create subscription for user %s", getattr(request.user, 'id', None))
+        #     return Response({"detail": "Failed to create subscription. Please try again."}, status=status.HTTP_400_BAD_REQUEST)
