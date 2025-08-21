@@ -1,4 +1,3 @@
-import sys
 from .settings import *
 
 # Use SQLite for tests

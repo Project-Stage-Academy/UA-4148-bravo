@@ -304,6 +304,27 @@ class ResendEmailView(APIView):
     def post(self, request):
         """
         Resend the email verification link to a user's email address.
+
+        This view validates the input data, retrieves the user by `user_id`,
+        updates the `pending_email` if a new one is provided, generates a new
+        verification token if not supplied, constructs the verification URL,
+        renders HTML and plain text email chat, sends the email, and returns
+        a generic success response regardless of whether the user exists.
+
+        The email is sent to `pending_email` if it exists; otherwise, the user's
+        primary email is used. The response does not disclose whether the user
+        exists for security reasons.
+
+        Args:
+            request (rest_framework.request.Request): DRF request object containing:
+                - user_id (int): Required ID of the user.
+                - email (str, optional): New pending email to update.
+                - token (str, optional): Custom verification token to use.
+
+        Returns:
+            rest_framework.response.Response: HTTP 202 Accepted with a generic
+            message indicating that if the account exists, a verification email
+            has been sent.
         """
         serializer = ResendEmailSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -860,6 +881,8 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         """
         Helper method to get or create user with intelligent field updates.
         """
+        from users.tasks import send_welcome_oauth_email_task
+        
         user, created = User.objects.get_or_create(
             email=email,
             defaults=defaults
@@ -905,6 +928,22 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                         'changed_fields': list(update_fields.keys())
                     }
                 )
+        PROVIDER_MAP = {
+            "google": "Google",
+            "github": "GitHub",
+        }
+
+        provider_name = PROVIDER_MAP.get(provider.lower(), provider)
+        subject="Welcome to Forum — your space for innovation!"
+        message = render_to_string(
+            "email/welcome_oauth_email.txt",
+            {"action": "registered" if created else "logged in", "provider_name": provider_name},
+        )
+        send_welcome_oauth_email_task.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[email],
+        )
         return user, created
 
     def generate_jwt_response(self, user):

@@ -7,6 +7,10 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import UserRole
+from django.test import override_settings
+from django.conf import settings
+
+from users.tasks import send_welcome_oauth_email_task
 
 User = get_user_model()
 
@@ -322,3 +326,53 @@ class OAuthTokenObtainPairViewTests(TestCase):
                 'access_token': 'valid'
             }, format='json')
         self.assertIn(res.status_code, [400, 502])
+
+
+class TestSendWelcomeEmail(TestCase):
+    def setUp(self):
+        # Enable eager mode
+        self._orig_always_eager = settings.CELERY_TASK_ALWAYS_EAGER
+        self._orig_eager_propagates = settings.CELERY_TASK_EAGER_PROPAGATES
+        settings.CELERY_TASK_ALWAYS_EAGER = True
+        settings.CELERY_TASK_EAGER_PROPAGATES = True
+
+    def tearDown(self):
+        # Restore original settings
+        settings.CELERY_TASK_ALWAYS_EAGER = self._orig_always_eager
+        settings.CELERY_TASK_EAGER_PROPAGATES = self._orig_eager_propagates    
+
+    @patch("users.tasks.send_mail")
+    def test_send_email_task_success(self, mock_send_mail):
+        
+        test_recipient_list = ["you@example.com"]
+        result = send_welcome_oauth_email_task.delay("Subject", "Hello", test_recipient_list)
+        self.assertEqual(result.status, "SUCCESS")
+        self.assertEqual(result.result, f"Email sent to {test_recipient_list}")
+
+        mock_send_mail.assert_called_once_with(
+            "Subject",
+            "Hello",
+            settings.DEFAULT_FROM_EMAIL,
+            test_recipient_list,
+            fail_silently=False
+        )
+
+    @patch("users.tasks.send_mail")
+    def test_send_email_task_missing_params(self, mock_send_mail):
+        # Empty subject/message/recipient_list
+        result = send_welcome_oauth_email_task.delay("", "", [])
+
+        self.assertEqual(result.status, "SUCCESS")  
+        self.assertEqual(result.result, "Invalid email parameters")
+        mock_send_mail.assert_not_called()    
+
+    @patch("users.tasks.send_mail", side_effect=Exception("SMTP error"))
+    def test_send_email_failure(self, mock_send_mail):
+
+        recipients = ["valid@example.com"]
+        with self.assertLogs("users.tasks", level="ERROR") as cm:
+            result = send_welcome_oauth_email_task.delay("Subject", "Hello", recipients)
+
+        self.assertEqual(result.status, "SUCCESS")
+        self.assertIn("Email was not sent", "\n".join(cm.output))
+        mock_send_mail.assert_called_once()    
