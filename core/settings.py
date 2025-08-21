@@ -20,7 +20,12 @@ ALLOWED_HOSTS = config(
 
 # Application definition
 
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000/')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+
+FRONTEND_ROUTES = {
+    "verify_email": "/auth/verify-email/{user_id}/{token}/",
+    "reset_password": "/password/reset/confirm/{uid}/{token}/",
+}
 
 INSTALLED_APPS = [
     'daphne',

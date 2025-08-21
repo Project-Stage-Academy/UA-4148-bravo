@@ -126,8 +126,10 @@ class UserRegistrationView(APIView):
     
     def _send_verification_email(self, request, user, token):
         """Send verification email to the user."""
-        full_path = reverse("verify-email", kwargs={"user_id": user.user_id, "token": token})
-        verification_relative_url = full_path.replace("/api/v1/", "", 1)
+        verification_relative_url = settings.FRONTEND_ROUTES["verify_email"].format(
+            user_id=user.user_id,
+            token=token,
+        )
         verification_url = urljoin(settings.FRONTEND_URL, verification_relative_url)
         
         context = {
@@ -363,9 +365,13 @@ class ResendEmailView(APIView):
         if not token:
             token = EMAIL_VERIFICATION_TOKEN.make_token(user)
 
-        full_path = reverse("verify-email", kwargs={"user_id": user.user_id, "token": token})
-        verification_relative_url = full_path.replace("/api/v1/", "", 1)
-        verify_url = urljoin(settings.FRONTEND_URL, verification_relative_url)
+        # full_path = reverse("verify-email", kwargs={"user_id": user.user_id, "token": token})
+        # verification_relative_url = full_path.replace("/api/v1/", "", 1)
+        verification_url = settings.FRONTEND_ROUTES["verify_email"].format(
+            user_id=user.user_id,
+            token=token,
+        )
+        verify_url = urljoin(settings.FRONTEND_URL, verification_url)
 
         context = {
             'user': user,
@@ -482,7 +488,10 @@ class CustomPasswordResetView(APIView):
 
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        reset_relative_url = f"password/reset/confirm/{uid}/{token}/"
+        reset_relative_url = settings.FRONTEND_ROUTES["reset_password"].format(
+            uid=uid,
+            token=token,
+        )
         reset_url = urljoin(settings.FRONTEND_URL, reset_relative_url)
 
         subject = "Reset your password"
