@@ -57,6 +57,7 @@ services:
 
   redis:
     image: redis:7
+    container_name: redis
     ports:
       - "6379:6379"
     networks:
@@ -111,10 +112,25 @@ services:
     networks:
       - forum
 
+  mongo:
+    image: mongo:6
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - forum
+
 volumes:
   postgres_data:
   pgadmin_data:
   esdata:
     driver: local
+  mongo_data:
 networks:
   forum:
