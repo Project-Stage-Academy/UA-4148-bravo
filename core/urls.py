@@ -11,6 +11,18 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from .healthcheck import elasticsearch_healthcheck
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+
+from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
+from users.views import (
+    CustomTokenObtainPairView,
+    UserRegistrationView,
+    VerifyEmailView,
+    OAuthTokenObtainPairView,
+    ResendEmailView,
+    CustomPasswordResetView,
+    CustomPasswordResetConfirmView,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -21,12 +33,15 @@ urlpatterns = [
     path('api/v1/projects/', include('projects.urls')),
     path('api/v1/startups/', include('startups.urls')),
     path('api/v1/investors/', include('investors.urls')),
+    path('api/v1/investments/', include(('investments.urls', 'investments'), namespace='investments')),  
     path('api/v1/communications/', include('communications.urls')),
 
     # Health & allauth
     path('health/elasticsearch/', elasticsearch_healthcheck),
     path('accounts/', include('allauth.urls')),
+
     path("chat/", include("chat.urls")),
+
 ]
 
 # Interactive API docs (Swagger/ReDoc) and machine-readable OpenAPI schema

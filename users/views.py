@@ -58,6 +58,10 @@ from .serializers import (
     UserSerializer,
 )
 
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from .serializers import CurrentUserSerializer
+from rest_framework.permissions import IsAuthenticated
+
 logger = logging.getLogger(__name__)
 
 class RegisterThrottle(AnonRateThrottle):
@@ -302,7 +306,7 @@ class ResendEmailView(APIView):
         This view validates the input data, retrieves the user by `user_id`,
         updates the `pending_email` if a new one is provided, generates a new
         verification token if not supplied, constructs the verification URL,
-        renders HTML and plain text email templates, sends the email, and returns
+        renders HTML and plain text email chat, sends the email, and returns
         a generic success response regardless of whether the user exists.
 
         The email is sent to `pending_email` if it exists; otherwise, the user's
@@ -968,6 +972,8 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 - user_object: The retrieved or created user instance
                 - created_bool: Boolean indicating if user was created
         """
+        from users.tasks import send_welcome_oauth_email_task
+        
         user, created = User.objects.get_or_create(
             email=email,
             defaults=defaults
@@ -1014,6 +1020,22 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                         'changed_fields': list(update_fields.keys())
                     }
                 )
+        PROVIDER_MAP = {
+            "google": "Google",
+            "github": "GitHub",
+        }
+
+        provider_name = PROVIDER_MAP.get(provider.lower(), provider)
+        subject="Welcome to Forum — your space for innovation!"
+        message = render_to_string(
+            "email/welcome_oauth_email.txt",
+            {"action": "registered" if created else "logged in", "provider_name": provider_name},
+        )
+        send_welcome_oauth_email_task.delay(
+            subject=subject,
+            message=message,
+            recipient_list=[email],
+        )
         return user, created
     
     def generate_jwt_response(self, user):
@@ -1035,3 +1057,28 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
             "access": str(refresh.access_token),
             "user": UserSerializer(user).data
         })    
+
+@extend_schema(
+    operation_id="auth_me",
+    summary="Retrieve the currently authenticated user",
+    description=(
+        "Returns the profile information of the currently authenticated user. "
+        "Requires a valid JWT access token. "
+        "If the token is missing or invalid, returns 401 Unauthorized."
+    ),
+    responses={
+        200: CurrentUserSerializer,
+        401: OpenApiResponse(description="Unauthorized - missing or invalid token"),
+        403: OpenApiResponse(description="Forbidden - user account is inactive"),
+        404: OpenApiResponse(description="Not Found - user no longer exists"),
+    },
+    tags=["Auth"],
+)
+class MeView(APIView):
+    """Returns profile info of the currently authenticated user."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = CurrentUserSerializer(request.user)
+        return Response(serializer.data)
+
