@@ -2,6 +2,7 @@ import logging
 from rest_framework import permissions
 from django.core.exceptions import PermissionDenied
 from startups.models import Startup
+from investors.models import Investor
 
 logger = logging.getLogger(__name__)
 
@@ -54,3 +55,25 @@ class IsStartupUser(permissions.BasePermission):
 
         logger.warning(f"Object-level permission denied for user {request.user.id} on object {obj.pk}.")
         return False
+
+class CanCreateCompanyPermission(permissions.BasePermission):
+    """
+    Permission to check if a user can create a new Startup or Investor profile.
+    Denies permission if the user already owns a Startup or an Investor profile.
+    """
+    message = "You have already created a company profile (Startup or Investor) and cannot create another."
+
+    def has_permission(self, request, view):
+        """
+        Check if the user is authenticated and does not already have a company.
+        """
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        has_startup = hasattr(request.user, 'startup')
+        has_investor = hasattr(request.user, 'investor')
+
+        if has_startup or has_investor:
+            return False
+
+        return True
