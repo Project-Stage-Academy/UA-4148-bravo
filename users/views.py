@@ -166,7 +166,7 @@ class UserRegistrationView(APIView):
             logger.warning(f"Validation failed: {serializer.errors}")
             return Response(
                 {'status': 'error', 'errors': serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_409_CONFLICT
             )
 
         try:
@@ -365,8 +365,6 @@ class ResendEmailView(APIView):
         if not token:
             token = EMAIL_VERIFICATION_TOKEN.make_token(user)
 
-        # full_path = reverse("verify-email", kwargs={"user_id": user.user_id, "token": token})
-        # verification_relative_url = full_path.replace("/api/v1/", "", 1)
         verification_url = settings.FRONTEND_ROUTES["verify_email"].format(
             user_id=user.user_id,
             token=token,
