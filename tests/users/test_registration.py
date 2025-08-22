@@ -69,7 +69,7 @@ class UserRegistrationTests(APITestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertIn('email', response.data['errors'])
     
     def test_registration_with_missing_fields(self):

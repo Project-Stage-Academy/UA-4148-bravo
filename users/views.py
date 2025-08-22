@@ -164,9 +164,16 @@ class UserRegistrationView(APIView):
     
         if not serializer.is_valid():
             logger.warning(f"Validation failed: {serializer.errors}")
+            if 'email' in serializer.errors and User.objects.filter(
+                email=request.data.get('email')
+            ).exists():
+                return Response(
+                    {'status': 'error', 'errors': serializer.errors},
+                    status=status.HTTP_409_CONFLICT
+                )
             return Response(
                 {'status': 'error', 'errors': serializer.errors},
-                status=status.HTTP_409_CONFLICT
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
