@@ -2,8 +2,9 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from django.db import transaction
-from django.db.models import F
+# Remove unused F import and transaction
+# from django.db import transaction
+# from django.db.models import F
 import logging
 
 from .models import Subscription
@@ -29,15 +30,15 @@ class SubscriptionCreateView(CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            with transaction.atomic():
-                self.perform_create(serializer)
-                subscription = serializer.instance
-                Project.objects.filter(pk=subscription.project_id).update(
-                    current_funding=F('current_funding') + subscription.amount
-                )
-                project = Project.objects.select_related('startup', 'category').get(pk=subscription.project_id)
-                remaining_funding = project.funding_goal - project.current_funding
-                project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
+            # The serializer now handles the atomic transaction and project update.
+            # No need for a transaction block or manual update here.
+            self.perform_create(serializer)
+            subscription = serializer.instance
+
+            # Fetch the updated project to get the latest funding status for the response.
+            project = Project.objects.select_related('startup', 'category').get(pk=subscription.project_id)
+            remaining_funding = project.funding_goal - project.current_funding
+            project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
 
             logger.info(
                 "Subscription created successfully for project %s by user %s",
