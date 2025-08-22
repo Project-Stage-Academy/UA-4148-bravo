@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.validators import validate_email, RegexValidator
+from django.core.validators import validate_email
 from djoser.serializers import UserSerializer
 from rest_framework import serializers
 from users.models import UserRole

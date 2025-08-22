@@ -1,12 +1,11 @@
 import logging
-from rest_framework import viewsets, status, permissions, mixins
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.utils.translation import gettext_lazy as _
+
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.shortcuts import get_object_or_404
+from rest_framework import viewsets, status, permissions, mixins
+from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
 
 from .models import (
     Notification,
@@ -20,6 +19,7 @@ from .serializers import (
     NotificationTypeSerializer,
     UserNotificationTypePreferenceSerializer
 )
+
 
 class DefaultPageNumberPagination(PageNumberPagination):
     page_size = 10
