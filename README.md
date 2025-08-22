@@ -227,3 +227,107 @@ Example:
 ```
 curl "http://localhost:8000/api/projects/?search=solar&category.name=Tech"
 ```
+
+# OAuth Authentication Setup
+
+This project supports authentication using **OAuth providers** (**Google** and **GitHub**).
+
+## 🔹 Google OAuth Setup
+
+### Create Google OAuth Credentials
+1. Go to [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project (or select an existing one).
+3. Navigate to **APIs & Services → Credentials**.
+4. Click **Create Credentials → OAuth 2.0 Client ID**.
+5. If prompted, configure the consent screen.
+6. Add **Authorized Redirect URIs**:  `http://yourdomain.com/oauth/callback/`(example)
+7. Copy the **Client ID** and **Client Secret**.
+
+### Environment Variables
+Add the following to `.env` file:
+
+```text
+GOOGLE_OAUTH_CLIENT_ID=your_google_client_id
+GOOGLE_OAUTH_CLIENT_SECRET=your_google_client_secret
+```
+## 🔹 GitHub OAuth Setup
+
+### Create GitHub OAuth App
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers).
+2. Click **New OAuth App**.
+3. Fill in application details.
+4. Set **Authorization Callback URL**:  `http://yourdomain.com/oauth/callback/`
+5. Copy the **Client ID** and generate a **Client Secret**.
+
+### Environment Variables
+Add these to `.env` file:
+
+```text
+GITHUB_OAUTH_CLIENT_ID=your_github_client_id
+GITHUB_OAUTH_CLIENT_SECRET=your_github_client_secret
+```
+
+## 🔐 Authentication Flow
+
+### OAuth Login Process
+
+#### Client-Side OAuth Flow
+1. Frontend redirects users to **Google/GitHub OAuth consent screen**.
+2. After consent, provider redirects back with **authorization code**.
+3. Frontend exchanges code for **access token** using provider's token endpoint.
+
+#### Backend Token Validation
+Example request:
+
+```http
+POST api/v1/auth/oauth/login/
+Content-Type: application/json
+
+{
+  "provider": "google",  // or "github"
+  "access_token": "oauth_provided_access_token"
+}
+```
+#### Backend Processing
+1. Validates access token with provider's API.
+2. Retrieves user profile information.
+3. Creates or updates local user record.
+4. Issues JWT tokens for authentication.
+
+#### Response
+```json
+{
+  "refresh": "jwt_refresh_token",
+  "access": "jwt_access_token",
+    "user": {
+    "id": "user_123",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_phone": "",
+    "title": "",
+    "role": "user"
+  }
+}
+```
+### JWT Token Issuance
+The system uses Django REST Framework Simple JWT for token management:
+- Access Token: Short-lived (default 5 minutes) for API authentication
+- Refresh Token: Longer-lived (default 24 hours) for obtaining new access tokens
+- Automatic User Creation: New users are automatically created with data from OAuth providers. is_active filed is set to True if email is verified and to False if not.
+
+### Troubleshooting
+Common Errors
+|    Error Message                        |      HTTP Status    |                    Cause                   |                     Solution                          |
+|-----------------------------------------|---------------------|--------------------------------------------|-------------------------------------------------------|
+| "Invalid provider or access_token type" | 400 Bad Request     | Non-string values provided                 | Ensure both `provider` and `access_token` are strings.|
+| "Provider or Access_token is missing"   | 400 Bad Request     | Missing parameters                         | Include both `provider` and `access_token` in request.|
+| "Unsupported OAuth provider"            | 400 Bad Request     | Provider other than Google/GitHub          | Use only `"google"` or `"github"` as provider value.  |
+| "Invalid Google token"                  | 400 Bad Request     | Expired, malformed, or revoked token       | Re-authenticate with Google to get a fresh token.     |
+| "Email not provided by OAuth provider"  | 400 Bad Request     | Email scope not granted or privacy settings| Ensure email scope is requested during OAuth flow.    |
+| "Google API timeout"                    | 408 Request Timeout | Network latency to Google APIs             | Retry the request.                                    |
+| "Security verification failed"          | 502 Bad Gateway     | SSL/TLS issues                             | Check system time and SSL certificates.               |
+| "Connection failed"                     | 502 Bad Gateway     | Network connectivity issues                | Check internet connection and firewall settings.      |
+| "No verified primary email found"       | 403 Forbidden       | GitHub account lacks verified email        | User must add/verify email in GitHub settings.        |
+| "GitHub API timeout"                    | 408 Request Timeout | Network latency to GitHub APIs             | Retry the request.                                    |
+| "Network error"                         | 502 Bad Gateway     | Cannot reach GitHub servers                | Check internet connection.                            |

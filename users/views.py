@@ -582,12 +582,11 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
     Inherits from Djoser's TokenObtainPairView to maintain all standard functionality
     while adding OAuth support through a unified authentication endpoint.
     
-    Endpoint: users/oauth/login/
+    Endpoint: api/v1/auth/oauth/login/
     Methods: POST
     
     Request Formats:
         - OAuth: {"provider": "google|github", "access_token": "oauth_token"}
-        - Password: {"email": "user@example.com", "password": "password123"}
     """
     
     permission_classes = [AllowAny]  # Explicitly mark as public endpoint

@@ -157,7 +157,7 @@ Content-Type: application/json
 
 ## Token Refresh
 
-Use `/api/token/refresh/` to obtain a new access token.
+Use `api/v1/auth/jwt/refresh/` to obtain a new access token.
 
 ### Response Example
 
@@ -176,7 +176,7 @@ This document describes the OAuth authentication endpoints for Google and GitHub
 
 ---
 
-## POST /users/oauth/login/
+## POST api/v1/auth/oauth/login/
 
 ### Description
 Authenticate users using Google or GitHub OAuth providers. The endpoint exchanges OAuth provider tokens for application JWT tokens and returns user information.
@@ -201,11 +201,10 @@ Authenticate users using Google or GitHub OAuth providers. The endpoint exchange
     "user": {
       "id": "user_123",
       "email": "user@example.com",
-      "username": "username123",
       "first_name": "John",
       "last_name": "Doe",
-      "user_phone": "+1234567890",
-      "title": "Software Developer",
+      "user_phone": "",
+      "title": "",
       "role": "user"
     }
   }
@@ -215,6 +214,7 @@ Authenticate users using Google or GitHub OAuth providers. The endpoint exchange
 
 | Status Code | Description |
 |-------------|-------------|
+| `200 OK`|Successful authentication|
 | `400 Bad Request` | Invalid request parameters or malformed data |
 | `401 Unauthorized` | Authentication failed or invalid credentials |
 | `403 Forbidden` | Authenticated but insufficient permissions |
@@ -252,6 +252,6 @@ The OAuth callback URLs are configured to handle redirects after successful auth
      ```
 
 4. **ExchangeCode for Token**:
-  -Send the authorization code to your backend API `/users/oauth/login/` to exchange it for an access token.
+  -Send the authorization code to your backend API `api/v1/auth/oauth/login/` to exchange it for an access token.
 =======
 
