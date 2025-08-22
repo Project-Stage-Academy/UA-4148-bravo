@@ -13,7 +13,7 @@ export class Validator {
     static validators = {
         companyName: (value) => /^[\w\s]{2,}$/.test(value),
         email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-        password: (value) => /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value),
+        password: (value) => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(value),
         confirmPassword: (value, data) => typeof value === "string" && value.trim() !== "" && value === data.password,
         firstName: (value) => /^[A-Za-z]{2,}$/.test(value),
         lastName: (value) => /^[A-Za-z]{2,}$/.test(value),

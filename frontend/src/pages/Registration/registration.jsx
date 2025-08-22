@@ -5,7 +5,6 @@ import { Validator } from '../../utils/validation/validate';
 import Button from '../../components/Button/button';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import TextInput from '../../components/TextInput/textInput';
-import Checkbox from '../../components/Checkbox/checkbox';
 import HiddenInput from '../../components/HiddenInput/hiddenInput';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 
@@ -21,6 +20,10 @@ import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 function Registration() {
     // This component handles user registration
     const { setUser, register } = useAuthContext();
+
+    // Simple brute force protection
+    const [attempts, setAttempts] = useState(0);
+    const [isLocked, setIsLocked] = useState(false);
 
     // Hook to navigate programmatically
     const navigate = useNavigate();
@@ -41,7 +44,7 @@ function Registration() {
 
     // Function to handle server-side errors
     const handleError = (error) => {
-        if (error.response && error.response.status === 401) {
+        if (error?.response && error?.response?.data?.errors?.email) {
             setErrors(prev => ({
                 ...prev,
                 email: Validator.serverSideErrorMessages.emailAlreadyExist
@@ -56,6 +59,8 @@ function Registration() {
 
     // Function to handle form submission
     const handleSubmit = () => {
+        if (isLocked) return;
+
         const validationErrors = Validator.validate(
             formData
         );
@@ -77,7 +82,33 @@ function Registration() {
 
                     navigate('/auth/register/confirm');
                 })
-                .catch(handleError);
+                .catch((error) => {
+                    setAttempts(() => {
+                        const next = attempts + 1;
+                        console.log(next);
+
+                        if (next >= 5) {
+                            setIsLocked(true);
+                            setErrors(prevErrors => ({
+                                ...prevErrors,
+                                unexpected: "Повторіть спробу через 30 секунд"
+                            }));
+
+                            setTimeout(() => {
+                                setAttempts(0);
+                                setErrors(prevErrors => ({
+                                    ...prevErrors,
+                                    unexpected: null
+                                }));
+                                setIsLocked(false);
+                            }, 30000);
+                        } else {
+                            handleError(error);
+                        }
+
+                        return next;
+                    });
+                });
         } else {
             console.warn('Errors:', validationErrors);
         }
@@ -111,7 +142,7 @@ function Registration() {
                             placeholder={'Введіть свою електронну пошту'}
                             className={errors['email'] && 'input__error-border-color'}
                         />
-                        { errors['email'] ? <p className={"panel--danger-text"}>{ errors['email'] }</p> : ""}
+                        { errors['email'] && <p className={"panel--danger-text"}>{ errors['email'] }</p> }
                     </div>
                     <div>
                         <PanelBodyTitle title={'Пароль'} className={'content--text-container__margin'}>
@@ -127,7 +158,7 @@ function Registration() {
                             placeholder={'Введіть пароль'}
                             className={errors['password'] && 'input__error-border-color'}
                         />
-                        { errors['password'] ? <p className={"panel--danger-text"}>{ errors['password'] }</p> : "" }
+                        { errors['password'] && <p className={"panel--danger-text"}>{ errors['password'] }</p> }
                     </div>
                     <div>
                         <PanelBodyTitle title={'Повторіть пароль'} className={'content--text-container__margin'} />
@@ -141,7 +172,7 @@ function Registration() {
                             placeholder={'Введіть пароль ще раз'}
                             className={errors['confirmPassword'] && 'input__error-border-color'}
                         />
-                        { errors['confirmPassword'] ? <p className={"panel--danger-text"}>{ errors["confirmPassword"] }</p> : "" }
+                        { errors['confirmPassword'] && <p className={"panel--danger-text"}>{ errors["confirmPassword"] }</p> }
                     </div>
                     <div>
                         <PanelBodyTitle title={'Прізвище'} className={'content--text-container__margin'} />
@@ -155,7 +186,7 @@ function Registration() {
                             placeholder={'Введіть ваше прізвище'}
                             className={errors['lastName'] && 'input__error-border-color'}
                         />
-                        { errors['lastName'] ? <p className={"panel--danger-text"}>{ errors["lastName"] }</p> : "" }
+                        { errors['lastName'] && <p className={"panel--danger-text"}>{ errors["lastName"] }</p> }
                     </div>
                     <div>
                         <PanelBodyTitle title={'Ім‘я'} className={'content--text-container__margin'} />
@@ -169,12 +200,14 @@ function Registration() {
                             placeholder={'Введіть ваше ім’я'}
                             className={errors['firstName'] && 'input__error-border-color'}
                         />
-                        { errors['firstName'] ? <p className={"panel--danger-text"}>{ errors["firstName"] }</p> : "" }
+                        { errors['firstName'] && <p className={"panel--danger-text"}>{ errors["firstName"] }</p> }
                     </div>
+                    { errors['unexpected'] && <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> }
                 </PanelBody>
                 <PanelNavigation>
                     <Button
                         onClick={handleSubmit}
+                        disabled={isLocked}
                         className={'button__padding panel--button'}
                     >
                         Зареєструватися

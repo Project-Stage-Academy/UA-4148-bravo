@@ -43,6 +43,7 @@ function RegistrationUserRepresent() {
 
     // Function to handle server-side errors
     const handleError = (error) => {
+        // TODO
         if (error.response && error.response.status === 401) {
             setErrors(prev => ({
                 ...prev,
@@ -64,6 +65,7 @@ function RegistrationUserRepresent() {
         setErrors(validationErrors);
 
         if (Object.values(validationErrors).every(value => value === null)) {
+            // TODO
             bindCompanyToUser
                 .then(() => {
                     navigate('/auth/register/completed');
@@ -100,7 +102,7 @@ function RegistrationUserRepresent() {
                         placeholder={'Введіть назву вашої компанії'}
                         className={errors['companyName'] && 'input__error-border-color'}
                     />
-                    { errors['companyName'] ? <p className={"panel--danger-text"}>{ errors['companyName'] }</p> : "" }
+                    { errors['companyName'] && <p className={"panel--danger-text"}>{ errors['companyName'] }</p> }
                 </div>
                 <div>
                     <PanelBodyTitle title={'Кого ви представляєте?'} className={'content--text-container__margin'} />
@@ -114,9 +116,9 @@ function RegistrationUserRepresent() {
                         errors={errors}
                         handleChange={handleChange}
                     />
-                    { errors['representation'] ? <p className={"panel--danger-text"}>{ errors["representation"] }</p> : "" }
+                    { errors['representation'] && <p className={"panel--danger-text"}>{ errors["representation"] }</p> }
                 </div>
-                { errors['unexpected'] ? <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> : ""}
+                { errors['unexpected'] && <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> }
             </PanelBody>
             <PanelNavigation>
                 <Button
