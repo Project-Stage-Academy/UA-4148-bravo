@@ -1,7 +1,12 @@
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
-from users.models import User
+from users.models import User, UserRole
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
 
 
 class AuthCookieTests(APITestCase):
@@ -19,15 +24,21 @@ class AuthCookieTests(APITestCase):
 
     def setUp(self):
         """Create a test user and configure the APIClient with CSRF checks enabled."""
+        role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
         self.user = User.objects.create_user(
             email="test@example.com",
-            password="securepassword123"
+            password=TEST_USER_PASSWORD,
+            first_name="Test",
+            last_name="User",
+            role=role_user,
+            is_active=True
         )
         self.client = APIClient(enforce_csrf_checks=True)
         self.csrf_url = reverse("csrf-init")
         self.login_url = reverse("jwt-create")
         self.refresh_url = reverse("jwt-refresh")
         self.logout_url = reverse("jwt-logout")
+        self.protected_url = reverse("auth-me")
 
     def _get_csrf_token(self):
         """
@@ -48,7 +59,7 @@ class AuthCookieTests(APITestCase):
         csrf_token = self._get_csrf_token()
         response = self.client.post(
             self.login_url,
-            {"email": self.user.email, "password": "securepassword123"},
+            {"email": self.user.email, "password": TEST_USER_PASSWORD},
             HTTP_X_CSRFTOKEN=csrf_token
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -66,7 +77,7 @@ class AuthCookieTests(APITestCase):
         csrf_token = self._get_csrf_token()
         self.client.post(
             self.login_url,
-            {"email": self.user.email, "password": "securepassword123"},
+            {"email": self.user.email, "password": TEST_USER_PASSWORD},
             HTTP_X_CSRFTOKEN=csrf_token
         )
         response = self.client.post(
@@ -92,12 +103,13 @@ class AuthCookieTests(APITestCase):
 
     def test_logout_deletes_cookie(self):
         """
-        Test that logging out clears the refresh token cookie on the client.
+        Ensure that logging out clears the refresh token cookie on the client
+        and returns HTTP 205 RESET CONTENT.
         """
         csrf_token = self._get_csrf_token()
         self.client.post(
             self.login_url,
-            {"email": self.user.email, "password": "securepassword123"},
+            {"email": self.user.email, "password": TEST_USER_PASSWORD},
             HTTP_X_CSRFTOKEN=csrf_token
         )
         response = self.client.post(
@@ -105,7 +117,40 @@ class AuthCookieTests(APITestCase):
             {},
             HTTP_X_CSRFTOKEN=csrf_token
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
+        self.assertIn("refresh_token", response.cookies)
+        cookie = response.cookies["refresh_token"]
+        self.assertEqual(cookie.value, "")
+
+    def test_logout_without_cookie_still_succeeds(self):
+        """
+        Ensure that logging out without a refresh token cookie still succeeds
+        and clears any existing refresh token cookie on the client.
+        """
+        csrf_token = self._get_csrf_token()
+        response = self.client.post(
+            self.logout_url,
+            {},
+            HTTP_X_CSRFTOKEN=csrf_token
+        )
+        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
+        self.assertIn("refresh_token", response.cookies)
+        cookie = response.cookies["refresh_token"]
+        self.assertEqual(cookie.value, "")
+
+    def test_logout_with_invalid_token_still_succeeds(self):
+        """
+        Ensure that logging out with an invalid refresh token still succeeds
+        and clears the refresh token cookie.
+        """
+        csrf_token = self._get_csrf_token()
+        self.client.cookies["refresh_token"] = "invalidtoken123"
+        response = self.client.post(
+            self.logout_url,
+            {},
+            HTTP_X_CSRFTOKEN=csrf_token
+        )
+        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
         self.assertIn("refresh_token", response.cookies)
         cookie = response.cookies["refresh_token"]
         self.assertEqual(cookie.value, "")
@@ -118,7 +163,7 @@ class AuthCookieTests(APITestCase):
         csrf_token = self._get_csrf_token()
         login_resp = self.client.post(
             self.login_url,
-            {"email": self.user.email, "password": "securepassword123"},
+            {"email": self.user.email, "password": TEST_USER_PASSWORD},
             HTTP_X_CSRFTOKEN=csrf_token
         )
         access_token = login_resp.data["access"]
@@ -157,19 +202,3 @@ class AuthCookieTests(APITestCase):
             HTTP_X_CSRFTOKEN=csrf_token
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_logout_without_cookie_still_succeeds(self):
-        """
-        Ensure that logging out without a refresh token cookie still succeeds
-        and clears any existing refresh token cookie on the client.
-        """
-        csrf_token = self._get_csrf_token()
-        response = self.client.post(
-            self.logout_url,
-            {},
-            HTTP_X_CSRFTOKEN=csrf_token
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("refresh_token", response.cookies)
-        cookie = response.cookies["refresh_token"]
-        self.assertEqual(cookie.value, "")

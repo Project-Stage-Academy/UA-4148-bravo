@@ -6,7 +6,7 @@ from users.serializers.token_serializer import CustomTokenObtainPairSerializer
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
@@ -22,6 +22,7 @@ class CSRFTokenView(APIView):
     def get(self, request, *args, **kwargs):
         token = get_token(request)
         return Response({"csrfToken": token})
+
 
 @extend_schema(
     tags=["Auth"],
@@ -134,6 +135,7 @@ class JWTLogoutView(APIView):
     2. Attempts to blacklist the refresh token to prevent further use (requires SimpleJWT blacklist app enabled).
     3. Deletes the 'refresh_token' cookie from the client to complete logout.
     """
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         """
@@ -150,14 +152,16 @@ class JWTLogoutView(APIView):
         Returns:
             Response: DRF Response confirming successful logout.
         """
-        refresh = request.COOKIES.get("refresh_token")
-        if refresh:
-            try:
-                token = RefreshToken(refresh)
-                token.blacklist()
-            except Exception:
-                pass
+        refresh_token = request.COOKIES.get('refresh_token')
+        if not refresh_token:
+            return Response({"detail": "No refresh token in cookie"}, status=status.HTTP_400_BAD_REQUEST)
 
-        response = Response({"detail": "Successfully logged out"}, status=status.HTTP_200_OK)
-        response.delete_cookie("refresh_token")
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except Exception as e:
+            logger.warning(f"Failed to blacklist refresh token: {str(e)}")
+
+        response = Response({"detail": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
+        response.delete_cookie('refresh_token')
         return response
