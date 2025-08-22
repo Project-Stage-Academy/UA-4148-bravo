@@ -1,13 +1,27 @@
-from .settings import *
+import sys
+from core.settings import * 
 
-# Use SQLite for tests
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'localhost',
+        'port': 9200
+    },
+    'signals': {
+        'pre_save': [],
+        'post_save': [],
+        'pre_delete': [],
+        'post_delete': []
+    }
+}
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-        "TEST": {
-            "NAME": BASE_DIR / "db.sqlite3",
-        },
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config('DB_NAME'),
+        "USER": config('DB_USER'),
+        "PASSWORD": config('DB_PASSWORD'),
+        "HOST": config('DB_HOST', default='db'),
+        "PORT": config('DB_PORT', default='5432'),
     }
 }
 

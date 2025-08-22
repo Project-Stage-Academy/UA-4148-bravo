@@ -2,8 +2,6 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from django.db import transaction
-from django.db.models import F
 import logging
 
 from .models import Subscription
@@ -13,11 +11,13 @@ from users.permissions import IsInvestor
 
 logger = logging.getLogger(__name__)
 
-
 class SubscriptionCreateView(CreateAPIView):
     """
     API endpoint for creating a new investment subscription.
-    Uses transaction management and F() expressions for safe concurrent updates.
+
+    - Requires authentication and investor role.
+    - Validates funding constraints and prevents invalid investments.
+    - Returns project funding status along with subscription details.
     """
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionCreateSerializer
@@ -27,15 +27,12 @@ class SubscriptionCreateView(CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            with transaction.atomic():
-                self.perform_create(serializer)
-                subscription = serializer.instance
-                Project.objects.filter(pk=subscription.project_id).update(
-                    current_funding=F('current_funding') + subscription.amount
-                )
-                project = Project.objects.select_related('startup', 'category').get(pk=subscription.project_id)
-                remaining_funding = project.funding_goal - project.current_funding
-                project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
+            self.perform_create(serializer)
+            subscription = serializer.instance
+
+            project = Project.objects.select_related('startup', 'category').get(pk=subscription.project_id)
+            remaining_funding = project.funding_goal - project.current_funding
+            project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
 
             logger.info(
                 "Subscription created successfully for project %s by user %s",

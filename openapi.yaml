@@ -9,6 +9,31 @@ info:
   license:
     name: Proprietary
 paths:
+  /api/v1/auth/auth/jwt/logout/:
+    post:
+      operationId: auth_auth_jwt_logout_create
+      description: |-
+        Takes a token and blacklists it. Must be used with the
+        `rest_framework_simplejwt.token_blacklist` app installed.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
   /api/v1/auth/jwt/create/:
     post:
       operationId: auth_jwt_create_create
@@ -92,6 +117,229 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/auth/me/:
+    get:
+      operationId: auth_me
+      description: Returns the profile information of the currently authenticated
+        user. Requires a valid JWT access token. If the token is missing or invalid,
+        returns 401 Unauthorized.
+      summary: Retrieve the currently authenticated user
+      tags:
+      - Auth
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+          description: ''
+        '401':
+          description: Unauthorized - missing or invalid token
+        '403':
+          description: Forbidden - user account is inactive
+        '404':
+          description: Not Found - user no longer exists
+  /api/v1/communications/notifications/:
+    get:
+      operationId: communications_notifications_list
+      description: |-
+        API endpoint that allows a user to list their notifications with filtering.
+      parameters:
+      - in: query
+        name: is_read
+        schema:
+          type: boolean
+      - in: query
+        name: type
+        schema:
+          type: string
+        description: Notification type code (slug)
+      - in: query
+        name: priority
+        schema:
+          type: string
+          enum: [low, medium, high]
+      - in: query
+        name: created_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+  /api/v1/communications/notifications/{notification_id}/:
+    get:
+      operationId: communications_notifications_retrieve
+      description: Retrieve a single notification by its UUID.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    delete:
+      operationId: communications_notifications_destroy
+      description: Delete a notification.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/communications/notifications/unread_count/:
+    get:
+      operationId: communications_notifications_unread_count_retrieve
+      description: Get the count of unread notifications for the current user.
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCount'
+          description: ''
+  /api/v1/communications/notifications/mark_all_as_read/:
+    post:
+      operationId: communications_notifications_mark_all_as_read_create
+      description: Mark all notifications as read for the current user.
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/mark_all_as_unread/:
+    post:
+      operationId: communications_notifications_mark_all_as_unread_create
+      description: Mark all notifications as unread for the current user.
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/{notification_id}/mark_as_read/:
+    post:
+      operationId: communications_notifications_mark_as_read_create
+      description: Mark a notification as read.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/{notification_id}/mark_as_unread/:
+    post:
+      operationId: communications_notifications_mark_as_unread_create
+      description: Mark a notification as unread.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/{notification_id}/resolve/:
+    get:
+      operationId: communications_notifications_resolve_retrieve
+      description: Return only the redirect payload for the notification.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
           description: ''
   /api/v1/auth/oauth/login/:
     post:
@@ -249,7 +497,7 @@ paths:
         This view validates the input data, retrieves the user by `user_id`,
         updates the `pending_email` if a new one is provided, generates a new
         verification token if not supplied, constructs the verification URL,
-        renders HTML and plain text email templates, sends the email, and returns
+        renders HTML and plain text email chat, sends the email, and returns
         a generic success response regardless of whether the user exists.
 
         The email is sent to `pending_email` if it exists; otherwise, the user's
@@ -482,6 +730,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserNotificationPreference'
+          description: ''
+  /api/v1/investments/api/v1/investments/subscriptions/create/:
+    post:
+      operationId: investments_api_v1_investments_subscriptions_create_create
+      description: |-
+        API endpoint for creating a new investment subscription.
+
+        - Requires authentication and investor role.
+        - Validates funding constraints and prevents invalid investments.
+        - Returns project funding status along with subscription details.
+      tags:
+      - investments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionCreate'
           description: ''
   /api/v1/investors/:
     get:
@@ -1172,35 +1452,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedProjectDocumentList'
-          description: ''
-  /api/v1/projects/subscriptions/create/:
-    post:
-      operationId: projects_subscriptions_create_create
-      description: |-
-        API endpoint for creating a new investment subscription.
-        Uses transaction management and F() expressions for safe concurrent updates.
-      tags:
-      - projects
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubscriptionCreateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/SubscriptionCreateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/SubscriptionCreateRequest'
-        required: true
-      security:
-      - bearerAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubscriptionCreate'
           description: ''
   /api/v1/startups/:
     get:
@@ -2010,6 +2261,42 @@ components:
           type: string
       required:
       - name
+    CurrentUser:
+      type: object
+      description: Public serializer for the currently logged-in user.
+      properties:
+        user_id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        user_phone:
+          type: string
+          readOnly: true
+          nullable: true
+        title:
+          type: string
+          readOnly: true
+          nullable: true
+        role:
+          type: string
+          readOnly: true
+      required:
+      - email
+      - first_name
+      - last_name
+      - role
+      - title
+      - user_id
+      - user_phone
     CustomTokenObtainPairRequest:
       type: object
       description: |-
@@ -2250,6 +2537,103 @@ components:
           description: Whether this notification type is active
       required:
       - name
+    Notification:
+      type: object
+      description: Serializer for user notifications.
+      properties:
+        notification_id:
+          type: string
+          format: uuid
+          readOnly: true
+        notification_type:
+          $ref: '#/components/schemas/NotificationType'
+        title:
+          type: string
+        message:
+          type: string
+        is_read:
+          type: boolean
+        priority:
+          type: string
+          enum: [low, medium, high]
+        priority_display:
+          type: string
+          description: Human-readable display value of priority
+        actor:
+          type: object
+          nullable: true
+          additionalProperties: true
+        redirect:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - notification_id
+      - notification_type
+      - title
+      - message
+      - is_read
+      - priority
+      - created_at
+      - updated_at
+    ActionStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    UnreadCount:
+      type: object
+      properties:
+        unread_count:
+          type: integer
+      required:
+      - unread_count
+    ResolveResponse:
+      type: object
+      properties:
+        redirect:
+          type: object
+          nullable: true
+          additionalProperties: true
+      required:
+      - redirect
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 1
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/communications/notifications/?page=2
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: null
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
     PaginatedProjectDocumentList:
       type: object
       required:
@@ -3199,6 +3583,26 @@ components:
       - user
     SubscriptionCreate:
       type: object
+      description: |-
+        Serializer for creating a new investment subscription.
+
+        Fields:
+            investor (Investor): The investor making the subscription.
+            project (Project): The project to invest in.
+            amount (Decimal): Investment amount, required and must be >= 0.01.
+
+        Validation:
+            - Ensures project exists and is a valid instance.
+            - Ensures the requesting user is an investor.
+            - Prevents self-investment (investor cannot fund their own startup project).
+            - Prevents investments into fully funded projects.
+            - Prevents investment amounts that exceed remaining funding.
+            - Ensures amount is greater than or equal to 0.01.
+
+        Creation:
+            - Uses database transactions with row-level locking to prevent race conditions.
+            - Recalculates effective funding using both DB aggregate and project's current_funding to avoid drift.
+            - Updates the project's current_funding field after saving the subscription.
       properties:
         id:
           type: integer
@@ -3210,25 +3614,34 @@ components:
         amount:
           type: string
           format: decimal
-          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
-        investment_share:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
       required:
       - amount
-      - created_at
       - id
-      - investment_share
       - investor
       - project
     SubscriptionCreateRequest:
       type: object
+      description: |-
+        Serializer for creating a new investment subscription.
+
+        Fields:
+            investor (Investor): The investor making the subscription.
+            project (Project): The project to invest in.
+            amount (Decimal): Investment amount, required and must be >= 0.01.
+
+        Validation:
+            - Ensures project exists and is a valid instance.
+            - Ensures the requesting user is an investor.
+            - Prevents self-investment (investor cannot fund their own startup project).
+            - Prevents investments into fully funded projects.
+            - Prevents investment amounts that exceed remaining funding.
+            - Ensures amount is greater than or equal to 0.01.
+
+        Creation:
+            - Uses database transactions with row-level locking to prevent race conditions.
+            - Recalculates effective funding using both DB aggregate and project's current_funding to avoid drift.
+            - Updates the project's current_funding field after saving the subscription.
       properties:
         investor:
           type: integer
@@ -3237,7 +3650,7 @@ components:
         amount:
           type: string
           format: decimal
-          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
       required:
       - amount
       - investor
