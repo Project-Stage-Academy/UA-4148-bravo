@@ -252,6 +252,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActionStatus'
           description: ''
+        '401':
+          description: Unauthorized
   /api/v1/communications/notifications/mark_all_as_unread/:
     post:
       operationId: communications_notifications_mark_all_as_unread_create
@@ -267,6 +269,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActionStatus'
           description: ''
+        '401':
+          description: Unauthorized
   /api/v1/communications/notifications/{notification_id}/mark_as_read/:
     post:
       operationId: communications_notifications_mark_as_read_create
@@ -289,6 +293,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActionStatus'
           description: ''
+        '401':
+          description: Unauthorized
   /api/v1/communications/notifications/{notification_id}/mark_as_unread/:
     post:
       operationId: communications_notifications_mark_as_unread_create
@@ -311,6 +317,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActionStatus'
           description: ''
+        '401':
+          description: Unauthorized
   /api/v1/communications/notifications/{notification_id}/resolve/:
     get:
       operationId: communications_notifications_resolve_retrieve

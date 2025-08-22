@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.urls import reverse
 from rest_framework import serializers
 from .models import (
     Notification, 
@@ -146,7 +147,10 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     def _get_investor_from_user(self, user):
         """Return Investor instance for a user, if present, else None."""
-        investor = getattr(user, 'investor', None)
+        try:
+            investor = user.investor 
+        except (Investor.DoesNotExist, AttributeError):
+            return None
         return investor if isinstance(investor, Investor) else None
 
     def get_actor(self, obj):
@@ -174,20 +178,38 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     def get_redirect(self, obj):
         """Compute a redirect target the frontend can use to navigate users.
-        Priority order: message -> project -> startup -> investor -> none.
+        Priority order: message -> project -> startup -> investor. Returns None if not applicable.
         """
-        for field, kind, path in [
-            ('related_message_id', 'message', '/messages/'),
-            ('related_project_id', 'project', '/projects/'),
-            ('related_startup_id', 'startup', '/startups/'),
+        for field, kind in [
+            ('related_message_id', 'message'),
+            ('related_project_id', 'project'),
+            ('related_startup_id', 'startup'),
         ]:
             rid = getattr(obj, field, None)
-            if rid:
-                return {'kind': kind, 'id': rid, 'url': f"{path}{rid}"}
+            if not rid:
+                continue
+            url = None
+            if kind == 'project':
+                try:
+                    url = reverse('project-detail', kwargs={'pk': rid})
+                except Exception:
+                    url = f"/projects/{rid}"
+            elif kind == 'startup':
+                try:
+                    url = reverse('startup-detail', kwargs={'pk': rid})
+                except Exception:
+                    url = f"/startups/{rid}"
+            elif kind == 'message':
+                url = f"/messages/{rid}"
+            return {'kind': kind, 'id': rid, 'url': url}
 
         user = getattr(obj, 'triggered_by_user', None)
         if user and getattr(obj, 'triggered_by_type', None) == NotificationTrigger.INVESTOR:
             investor = self._get_investor_from_user(user)
             if investor:
-                return {'kind': 'investor', 'id': investor.pk, 'url': f"/investors/{investor.pk}"}
-        return {'kind': 'none', 'id': None, 'url': None}
+                try:
+                    url = reverse('investor-detail', kwargs={'pk': investor.pk})
+                except Exception:
+                    url = f"/investors/{investor.pk}"
+                return {'kind': 'investor', 'id': investor.pk, 'url': url}
+        return None

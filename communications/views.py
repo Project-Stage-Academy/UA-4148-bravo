@@ -1,5 +1,5 @@
 import logging
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
@@ -27,7 +27,12 @@ class DefaultPageNumberPagination(PageNumberPagination):
 logger = logging.getLogger(__name__)
 
 
-class NotificationViewSet(viewsets.ModelViewSet):
+class NotificationViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
     """
     ViewSet for managing user notifications.
     """
@@ -93,18 +98,15 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
         return qs
     
-    def create(self, request, *args, **kwargs):
-        """Creation of notifications via API is not allowed."""
-        from rest_framework.exceptions import MethodNotAllowed
-        raise MethodNotAllowed('POST')
     
-    @action(detail=False, methods=['get'])
+    
+    @action(detail=False, methods=['get'], url_path='unread_count')
     def unread_count(self, request):
         """Get the count of unread notifications for the current user."""
         count = self.get_queryset().filter(is_read=False).count()
         return Response({'unread_count': count})
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='mark_as_read')
     def mark_as_read(self, request, notification_id=None):
         """
         Mark a notification as read.
@@ -112,8 +114,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         Response: {"status": "notification marked as read"}
         """
         notification = self.get_object()
-        notification.is_read = True
-        notification.save()
+        if not notification.is_read:
+            notification.is_read = True
+            notification.save(update_fields=['is_read', 'updated_at'])
         
         logger.info(
             "notifications.mark_as_read user=%s notification_id=%s",
@@ -122,7 +125,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         )
         return Response({'status': 'notification marked as read'})
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='mark_as_unread')
     def mark_as_unread(self, request, notification_id=None):
         """
         Mark a notification as unread.
@@ -130,8 +133,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         Response: {"status": "notification marked as unread"}
         """
         notification = self.get_object()
-        notification.is_read = False
-        notification.save(update_fields=['is_read', 'updated_at'])
+        if notification.is_read:
+            notification.is_read = False
+            notification.save(update_fields=['is_read', 'updated_at'])
         logger.info(
             "notifications.mark_as_unread user=%s notification_id=%s",
             getattr(request.user, 'user_id', getattr(request.user, 'id', None)),
@@ -139,7 +143,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         )
         return Response({'status': 'notification marked as unread'})
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='mark_all_as_read')
     def mark_all_as_read(self, request):
         """
         Mark all notifications as read for the current user.
@@ -156,7 +160,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         )
         return Response({'status': f'marked {updated} notifications as read'})
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='mark_all_as_unread')
     def mark_all_as_unread(self, request):
         """
         Mark all notifications as unread for the current user.
@@ -172,7 +176,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         )
         return Response({'status': f'marked {updated} notifications as unread'})
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], url_path='resolve')
     def resolve(self, request, notification_id=None):
         """
         Return just the redirect payload for the notification to help lightweight clients.

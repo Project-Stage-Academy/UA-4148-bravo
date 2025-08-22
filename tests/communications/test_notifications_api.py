@@ -154,13 +154,11 @@ class NotificationsApiTestCase(APITestCase):
 
     def test_create_disallowed(self):
         url = reverse('communications:notification-list')
-        payload = {
-            'notification_type': self.type_message.id,
-            'title': 'Nope',
-            'message': 'Should not create',
-        }
-        resp = self.client.post(url, payload, format='json')
-        self.assertEqual(resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        resp = self.client.options(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        allow_header = resp.headers.get('Allow') or resp.get('Allow') 
+        self.assertIsNotNone(allow_header)
+        self.assertNotIn('POST', allow_header)
 
     def test_unauthorized_access(self):
         client = APIClient()
