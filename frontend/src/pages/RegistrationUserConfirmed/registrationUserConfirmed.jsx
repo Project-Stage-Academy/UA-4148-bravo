@@ -21,11 +21,19 @@ function RegistrationUserConfirmed() {
     }
 
     return (
-        <Panel className={"panel__margin-large"}>
-            <PanelTitle>Залишилось декілька кроків</PanelTitle>
+        <Panel aria-labelledby="registrationUserConfirmed-title"
+               className={"panel__margin-large"}
+        >
+            <PanelTitle id="registrationUserConfirmed-title"
+                        aria-describedby="registrationUserConfirmed-help"
+            >
+                Залишилось декілька кроків
+            </PanelTitle>
             <PanelBody>
                 <div>
-                    <p className={"panel--font-size"}>
+                    <p id="registrationUserConfirmed-help"
+                       className={"panel--font-size"}
+                    >
                         Ви успішно підтвердили вказану електронну адресу.
                     </p>
                 </div>
@@ -34,6 +42,7 @@ function RegistrationUserConfirmed() {
                 <Button
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
+                    type="submit"
                 >
                     Продовжити реєстрацію
                 </Button>

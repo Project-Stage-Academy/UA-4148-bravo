@@ -181,9 +181,12 @@ function AuthProvider({ children }) {
                 console.error(err);
             });
             setUser(data);
-        } catch {
-            console.log('User not found');
-            setUser(null);
+        } catch (err) {
+            if (err.response?.status === 404) {
+                setUser(null);
+            } else {
+                throw err;
+            }
         }
     }, []);
 
@@ -251,6 +254,7 @@ function AuthProvider({ children }) {
         try {
             const { data } = await api.post('/api/v1/auth/jwt/refresh/');
             setAccessToken(data.access || null);
+            return data.access;
             /*
              * TODO
              * await loadUser();

@@ -24,11 +24,17 @@ function RegistrationCompleted() {
     }
 
     return (
-        <Panel className={"panel__margin-large"}>
-            <PanelTitle>Реєстрація завершена!</PanelTitle>
+        <Panel className={"panel__margin-large"}
+               aria-labelledby="registrationCompleted-title"
+        >
+            <PanelTitle
+                id="registrationCompleted-title"
+                aria-describedby="registrationCompleted-help"
+            >Реєстрація завершена!</PanelTitle>
             <PanelBody>
                 <div>
-                    <p className={"panel--font-size"}>
+                    <p id="registrationCompleted-help"
+                       className={"panel--font-size"}>
                         Ви успішно завершили реєстрацію
                     </p>
                 </div>
@@ -37,6 +43,7 @@ function RegistrationCompleted() {
                 <Button
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
+                    type="submit"
                 >
                     Повернутися до входу
                 </Button>

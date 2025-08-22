@@ -82,15 +82,25 @@ function RegistrationReconfirmation() {
     };
 
     return (
-        <Panel className={'panel__margin-large'}>
-            <PanelTitle>Надіслати лист для активації ще раз</PanelTitle>
+        <Panel className={'panel__margin-large'}
+               aria-labelledby="registrationReconfirmation-title"
+        >
+            <PanelTitle id="registrationReconfirmation-title"
+                        aria-describedby="registrationReconfirmation-help1 registrationReconfirmation-help2"
+            >
+                Надіслати лист для активації ще раз
+            </PanelTitle>
             <PanelBody>
                 <div>
-                    <p className={'panel--font-size'}>
+                    <p id="registrationReconfirmation-help1"
+                       className={'panel--font-size'}
+                    >
                         Введіть електронну адресу вказану при реєстрації для
                         повторного надіслення листа.
                     </p>
-                    <p className={'panel--font-size'}>
+                    <p id="registrationReconfirmation-help2"
+                       className={'panel--font-size'}
+                    >
                         На зазначену Вами електронну пошту буде відправлено
                         листа з посиланням для активації.
                     </p>
@@ -98,6 +108,7 @@ function RegistrationReconfirmation() {
                 <div>
                     <PanelBodyTitle title={'Електронна пошта'} />
                     <TextInput
+                        id="email"
                         name="email"
                         autoComplete="off"
                         autoCorrect="off"
@@ -105,9 +116,22 @@ function RegistrationReconfirmation() {
                         value={formData.email}
                         onChange={handleChange}
                         placeholder={'Введіть свою електронну пошту'}
-                        className={errors['email'] && 'input__error-border-color'}
+                        className={
+                            errors['email'] && 'input__error-border-color'
+                        }
+                        aria-labelledby="email-label"
+                        aria-describedby={errors['email'] ? 'email-error' : undefined}
+                        aria-invalid={!!errors['email']}
+                        aria-required="true"
                     />
-                    {errors['email'] && <p className={'panel--danger-text'}>{ errors['email'] }</p>}
+                    {errors['email'] && (
+                        <p id="email-error"
+                           className={'panel--danger-text'}
+                           role="alert"
+                        >
+                            {errors['email']}
+                        </p>
+                    )}
                 </div>
                 {errors['unexpected'] && <p className={'panel--danger-text'}>{ errors['unexpected'] }</p>}
             </PanelBody>
@@ -115,6 +139,7 @@ function RegistrationReconfirmation() {
                 <Button
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
+                    type="submit"
                 >
                     Надіслати
                 </Button>

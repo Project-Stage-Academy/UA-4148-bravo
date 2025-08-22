@@ -47,7 +47,7 @@ function RegistrationUserRepresent() {
         if (error.response && error.response.status === 401) {
             setErrors(prev => ({
                 ...prev,
-                email: Validator.serverSideErrorMessages.companyAlreadyExist
+                companyName: Validator.serverSideErrorMessages.companyAlreadyExist
             }));
         } else {
             setErrors(prev => ({
@@ -66,7 +66,7 @@ function RegistrationUserRepresent() {
 
         if (Object.values(validationErrors).every(value => value === null)) {
             // TODO
-            bindCompanyToUser
+            bindCompanyToUser(formData.companyName, formData.representation.company ? 'investor' : 'startup')
                 .then(() => {
                     navigate('/auth/register/completed');
                 })
@@ -87,12 +87,18 @@ function RegistrationUserRepresent() {
     };
 
     return (
-        <Panel className={"panel__margin-large"}>
-            <PanelTitle>Залишилось декілька кроків</PanelTitle>
+        <Panel aria-labelledby="registrationUserRepresent-title"
+               className={"panel__margin-large"}
+        >
+            <PanelTitle id="registrationUserRepresent-title">Залишилось декілька кроків</PanelTitle>
             <PanelBody>
                 <div>
-                    <PanelBodyTitle title={'Електронна пошта'} className={'content--text-container__margin'} />
+                    <PanelBodyTitle id="companyName-label"
+                                    title={'Назва компанії'}
+                                    className={'content--text-container__margin'}
+                    />
                     <TextInput
+                        id="companyName"
                         name="companyName"
                         autoComplete="off"
                         autoCorrect="off"
@@ -101,11 +107,26 @@ function RegistrationUserRepresent() {
                         onChange={handleChange}
                         placeholder={'Введіть назву вашої компанії'}
                         className={errors['companyName'] && 'input__error-border-color'}
+                        aria-labelledby="companyName-label"
+                        aria-describedby={errors['companyName'] ? 'companyName-error' : undefined}
+                        aria-invalid={!!errors['companyName']}
+                        aria-required="true"
                     />
-                    { errors['companyName'] && <p className={"panel--danger-text"}>{ errors['companyName'] }</p> }
+                    {errors['companyName'] && (
+                        <p id="companyName-error"
+                           className={'panel--danger-text'}
+                           role="alert"
+                        >
+                            {errors['companyName']}
+                        </p>
+                    )}
                 </div>
                 <div>
-                    <PanelBodyTitle title={'Кого ви представляєте?'} className={'content--text-container__margin'} />
+                    <PanelBodyTitle
+                        id="representation-title"
+                        title={'Кого ви представляєте?'}
+                        className={'content--text-container__margin'}
+                    />
                     <Checkbox
                         groupKey={"representation"}
                         values={formData.representation}
@@ -115,15 +136,35 @@ function RegistrationUserRepresent() {
                         }}
                         errors={errors}
                         handleChange={handleChange}
+                        isGrouped={true}
+                        aria-labelledby="representation-label"
+                        aria-describedby={errors['representation'] ? 'representation-error' : undefined}
+                        aria-invalid={!!errors['representation']}
+                        aria-required="true"
                     />
-                    { errors['representation'] && <p className={"panel--danger-text"}>{ errors["representation"] }</p> }
+                    {errors['representation'] && (
+                        <p id="representation-error"
+                           className={'panel--danger-text'}
+                           role="alert"
+                        >
+                            {errors['representation']}
+                        </p>
+                    )}
                 </div>
-                { errors['unexpected'] && <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> }
+                { errors['unexpected'] && (
+                    <p id="unexpected-error"
+                       className={"panel--danger-text"}
+                       role="alert"
+                    >
+                        { errors['unexpected'] }
+                    </p>)
+                }
             </PanelBody>
             <PanelNavigation>
                 <Button
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
+                    type="submit"
                 >
                     Продовжити
                 </Button>
