@@ -14,7 +14,7 @@ from users.tasks import send_welcome_oauth_email_task
 
 User = get_user_model()
 
-@patch('users.views.OAuthTokenObtainPairView.throttle_classes', [])
+@patch('users.views.oauth_view.OAuthTokenObtainPairView.throttle_classes', [])
 class OAuthTokenObtainPairViewTests(TestCase):
     """
     Test suite for the extended OAuthTokenObtainPairView that handles both
@@ -276,7 +276,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
     # ------------------------------
     # Edge & safety tests
     # ------------------------------
-    @patch("users.views.requests.get")
+    @patch("users.views.oauth_view.requests.get")
     def test_no_real_http_calls(self, mock_get):
         from unittest.mock import Mock
         """
@@ -317,7 +317,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
         """
         Test failure when OAuth provider response JSON is not a dictionary.
         """
-        with patch("users.views.requests.get") as mock_get:
+        with patch("users.views.oauth_view.requests.get") as mock_get:
             mock_get.return_value.status_code = 200
             mock_get.return_value.json.return_value = "not_a_dict"
             mock_get.return_value.raise_for_status.return_value = None

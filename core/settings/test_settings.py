@@ -1,4 +1,4 @@
-from .settings import *
+from core.settings import *
 
 # Use SQLite for tests
 DATABASES = {
