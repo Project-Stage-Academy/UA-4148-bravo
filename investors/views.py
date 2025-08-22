@@ -6,7 +6,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from investors.models import Investor, SavedStartup
-from investors.serializers import InvestorSerializer, SavedStartupSerializer
+from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
 from users.permissions import CanCreateCompanyPermission
 
