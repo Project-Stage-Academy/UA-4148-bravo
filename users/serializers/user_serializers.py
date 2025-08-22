@@ -5,6 +5,7 @@ from djoser.serializers import UserSerializer
 from rest_framework import serializers
 from users.models import UserRole
 from users.validators import CustomPasswordValidator
+from django.contrib.auth.password_validation import validate_password
 
 User = get_user_model()
 custom_password_validator = CustomPasswordValidator()
@@ -24,12 +25,7 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
         write_only=True,
         required=True,
         style={'input_type': 'password'},
-        validators=[
-            RegexValidator(
-                regex=r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$',
-                message='Password must be at least 8 characters long and contain at least one letter and one number.'
-            )
-        ]
+        min_length=8,
     )
     password2 = serializers.CharField(
         write_only=True,
@@ -47,27 +43,29 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
             'last_name': {'required': True, 'allow_blank': False},
         }
 
-    def validate_first_name(self, value):
-        if not value.strip():
-            raise serializers.ValidationError("First name cannot be blank.")
-        return value
-
     def validate_email(self, value):
         """Validate that the email is not already in use."""
         if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
+            raise serializers.ValidationError(
+                "A user with this email already exists.", code="conflict"
+            )
         return value.lower()
+
+    def validate_password(self, value):
+        """Apply global Django password validators (length, similarity, common, numeric, custom)."""
+        try:
+            validate_password(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        return value
 
     def validate(self, data):
         """Validate the entire user data."""
-        password = data.get("password")
-        password2 = data.get("password2")
-
-        if password != password2:
+        if data['password'] != data.pop('password2'):
             raise serializers.ValidationError({"password": "Password fields didn't match."})
 
         try:
-            validate_email(data.get("email"))
+            validate_email(data.get('email'))
         except DjangoValidationError:
             raise serializers.ValidationError({"email": "Enter a valid email address."})
 

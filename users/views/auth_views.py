@@ -17,7 +17,6 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 # Local application imports
@@ -26,11 +25,6 @@ from users.serializers.user_serializers import CurrentUserSerializer
 from users.serializers.user_serializers import CustomUserCreateSerializer
 
 logger = logging.getLogger(__name__)
-
-
-class RegisterThrottle(AnonRateThrottle):
-    """Rate limiting for registration endpoint."""
-    rate = '5/hour'
 
 
 @extend_schema(
@@ -48,7 +42,6 @@ class UserRegistrationView(APIView):
     """
     permission_classes = [AllowAny]
     serializer_class = CustomUserCreateSerializer
-    throttle_classes = [RegisterThrottle]
 
     def _generate_verification_token(self):
         """Generate a secure random token for email verification."""
@@ -91,9 +84,14 @@ class UserRegistrationView(APIView):
 
         if not serializer.is_valid():
             logger.warning(f"Validation failed: {serializer.errors}")
+            email_errors = serializer.errors.get('email', [])
+            if not isinstance(email_errors, list):
+                email_errors = [email_errors]
+            is_conflict = any(getattr(err, 'code', '') in ('conflict', 'unique') for err in email_errors)
+
             return Response(
                 {'status': 'error', 'errors': serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_409_CONFLICT if is_conflict else status.HTTP_400_BAD_REQUEST
             )
 
         try:
