@@ -1,21 +1,16 @@
-from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer, UserSerializer
+from djoser.serializers import UserSerializer
 from django.contrib.auth import get_user_model
-from jsonschema import ValidationError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from djoser.serializers import PasswordResetConfirmSerializer as BasePasswordResetConfirmSerializer
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
-from .validators import CustomPasswordValidator
 from django.core.exceptions import ValidationError as DjangoValidationError
-from rest_framework import serializers
-from django.core.validators import validate_email, RegexValidator
+from django.core.validators import validate_email
 from users.models import UserRole 
 
 User = get_user_model()
-custom_password_validator = CustomPasswordValidator()
 
 
 
@@ -185,12 +180,7 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
         write_only=True,
         required=True,
         style={'input_type': 'password'},
-        validators=[
-            RegexValidator(
-                regex=r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$',
-                message='Password must be at least 8 characters long and contain at least one letter and one number.'
-            )
-        ]
+        min_length=8,
     )
     password2 = serializers.CharField(
         write_only=True,
@@ -211,8 +201,18 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         """Validate that the email is not already in use."""
         if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
+            raise serializers.ValidationError(
+                "A user with this email already exists.", code="conflict"
+            )
         return value.lower()
+
+    def validate_password(self, value):
+        """Apply global Django password validators (length, similarity, common, numeric, custom)."""
+        try:
+            validate_password(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        return value
 
     def validate(self, data):
         """Validate the entire user data."""

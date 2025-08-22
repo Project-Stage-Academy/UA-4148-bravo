@@ -142,6 +142,205 @@ paths:
           description: Forbidden - user account is inactive
         '404':
           description: Not Found - user no longer exists
+  /api/v1/communications/notifications/:
+    get:
+      operationId: communications_notifications_list
+      description: |-
+        API endpoint that allows a user to list their notifications with filtering.
+      parameters:
+      - in: query
+        name: is_read
+        schema:
+          type: boolean
+      - in: query
+        name: type
+        schema:
+          type: string
+        description: Notification type code (slug)
+      - in: query
+        name: priority
+        schema:
+          type: string
+          enum: [low, medium, high]
+      - in: query
+        name: created_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+  /api/v1/communications/notifications/{notification_id}/:
+    get:
+      operationId: communications_notifications_retrieve
+      description: Retrieve a single notification by its UUID.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    delete:
+      operationId: communications_notifications_destroy
+      description: Delete a notification.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/communications/notifications/unread_count/:
+    get:
+      operationId: communications_notifications_unread_count_retrieve
+      description: Get the count of unread notifications for the current user.
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCount'
+          description: ''
+  /api/v1/communications/notifications/mark_all_as_read/:
+    post:
+      operationId: communications_notifications_mark_all_as_read_create
+      description: Mark all notifications as read for the current user.
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/mark_all_as_unread/:
+    post:
+      operationId: communications_notifications_mark_all_as_unread_create
+      description: Mark all notifications as unread for the current user.
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/{notification_id}/mark_as_read/:
+    post:
+      operationId: communications_notifications_mark_as_read_create
+      description: Mark a notification as read.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/{notification_id}/mark_as_unread/:
+    post:
+      operationId: communications_notifications_mark_as_unread_create
+      description: Mark a notification as unread.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/{notification_id}/resolve/:
+    get:
+      operationId: communications_notifications_resolve_retrieve
+      description: Return only the redirect payload for the notification.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
+          description: ''
   /api/v1/auth/oauth/login/:
     post:
       operationId: auth_oauth_login_create
@@ -2338,6 +2537,103 @@ components:
           description: Whether this notification type is active
       required:
       - name
+    Notification:
+      type: object
+      description: Serializer for user notifications.
+      properties:
+        notification_id:
+          type: string
+          format: uuid
+          readOnly: true
+        notification_type:
+          $ref: '#/components/schemas/NotificationType'
+        title:
+          type: string
+        message:
+          type: string
+        is_read:
+          type: boolean
+        priority:
+          type: string
+          enum: [low, medium, high]
+        priority_display:
+          type: string
+          description: Human-readable display value of priority
+        actor:
+          type: object
+          nullable: true
+          additionalProperties: true
+        redirect:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - notification_id
+      - notification_type
+      - title
+      - message
+      - is_read
+      - priority
+      - created_at
+      - updated_at
+    ActionStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    UnreadCount:
+      type: object
+      properties:
+        unread_count:
+          type: integer
+      required:
+      - unread_count
+    ResolveResponse:
+      type: object
+      properties:
+        redirect:
+          type: object
+          nullable: true
+          additionalProperties: true
+      required:
+      - redirect
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 1
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/communications/notifications/?page=2
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: null
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
     PaginatedProjectDocumentList:
       type: object
       required:
