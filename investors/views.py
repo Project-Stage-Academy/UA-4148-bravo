@@ -7,6 +7,8 @@ from rest_framework.response import Response
 
 from investors.models import Investor, SavedStartup
 from investors.serializers import InvestorSerializer, SavedStartupSerializer
+from investors.serializers.investor_create import InvestorCreateSerializer
+from users.permissions import CanCreateCompanyPermission
 
 logger = logging.getLogger(__name__) 
 
@@ -18,8 +20,22 @@ class InvestorViewSet(viewsets.ModelViewSet):
     """
     queryset = Investor.objects.select_related("user", "industry", "location")
     serializer_class = InvestorSerializer
-    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action == 'create':
+            return [IsAuthenticated(), CanCreateCompanyPermission()]
+        return [IsAuthenticated()]
 
+    def get_serializer_class(self):
+        """
+        Return the appropriate serializer class based on the request action.
+        """
+        if self.action == 'create':
+            return InvestorCreateSerializer
+        return InvestorSerializer
 
 class IsSavedStartupOwner(BasePermission):
     """
