@@ -13,7 +13,7 @@ custom_password_validator = CustomPasswordValidator()
 class CustomUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         model = User
-        fields = ('id', 'username', 'email')
+        fields = ('user_id', 'username', 'email')
 
 
 class CustomUserCreateSerializer(serializers.ModelSerializer):
@@ -47,6 +47,11 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
             'last_name': {'required': True, 'allow_blank': False},
         }
 
+    def validate_first_name(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("First name cannot be blank.")
+        return value
+
     def validate_email(self, value):
         """Validate that the email is not already in use."""
         if User.objects.filter(email__iexact=value).exists():
@@ -55,11 +60,14 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Validate the entire user data."""
-        if data['password'] != data.pop('password2'):
+        password = data.get("password")
+        password2 = data.get("password2")
+
+        if password != password2:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
 
         try:
-            validate_email(data.get('email'))
+            validate_email(data.get("email"))
         except DjangoValidationError:
             raise serializers.ValidationError({"email": "Enter a valid email address."})
 

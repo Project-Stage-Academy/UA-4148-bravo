@@ -9,15 +9,35 @@ info:
   license:
     name: Proprietary
 paths:
+  /api/v1/auth/csrf/:
+    get:
+      operationId: auth_csrf_init
+      description: |
+        Initializes CSRF protection by setting a CSRF cookie.
+        Frontend must call this endpoint before sending any POST/PUT/PATCH/DELETE requests.
+      summary: Initialize CSRF protection
+      tags:
+        - Auth
+      responses:
+        '200':
+          description: CSRF cookie set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: CSRF cookie set
   /api/v1/auth/jwt/create/:
     post:
       operationId: auth_jwt_create_create
-      description: |-
+      description: |
         Custom view for obtaining JWT tokens.
         Uses CustomTokenObtainPairSerializer for token generation.
       summary: Obtain JWT access/refresh tokens
       tags:
-      - Auth
+        - Auth
       requestBody:
         content:
           application/json:
@@ -31,21 +51,29 @@ paths:
               $ref: '#/components/schemas/CustomTokenObtainPairRequest'
         required: true
       security:
-      - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
-          description: No response body
+          description: Access token returned; refresh token set in HttpOnly cookie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                    description: Access JWT token
         '401':
           description: Invalid credentials
   /api/v1/auth/jwt/logout/:
     post:
       operationId: auth_jwt_logout_create
-      description: |-
-        Takes a token and blacklists it. Must be used with the
-        `rest_framework_simplejwt.token_blacklist` app installed.
+      description: |
+        Invalidates the refresh token and clears the authentication cookie.
+        Requires `rest_framework_simplejwt.token_blacklist` app installed.
       summary: Logout (blacklist refresh token)
       tags:
-      - Auth
+        - Auth
       requestBody:
         content:
           application/json:
@@ -59,40 +87,53 @@ paths:
               $ref: '#/components/schemas/TokenBlacklistRequest'
         required: true
       security:
-      - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
-          description: No response body
-  /api/v1/auth/jwt/refresh/:
-    post:
-      operationId: auth_jwt_refresh_create
-      description: |-
-        Takes a refresh type JSON web token and returns an access type JSON web
-        token if the refresh token is valid.
-      summary: Refresh JWT access token
-      tags:
-      - Auth
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-        required: true
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
+          description: Logout successful
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenRefresh'
-          description: ''
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Successfully logged out
+  /api/v1/auth/jwt/refresh/:
+    post:
+      operationId: auth_jwt_refresh_create
+      description: |
+        Takes a refresh token from HttpOnly cookie and returns a new access token if valid.
+      summary: Refresh JWT access token
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: New access token returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                    description: New access JWT token
+        '401':
+          description: Unauthorized / Invalid refresh token
   /api/v1/auth/oauth/login/:
     post:
       operationId: auth_oauth_login_create

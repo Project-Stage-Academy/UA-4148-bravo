@@ -92,7 +92,7 @@ class CustomPasswordResetView(APIView):
 
         context = {"user": user}
         to = [getattr(user, User.EMAIL_FIELD)]
-        PasswordResetEmail(request, context).send(to)
+        PasswordResetEmail(request=request._request, context=context).send(to)
 
         return Response({"detail": "Password reset instructions have been sent to the provided email."},
                         status=status.HTTP_200_OK)

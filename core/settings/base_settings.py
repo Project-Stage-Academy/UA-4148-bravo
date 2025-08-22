@@ -5,7 +5,9 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Security
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY', default=None)
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY is not set. Please define it in environment variables or .env file.")
 DEBUG = config('DEBUG', default=False, cast=bool)
 DOCS_ENABLED = config('DOCS_ENABLED', default=True, cast=bool)
 

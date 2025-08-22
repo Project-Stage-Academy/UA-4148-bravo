@@ -12,6 +12,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_protect
 
+from validation.validate_token import safe_decode
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,23 +60,23 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             Response: DRF Response containing the access token and
                       the refresh token set in an HTTPOnly cookie.
         """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        response = super().post(request, *args, **kwargs)
 
-        user = serializer.user
-        refresh = RefreshToken.for_user(user)
-        access = refresh.access_token
-
-        response = Response({"access": str(access)}, status=status.HTTP_200_OK)
+        if "refresh" not in response.data:
+            return Response(
+                {"detail": "Refresh token missing."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         response.set_cookie(
             key="refresh_token",
-            value=str(refresh),
+            value=response.data["refresh"],
             httponly=True,
             secure=True,
             samesite="Lax",
-            max_age=60 * 60 * 24,
+            max_age=60 * 60 * 24 * 7,
         )
+
         return response
 
 
@@ -112,8 +114,13 @@ class CookieTokenRefreshView(TokenRefreshView):
                       Returns 401 if no refresh token cookie is found.
         """
         refresh = request.COOKIES.get("refresh_token")
-        if refresh is None:
-            return Response({"detail": "No refresh token provided"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            safe_decode(refresh)
+        except Exception as e:
+            response = Response({"detail": str(e)}, status=status.HTTP_205_RESET_CONTENT)
+            response.delete_cookie("refresh_token")
+            return response
 
         serializer = self.get_serializer(data={"refresh": refresh})
         serializer.is_valid(raise_exception=True)
@@ -152,16 +159,16 @@ class JWTLogoutView(APIView):
         Returns:
             Response: DRF Response confirming successful logout.
         """
-        refresh_token = request.COOKIES.get('refresh_token')
-        if not refresh_token:
-            return Response({"detail": "No refresh token in cookie"}, status=status.HTTP_400_BAD_REQUEST)
+        refresh_token = request.COOKIES.get("refresh_token")
 
-        try:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-        except Exception as e:
-            logger.warning(f"Failed to blacklist refresh token: {str(e)}")
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception as e:
+                logger.warning(f"Failed to blacklist refresh token: {str(e)}")
+                pass
 
         response = Response({"detail": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
-        response.delete_cookie('refresh_token')
+        response.delete_cookie("refresh_token")
         return response

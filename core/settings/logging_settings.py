@@ -3,7 +3,10 @@ from core.settings.base_settings import BASE_DIR
 
 # Logs
 LOG_DIR = BASE_DIR / 'logs'
-LOG_DIR.mkdir(exist_ok=True)
+try:
+    LOG_DIR.mkdir(exist_ok=True)
+except Exception as e:
+    print(f"Could not create log dir: {e}")
 
 LOGGING = {
     'version': 1,

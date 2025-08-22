@@ -4,6 +4,8 @@ from rest_framework import status
 from users.models import User, UserRole
 import os
 from dotenv import load_dotenv
+import jwt
+from django.conf import settings
 
 load_dotenv()
 TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
@@ -64,6 +66,7 @@ class AuthCookieTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
         self.assertIn("refresh_token", response.cookies)
         cookie = response.cookies["refresh_token"]
         self.assertTrue(cookie["httponly"])
@@ -99,7 +102,7 @@ class AuthCookieTests(APITestCase):
             {},
             HTTP_X_CSRFTOKEN=csrf_token
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
 
     def test_logout_deletes_cookie(self):
         """
@@ -121,39 +124,36 @@ class AuthCookieTests(APITestCase):
         self.assertIn("refresh_token", response.cookies)
         cookie = response.cookies["refresh_token"]
         self.assertEqual(cookie.value, "")
+        self.assertEqual(cookie["max-age"], 0)
 
-    def test_logout_without_cookie_still_succeeds(self):
+    def test_logout_always_succeeds_and_clears_cookie(self):
         """
-        Ensure that logging out without a refresh token cookie still succeeds
-        and clears any existing refresh token cookie on the client.
+        Logout should always succeed and clear the refresh token cookie,
+        regardless of whether the refresh token is present, invalid, or missing.
         """
         csrf_token = self._get_csrf_token()
-        response = self.client.post(
-            self.logout_url,
-            {},
-            HTTP_X_CSRFTOKEN=csrf_token
-        )
-        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
-        self.assertIn("refresh_token", response.cookies)
-        cookie = response.cookies["refresh_token"]
-        self.assertEqual(cookie.value, "")
 
-    def test_logout_with_invalid_token_still_succeeds(self):
-        """
-        Ensure that logging out with an invalid refresh token still succeeds
-        and clears the refresh token cookie.
-        """
-        csrf_token = self._get_csrf_token()
-        self.client.cookies["refresh_token"] = "invalidtoken123"
-        response = self.client.post(
-            self.logout_url,
-            {},
-            HTTP_X_CSRFTOKEN=csrf_token
-        )
-        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
-        self.assertIn("refresh_token", response.cookies)
-        cookie = response.cookies["refresh_token"]
-        self.assertEqual(cookie.value, "")
+        scenarios = {
+            "without_cookie": None,
+            "with_invalid_cookie": "invalidtoken123",
+        }
+
+        for case, token in scenarios.items():
+            with self.subTest(case=case):
+                if token:
+                    self.client.cookies["refresh_token"] = token
+
+                response = self.client.post(
+                    self.logout_url,
+                    {},
+                    HTTP_X_CSRFTOKEN=csrf_token
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
+                self.assertIn("refresh_token", response.cookies)
+                cookie = response.cookies["refresh_token"]
+                self.assertEqual(cookie.value, "")
+                self.assertEqual(cookie["max-age"], 0)
 
     def test_access_token_works_for_protected_endpoint(self):
         """
@@ -201,4 +201,22 @@ class AuthCookieTests(APITestCase):
             {},
             HTTP_X_CSRFTOKEN=csrf_token
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
+
+    def test_jwt_algorithm(self):
+        """
+        Verify that the JWT access token is signed with the correct algorithm.
+        """
+        csrf_token = self._get_csrf_token()
+        login_resp = self.client.post(
+            self.login_url,
+            {"email": self.user.email, "password": TEST_USER_PASSWORD},
+            HTTP_X_CSRFTOKEN=csrf_token
+        )
+        self.assertEqual(login_resp.status_code, status.HTTP_200_OK)
+        access_token = login_resp.data["access"]
+
+        header = jwt.get_unverified_header(access_token)
+
+        expected_alg = settings.SIMPLE_JWT.get("ALGORITHM", "HS256")
+        self.assertEqual(header["alg"], expected_alg)

@@ -3,14 +3,34 @@ import sys
 from decouple import config
 from datetime import timedelta
 import mongoengine
-
+from typing import Any
 from core.settings.base_settings import DEBUG, SECRET_KEY
 
 AUTHENTICATION_BACKENDS = [
     'users.backends.EmailBackend',
+    'social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.github.GithubOAuth2',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('GOOGLE_CLIENT_ID')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_CLIENT_SECRET')
+
+SOCIAL_AUTH_GITHUB_KEY = config('GITHUB_CLIENT_ID')
+SOCIAL_AUTH_GITHUB_SECRET = config('GITHUB_CLIENT_SECRET')
+
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+    'users.pipelines.create_or_update_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+)
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -42,27 +62,24 @@ SOCIALACCOUNT_EMAIL_REQUIRED = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
+DEFAULT_SCHEMA_CLASS = 'drf_spectacular.openapi.AutoSchema'
+
+REST_FRAMEWORK: dict[str, Any] = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
     ),
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.UserRateThrottle',
-        'rest_framework.throttling.AnonRateThrottle',
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'user': '5/minute',
-        'anon': '2/minute',
-        'resend_email': '5/minute',
-
+    "DEFAULT_THROTTLE_RATES": {
+        "user": "5/minute",
+        "anon": "2/minute",
+        "resend_email": "5/minute"
     },
+    "DEFAULT_SCHEMA_CLASS": 'drf_spectacular.openapi.AutoSchema'
 }
-
-# drf-spectacular: use AutoSchema for OpenAPI generation
-REST_FRAMEWORK.update({
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-})
 
 if 'test' in sys.argv:
     REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
@@ -111,6 +128,14 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
+
+    # Cookie settings
+    "AUTH_COOKIE": "refresh_token",
+    "AUTH_COOKIE_DOMAIN": None,
+    "AUTH_COOKIE_SECURE": not DEBUG,
+    "AUTH_COOKIE_HTTP_ONLY": True,
+    "AUTH_COOKIE_PATH": "/",
+    "AUTH_COOKIE_SAMESITE": "Lax",
 }
 
 # CSRF
@@ -118,6 +143,7 @@ CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
@@ -193,6 +219,7 @@ AUTH_PASSWORD_VALIDATORS = [
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
+    "http://localhost:5173",
 ]
 
 # Elasticsearch DSL Configuration

@@ -1,5 +1,6 @@
 # Python standard library
 import logging
+import time
 from datetime import timedelta
 from smtplib import SMTPException
 
@@ -175,6 +176,7 @@ class ResendEmailView(APIView):
         try:
             user = User.objects.get(user_id=user_id)
         except User.DoesNotExist:
+            time.sleep(0.5)
             return Response(
                 {"detail": "If the account exists, a verification email has been sent."},
                 status=status.HTTP_202_ACCEPTED,
