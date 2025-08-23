@@ -70,8 +70,8 @@ class CanCreateCompanyPermission(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        has_startup = hasattr(request.user, 'startup')
-        has_investor = hasattr(request.user, 'investor')
+        has_startup = Startup.objects.filter(user=request.user).exists()
+        has_investor = Investor.objects.filter(user=request.user).exists()
 
         if has_startup or has_investor:
             return False

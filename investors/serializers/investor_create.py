@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from investors.models import Investor
-from startups.models import Industry, Location
+from startups.models import Startup, Industry, Location
 from mixins.social_links_mixin import SocialLinksValidationMixin
 
 
@@ -41,7 +41,7 @@ class InvestorCreateSerializer(SocialLinksValidationMixin, serializers.ModelSeri
         """
         Ensure the company name is unique, case-insensitively.
         """
-        if Investor.objects.filter(company_name__iexact=value).exists():
+        if self.instance is None and Investor.objects.filter(company_name__iexact=value).exists():
             raise serializers.ValidationError("An investor with this name already exists.")
         return value
 
@@ -54,6 +54,9 @@ class InvestorCreateSerializer(SocialLinksValidationMixin, serializers.ModelSeri
             raise serializers.ValidationError("Authenticated user not found in context.")
 
         user = request.user
-        validated_data['user'] = user
 
+        if Startup.objects.filter(user=user).exists():
+            raise serializers.ValidationError("You have already created a startup profile.")
+        
+        validated_data['user'] = user
         return Investor.objects.create(**validated_data)

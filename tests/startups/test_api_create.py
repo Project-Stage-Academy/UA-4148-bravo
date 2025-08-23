@@ -39,6 +39,8 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
         Ensure an authenticated user can create a new startup with valid data.
         """
         payload = self.get_valid_payload()
+        self.assertEqual(Startup.objects.count(), 0)
+
         response = self.client.post(self.url, payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -48,6 +50,8 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
         self.assertEqual(startup.company_name, payload["company_name"])
         self.assertEqual(startup.user, self.user_for_creation)
         self.assertIn("id", response.data)
+
+        self.assertEqual(Startup.objects.filter(user=self.user_for_creation).count(), 1)
 
     def test_unauthorized_creation_fails(self):
         """
@@ -99,7 +103,8 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("stage", response.data)
-        self.assertIn("is not a valid choice", str(response.data['stage']))
+        self.assertIn("is not a valid choice" in str(response.data['stage']))
+        self.assertIn("greater than or equal to", str(response.data["fund_size"]))
 
     def test_creation_missing_required_fields_fails(self):
         """

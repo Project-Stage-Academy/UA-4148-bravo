@@ -40,7 +40,7 @@ class StartupCreateSerializer(SocialLinksValidationMixin, serializers.ModelSeria
         """
         Ensure the company name is unique, case-insensitively.
         """
-        if Startup.objects.filter(company_name__iexact=value).exists():
+        if self.instance is None and Startup.objects.filter(company_name__iexact=value).exists():
             raise serializers.ValidationError("A startup with this name already exists.")
         return value
 
@@ -53,6 +53,9 @@ class StartupCreateSerializer(SocialLinksValidationMixin, serializers.ModelSeria
             raise serializers.ValidationError("Authenticated user not found in context.")
 
         user = request.user
-        validated_data['user'] = user
 
+        if Startup.objects.filter(user=user).exists() or hasattr(user, 'investor'):
+            raise serializers.ValidationError({"detail": "You have already created a company profile."})
+
+        validated_data['user'] = user
         return Startup.objects.create(**validated_data)

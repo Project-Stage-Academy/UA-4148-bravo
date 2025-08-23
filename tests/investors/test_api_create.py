@@ -41,6 +41,8 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         Ensure an authenticated user can create a new investor with valid data.
         """
         payload = self.get_valid_payload()
+        self.assertEqual(Investor.objects.count(), 0)
+        
         response = self.client.post(self.url, payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -50,6 +52,8 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         self.assertEqual(investor.company_name, payload["company_name"])
         self.assertEqual(investor.user, self.user_for_creation)
         self.assertIn("id", response.data)
+        
+        self.assertEqual(Investor.objects.filter(user=self.user_for_creation).count(), 1)
 
     def test_unauthorized_creation_fails(self):
         """
