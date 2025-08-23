@@ -20,7 +20,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 # Local application imports
-from users.models import UserRole
 from users.serializers.user_serializers import CurrentUserSerializer
 from users.serializers.user_serializers import CustomUserCreateSerializer
 
@@ -133,32 +132,6 @@ class UserRegistrationView(APIView):
 
 
 User = get_user_model()
-
-
-def get_default_user_role():
-    """
-    Retrieve the default 'user' role with caching and error handling.
-    
-    Returns:
-        UserRole: The default user role object
-        
-    Raises:
-        RuntimeError: If the default user role is not configured in the system
-    """
-    cache_key = "default_user_role"
-    default_role = cache.get(cache_key)
-
-    if default_role is None:
-        try:
-            default_role = UserRole.objects.get(role="user")
-            cache.set(cache_key, default_role, timeout=3600)  # Cache for 1 hour
-        except UserRole.DoesNotExist:
-            raise RuntimeError(
-                "Default 'user' role is not configured in the system. "
-                "Please create a UserRole with role='user'."
-            )
-
-    return default_role
 
 
 @extend_schema(

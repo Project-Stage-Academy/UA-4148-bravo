@@ -5,7 +5,6 @@ import logging
 import requests
 
 # Django imports
-from django.core.cache import cache
 from django.template.loader import render_to_string
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import status
@@ -16,38 +15,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 # Local application imports
-from users.models import User, UserRole
+from users.models import User
 from social_django.utils import load_strategy, load_backend
 from users.serializers.token_serializer import CustomTokenObtainPairSerializer
 from users.serializers.user_serializers import UserSerializer
 from users.tasks import send_welcome_oauth_email_task
+from utils.get_default_user_role import get_default_user_role
 
 logger = logging.getLogger(__name__)
-
-
-def get_default_user_role():
-    """
-    Retrieve the default 'user' role with caching and error handling.
-
-    Returns:
-        UserRole: The default user role object
-
-    Raises:
-        RuntimeError: If the default user role is not configured in the system
-    """
-    cache_key = "default_user_role"
-    default_role = cache.get(cache_key)
-
-    if default_role is None:
-        try:
-            default_role = UserRole.objects.get(role="user")
-            cache.set(cache_key, default_role, timeout=3600)  # Cache 1 hour
-        except UserRole.DoesNotExist:
-            raise RuntimeError(
-                "Default 'user' role is not configured. Please create UserRole with role='user'."
-            )
-
-    return default_role
 
 
 @extend_schema(
@@ -99,9 +74,15 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         provider = request.data.get("provider")
         access_token = request.data.get("access_token")
 
-        if not provider or not access_token:
+        if not isinstance(provider, str) or not provider.strip():
             return Response(
-                {"error": "Provider or access_token is missing"},
+                {"error": "Invalid provider"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not access_token:
+            return Response(
+                {"error": "access_token is missing"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -139,6 +120,19 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
 
         if not user:
             raise ValueError("Invalid or expired token")
+
+        existing = User.objects.filter(email=user.email).first()
+        if existing:
+            updated = False
+            if user.first_name and user.first_name != existing.first_name:
+                existing.first_name = user.first_name
+                updated = True
+            if user.last_name and user.last_name != existing.last_name:
+                existing.last_name = user.last_name
+                updated = True
+            if updated:
+                existing.save()
+            user = existing
 
         if provider == "github" and not getattr(user, "email", None):
             try:

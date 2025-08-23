@@ -11,12 +11,22 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_protect
-
 from validation.validate_token import safe_decode
 
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(
+    tags=["Auth"],
+    summary="Get CSRF token",
+    description="Returns a CSRF token in JSON. Used for subsequent requests that require CSRF protection.",
+    responses={
+        200: OpenApiResponse(
+            description="CSRF token retrieved successfully",
+            response= {"csrfToken": str}
+        )
+    },
+)
 class CSRFTokenView(APIView):
     permission_classes = [AllowAny]
 
@@ -169,6 +179,6 @@ class JWTLogoutView(APIView):
                 logger.warning(f"Failed to blacklist refresh token: {str(e)}")
                 pass
 
-        response = Response({"detail": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
+        response = Response({"detail": "Logout successful"}, status=status.HTTP_200_OK)
         response.delete_cookie("refresh_token")
         return response

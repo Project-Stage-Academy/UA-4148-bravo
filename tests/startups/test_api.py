@@ -25,7 +25,9 @@ class StartupAPITests(BaseAPITestCase):
         }
         self.url = reverse('startup-list')
 
-    def test_create_startup_success(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_create_startup_success(self, mock_has_object_permission, mock_has_permission):
         """
         Test that a startup can be successfully created via POST request to the startup-list endpoint.
         Verifies that the response status is HTTP 201 Created and the returned data matches the input.
@@ -42,7 +44,9 @@ class StartupAPITests(BaseAPITestCase):
         startup = Startup.objects.get(pk=data['id'])
         self.assertEqual(startup.user, self.user)
 
-    def test_get_startup_list(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_get_startup_list(self, mock_has_object_permission, mock_has_permission):
         """
         Test that the GET request to startup-list endpoint returns a list of startups,
         including at least one startup created in the test setup.
@@ -59,7 +63,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
-    def test_create_startup_validation_error(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_create_startup_validation_error(self, mock_has_object_permission, mock_has_permission):
         """
         Ensure that creating a startup with invalid data (empty company_name)
         returns HTTP 400 Bad Request and includes the relevant validation error.
@@ -70,7 +76,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('company_name', response.data)
 
-    def test_filter_by_industry(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_filter_by_industry(self, mock_has_object_permission, mock_has_permission):
         """
         Verify that the industry filter correctly returns startups only
         within the specified industry and excludes others.
@@ -93,7 +101,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertIn(startup1.company_name, returned_names)
         self.assertNotIn(startup2.company_name, returned_names)
 
-    def test_search_by_company_name(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_search_by_company_name(self, mock_has_object_permission, mock_has_permission):
         """
         Ensure that searching by a partial company name returns the matching startups.
         """
@@ -105,7 +115,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(any('Searchable' in s['company_name'] for s in response.data))
 
-    def test_retrieve_startup_detail(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_retrieve_startup_detail(self, mock_has_object_permission, mock_has_permission):
         """
         Verify that retrieving a single startup by its ID returns
         the correct details and HTTP 200 OK.
@@ -119,7 +131,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['company_name'], 'DetailStartup')
 
-    def test_update_startup_success(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_update_startup_success(self, mock_has_object_permission, mock_has_permission):
         """
         Ensure that a full update (PUT) to a startup works and
         returns HTTP 200 OK with the updated data.
@@ -142,7 +156,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['company_name'], 'UpdatedName')
 
-    def test_partial_update_startup(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_partial_update_startup(self, mock_has_object_permission, mock_has_permission):
         """
         Ensure that a partial update (PATCH) to a startup works and
         returns HTTP 200 OK with the updated field.
@@ -157,7 +173,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['company_name'], 'PartialUpdatedName')
 
-    def test_update_startup_validation_error(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_update_startup_validation_error(self, mock_has_object_permission, mock_has_permission):
         """
         Verify that updating a startup with invalid data
         (empty company_name) returns HTTP 400 Bad Request with errors.
@@ -172,7 +190,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('company_name', response.data)
 
-    def test_delete_startup(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_delete_startup(self, mock_has_object_permission, mock_has_permission):
         """
         Ensure that deleting a startup works, returns HTTP 204 No Content,
         and removes the object from the database.
@@ -186,7 +206,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Startup.objects.filter(pk=startup.pk).exists())
 
-    def test_create_startup_user_is_ignored(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_create_startup_user_is_ignored(self, mock_has_object_permission, mock_has_permission):
         """
         Even if a different user ID is passed in request,
         Startup should be created with request.user.
@@ -200,7 +222,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(startup.user, self.user)  # Має бути request.user
 
     @patch('startups.models.Startup.clean', side_effect=Exception("Invalid data"))
-    def test_create_startup_model_clean_error(self, mock_clean):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_create_startup_model_clean_error(self, mock_clean, mock_has_object_permission, mock_has_permission):
         """
         Simulate model validation error during creation.
         Should return HTTP 400.
@@ -221,7 +245,9 @@ class StartupAPITests(BaseAPITestCase):
         response = client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_update_startup_returns_updated_fields(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_update_startup_returns_updated_fields(self, mock_has_object_permission, mock_has_permission):
         """
         After update, API should return all updated fields correctly.
         """

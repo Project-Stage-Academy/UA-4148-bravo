@@ -135,7 +135,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
         self.assertEqual(user.last_name, 'Full Name')
 
     @patch('users.views.oauth_view.load_backend')
-    def test_oauth_missing_email(mock_load_backend, self):
+    def test_oauth_missing_email(self, mock_load_backend):
         """
         Test authentication failure when OAuth provider (Google/GitHub) does not provide a verified email.
         """
