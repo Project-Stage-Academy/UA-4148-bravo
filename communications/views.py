@@ -1,10 +1,12 @@
 import logging
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.shortcuts import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 
 from .models import (
     Notification,
@@ -19,29 +21,92 @@ from .serializers import (
     UserNotificationTypePreferenceSerializer
 )
 
+class DefaultPageNumberPagination(PageNumberPagination):
+    page_size = 10
+
 logger = logging.getLogger(__name__)
 
 
-class NotificationViewSet(viewsets.ModelViewSet):
+class NotificationViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
     """
     ViewSet for managing user notifications.
     """
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'notification_id'
-    http_method_names = ['get', 'patch', 'head', 'options']
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+    pagination_class = DefaultPageNumberPagination
 
     def get_queryset(self):
-        """Return only the authenticated user's notifications."""
-        return Notification.objects.filter(user=self.request.user)
+        """Return only the authenticated user's notifications with helpful joins and filters.
+
+        Supported query params:
+        - is_read: 'true' | 'false'
+        - type: notification type code (slug)
+        - priority: 'low' | 'medium' | 'high'
+        - created_after, created_before: ISO datetime strings
+        """
+        qs = (
+            Notification.objects
+            .filter(user=self.request.user)
+            .select_related('notification_type', 'triggered_by_user')
+        )
+
+        params = self.request.query_params
+
+        def _parse_bool(val):
+            if isinstance(val, bool):
+                return val
+            if val is None:
+                return None
+            s = str(val).strip().lower()
+            if s in {'1', 'true', 'yes'}:
+                return True
+            if s in {'0', 'false', 'no'}:
+                return False
+            return None
+
+        is_read_param = _parse_bool(params.get('is_read'))
+        if is_read_param is not None:
+            qs = qs.filter(is_read=is_read_param)
+
+        ntype_code = params.get('type')
+        if ntype_code:
+            qs = qs.filter(notification_type__code=ntype_code)
+
+
+        priority = params.get('priority')
+        if priority in {'low', 'medium', 'high'}:
+            qs = qs.filter(priority=priority)
+
+        created_after = params.get('created_after')
+        if created_after:
+            dt = parse_datetime(created_after)
+            if dt:
+                qs = qs.filter(created_at__gte=dt)
+
+        created_before = params.get('created_before')
+        if created_before:
+            dt = parse_datetime(created_before)
+            if dt:
+                qs = qs.filter(created_at__lte=dt)
+
+        return qs
     
-    @action(detail=False, methods=['get'])
+    
+    
+    @action(detail=False, methods=['get'], url_path='unread_count')
     def unread_count(self, request):
         """Get the count of unread notifications for the current user."""
         count = self.get_queryset().filter(is_read=False).count()
         return Response({'unread_count': count})
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='mark_as_read')
     def mark_as_read(self, request, notification_id=None):
         """
         Mark a notification as read.
@@ -49,8 +114,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         Response: {"status": "notification marked as read"}
         """
         notification = self.get_object()
-        notification.is_read = True
-        notification.save()
+        if not notification.is_read:
+            notification.is_read = True
+            notification.save(update_fields=['is_read', 'updated_at'])
         
         logger.info(
             "notifications.mark_as_read user=%s notification_id=%s",
@@ -58,8 +124,26 @@ class NotificationViewSet(viewsets.ModelViewSet):
             str(notification.notification_id),
         )
         return Response({'status': 'notification marked as read'})
+
+    @action(detail=True, methods=['post'], url_path='mark_as_unread')
+    def mark_as_unread(self, request, notification_id=None):
+        """
+        Mark a notification as unread.
+
+        Response: {"status": "notification marked as unread"}
+        """
+        notification = self.get_object()
+        if notification.is_read:
+            notification.is_read = False
+            notification.save(update_fields=['is_read', 'updated_at'])
+        logger.info(
+            "notifications.mark_as_unread user=%s notification_id=%s",
+            getattr(request.user, 'user_id', getattr(request.user, 'id', None)),
+            str(notification.notification_id),
+        )
+        return Response({'status': 'notification marked as unread'})
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='mark_all_as_read')
     def mark_all_as_read(self, request):
         """
         Mark all notifications as read for the current user.
@@ -75,6 +159,34 @@ class NotificationViewSet(viewsets.ModelViewSet):
             updated,
         )
         return Response({'status': f'marked {updated} notifications as read'})
+
+    @action(detail=False, methods=['post'], url_path='mark_all_as_unread')
+    def mark_all_as_unread(self, request):
+        """
+        Mark all notifications as unread for the current user.
+
+        Response: {"status": "marked <n> notifications as unread"}
+        """
+        now = timezone.now()
+        updated = self.get_queryset().filter(is_read=True).update(is_read=False, updated_at=now)
+        logger.info(
+            "notifications.mark_all_as_unread user=%s updated=%d",
+            getattr(request.user, 'user_id', getattr(request.user, 'id', None)),
+            updated,
+        )
+        return Response({'status': f'marked {updated} notifications as unread'})
+
+    @action(detail=True, methods=['get'], url_path='resolve')
+    def resolve(self, request, notification_id=None):
+        """
+        Return just the redirect payload for the notification to help lightweight clients.
+
+        Response: {"redirect": {...}}
+        """
+        notification = self.get_object()
+        serializer = self.get_serializer(notification)
+        data = serializer.data.get('redirect')
+        return Response({'redirect': data})
 
 
 class NotificationTypeViewSet(viewsets.ReadOnlyModelViewSet):

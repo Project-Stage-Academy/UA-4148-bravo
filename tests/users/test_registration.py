@@ -69,7 +69,7 @@ class UserRegistrationTests(APITestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertIn('email', response.data['errors'])
     
     def test_registration_with_missing_fields(self):
@@ -159,7 +159,7 @@ class UserRegistrationTests(APITestCase):
         parsed_url = urlparse(verification_link)
         path_parts = [part for part in parsed_url.path.strip('/').split('/') if part]
         
-        self.assertGreaterEqual(len(path_parts), 4, f"Unexpected URL format: {verification_link}")
+        self.assertGreaterEqual(len(path_parts), 3, f"Unexpected URL format: {verification_link}")
         self.assertEqual(path_parts[-3], 'verify-email')
         
         user_id = path_parts[-2]
