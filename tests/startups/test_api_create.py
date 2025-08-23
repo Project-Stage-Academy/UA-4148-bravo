@@ -109,7 +109,8 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("stage", response.data)
-        self.assertIn("is not a valid choice" in str(response.data['stage']))
+        
+        self.assertIn("is not a valid choice", str(response.data['stage']))
         self.assertIn("greater than or equal to", str(response.data["fund_size"]))
 
     def test_creation_missing_required_fields_fails(self):
