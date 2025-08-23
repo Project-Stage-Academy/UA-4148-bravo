@@ -110,15 +110,17 @@ class AuthCookieTests(APITestCase):
         and returns HTTP 205 RESET CONTENT.
         """
         csrf_token = self._get_csrf_token()
-        self.client.post(
+        login_response = self.client.post(
             self.login_url,
             {"email": self.user.email, "password": TEST_USER_PASSWORD},
             HTTP_X_CSRFTOKEN=csrf_token
         )
+        access_token = login_response.data["access"]
         response = self.client.post(
             self.logout_url,
             {},
-            HTTP_X_CSRFTOKEN=csrf_token
+            HTTP_X_CSRFTOKEN=csrf_token,
+            HTTP_AUTHORIZATION=f"Bearer {access_token}"
         )
         self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
         self.assertIn("refresh_token", response.cookies)
@@ -132,6 +134,12 @@ class AuthCookieTests(APITestCase):
         regardless of whether the refresh token is present, invalid, or missing.
         """
         csrf_token = self._get_csrf_token()
+        login_response = self.client.post(
+            self.login_url,
+            {"email": self.user.email, "password": TEST_USER_PASSWORD},
+            HTTP_X_CSRFTOKEN=csrf_token
+        )
+        access_token = login_response.data["access"]
 
         scenarios = {
             "without_cookie": None,
@@ -146,7 +154,8 @@ class AuthCookieTests(APITestCase):
                 response = self.client.post(
                     self.logout_url,
                     {},
-                    HTTP_X_CSRFTOKEN=csrf_token
+                    HTTP_X_CSRFTOKEN=csrf_token,
+                    HTTP_AUTHORIZATION=f"Bearer {access_token}"
                 )
 
                 self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)

@@ -215,22 +215,20 @@ class StartupAPITests(BaseAPITestCase):
         """
         other_user = self.get_or_create_user("fake@example.com", "Fake", "User")
         data = self.startup_data.copy()
-        data['user'] = other_user.pk  # Підміна користувача
+        data['user'] = other_user.pk
         response = self.client.post(self.url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         startup = Startup.objects.get(pk=response.data['id'])
-        self.assertEqual(startup.user, self.user)  # Має бути request.user
+        self.assertEqual(startup.user, self.user)
 
-    @patch('startups.models.Startup.clean', side_effect=Exception("Invalid data"))
+    @patch('startups.models.Startup.clean', side_effect=DjangoValidationError({'non_field_errors': ['Invalid data']}))
     @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
     @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
-    def test_create_startup_model_clean_error(self, mock_clean, mock_has_object_permission, mock_has_permission):
+    def test_create_startup_model_clean_error(self, mock_has_object_permission, mock_has_permission, mock_clean):
         """
         Simulate model validation error during creation.
         Should return HTTP 400.
         """
-        mock_clean.side_effect = DjangoValidationError({'non_field_errors': ['Invalid data']})
-
         response = self.client.post(self.url, self.startup_data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -179,6 +179,6 @@ class JWTLogoutView(APIView):
                 logger.warning(f"Failed to blacklist refresh token: {str(e)}")
                 pass
 
-        response = Response({"detail": "Logout successful"}, status=status.HTTP_200_OK)
+        response = Response({"detail": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
         response.delete_cookie("refresh_token")
         return response
