@@ -52,7 +52,7 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         self.assertEqual(investor.company_name, payload["company_name"])
         self.assertEqual(investor.user, self.user_for_creation)
         self.assertIn("id", response.data)
-        
+
         self.assertEqual(Investor.objects.filter(user=self.user_for_creation).count(), 1)
 
     def test_unauthorized_creation_fails(self):
@@ -69,15 +69,21 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         Ensure creating an investor with an already existing name fails.
         """
         payload = self.get_valid_payload()
-        self.client.post(self.url, payload, format='json')
+        response1 = self.client.post(self.url, payload, format='json')
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED, "First investor creation failed")
 
-        payload["email"] = "another-email@capitalventures.com"
-        response = self.client.post(self.url, payload, format='json')
+        second_user = self.get_or_create_user(
+            email="second-investor-creator@example.com", first_name="Second", last_name="Creator"
+        )
+        self.client.force_authenticate(user=second_user)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("company_name", response.data)
-        self.assertIn("already exists", str(response.data['company_name']))
+        payload["email"] = "another-contact@capitalventures.com"
+        response2 = self.client.post(self.url, payload, format='json')
 
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("company_name", response2.data)
+        self.assertIn("already exists", str(response2.data['company_name']))
+        
     def test_user_cannot_create_more_than_one_investor(self):
         """
         Ensure a user who already owns an investor profile cannot create another one.

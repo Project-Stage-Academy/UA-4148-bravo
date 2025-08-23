@@ -64,18 +64,24 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
 
     def test_create_with_duplicate_name_fails(self):
         """
-        Ensure creating a startup with an already existing name fails.
+        Ensure creating a startup with an already existing name fails with a
+        400 Bad Request, even if attempted by a different, valid user.
         """
         payload = self.get_valid_payload()
+        response1 = self.client.post(self.url, payload, format='json')
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED, "First startup creation failed")
 
-        self.client.post(self.url, payload, format='json')
+        second_user = self.get_or_create_user(
+            email="secondcreator@example.com", first_name="Second", last_name="Creator"
+        )
+        self.client.force_authenticate(user=second_user)
 
-        payload["email"] = "another-email@innovative-tech.com" 
-        response = self.client.post(self.url, payload, format='json')
+        payload["email"] = "another-contact@innovative-tech.com" 
+        response2 = self.client.post(self.url, payload, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("company_name", response.data)
-        self.assertIn("already exists", str(response.data['company_name']))
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("company_name", response2.data)
+        self.assertIn("already exists", str(response2.data['company_name']))
 
     def test_user_cannot_create_more_than_one_startup(self):
         """
