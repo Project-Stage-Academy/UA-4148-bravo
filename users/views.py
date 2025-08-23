@@ -3,6 +3,7 @@ import logging
 import secrets
 from datetime import timedelta
 from smtplib import SMTPException
+from urllib.parse import urljoin
 
 # Django imports
 from django.conf import settings
@@ -95,7 +96,9 @@ class JWTRefreshView(SimpleJWTRefreshView):
     summary="Logout (blacklist refresh token)",
 )
 class JWTLogoutView(SimpleJWTBlacklistView):
-    pass
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        return Response({"detail": "Successfully logged out."}, status=response.status_code)
 
 @extend_schema(
     tags=["Auth"],
@@ -119,8 +122,11 @@ class UserRegistrationView(APIView):
     
     def _send_verification_email(self, request, user, token):
         """Send verification email to the user."""
-        verification_relative_url = reverse('verify-email', kwargs={'user_id': user.user_id, 'token': token})
-        verification_url = f"{request.scheme}://{request.get_host()}{verification_relative_url}"
+        verification_relative_url = settings.FRONTEND_ROUTES["verify_email"].format(
+            user_id=user.user_id,
+            token=token,
+        )
+        verification_url = urljoin(settings.FRONTEND_URL, verification_relative_url)
         
         context = {
             'user': user,
@@ -154,14 +160,16 @@ class UserRegistrationView(APIView):
     
         if not serializer.is_valid():
             logger.warning(f"Validation failed: {serializer.errors}")
-            email_errors = serializer.errors.get('email', [])
-            if not isinstance(email_errors, list):
-                email_errors = [email_errors]
-            is_conflict = any(getattr(err, 'code', '') in ('conflict', 'unique') for err in email_errors)
-
+            if 'email' in serializer.errors and User.objects.filter(
+                email=request.data.get('email')
+            ).exists():
+                return Response(
+                    {'status': 'error', 'errors': serializer.errors},
+                    status=status.HTTP_409_CONFLICT
+                )
             return Response(
                 {'status': 'error', 'errors': serializer.errors},
-                status=status.HTTP_409_CONFLICT if is_conflict else status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
@@ -360,10 +368,11 @@ class ResendEmailView(APIView):
         if not token:
             token = EMAIL_VERIFICATION_TOKEN.make_token(user)
 
-        verification_relative_url = reverse(
-            'verify-email', kwargs={'user_id': user.user_id, 'token': token}
+        verification_url = settings.FRONTEND_ROUTES["verify_email"].format(
+            user_id=user.user_id,
+            token=token,
         )
-        verify_url = f"{settings.FRONTEND_URL}{verification_relative_url}"
+        verify_url = urljoin(settings.FRONTEND_URL, verification_url)
 
         context = {
             'user': user,
@@ -478,9 +487,29 @@ class CustomPasswordResetView(APIView):
         except User.DoesNotExist:
             return error_response({"email": "User with this email was not found."}, status.HTTP_404_NOT_FOUND)
 
-        context = {"user": user}
-        to = [getattr(user, User.EMAIL_FIELD)]
-        PasswordResetEmail(request, context).send(to)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_relative_url = settings.FRONTEND_ROUTES["reset_password"].format(
+            uid=uid,
+            token=token,
+        )
+        reset_url = urljoin(settings.FRONTEND_URL, reset_relative_url)
+
+        subject = "Reset your password"
+        context = {
+            "user": user,
+            "reset_url": reset_url,
+        }
+        html_message = render_to_string("email/password_reset.html", context)
+        plain_message = f"Use this link to reset your password: {reset_url}"
+
+        send_mail(
+            subject,
+            plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            html_message=html_message,
+        )
 
         return Response({"detail": "Password reset instructions have been sent to the provided email."}, status=status.HTTP_200_OK)
 
