@@ -1,6 +1,6 @@
 # Python standard library
 import logging
-import time
+from urllib.parse import urljoin
 from datetime import timedelta
 from smtplib import SMTPException
 
@@ -12,7 +12,6 @@ from django.core.exceptions import (
 )
 from django.core.mail import send_mail
 from django.db import IntegrityError
-from django.shortcuts import reverse
 from django.template.loader import render_to_string
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiResponse
@@ -176,7 +175,6 @@ class ResendEmailView(APIView):
         try:
             user = User.objects.get(user_id=user_id)
         except User.DoesNotExist:
-            time.sleep(0.5)
             return Response(
                 {"detail": "If the account exists, a verification email has been sent."},
                 status=status.HTTP_202_ACCEPTED,
@@ -202,10 +200,11 @@ class ResendEmailView(APIView):
         if not token:
             token = EMAIL_VERIFICATION_TOKEN.make_token(user)
 
-        verification_relative_url = reverse(
-            'verify-email', kwargs={'user_id': user.user_id, 'token': token}
+        verification_url = settings.FRONTEND_ROUTES["verify_email"].format(
+            user_id=user.user_id,
+            token=token,
         )
-        verify_url = f"{settings.FRONTEND_URL}{verification_relative_url}"
+        verify_url = urljoin(settings.FRONTEND_URL, verification_url)
 
         context = {
             'user': user,

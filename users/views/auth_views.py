@@ -1,13 +1,13 @@
 # Python standard library
 import logging
 import secrets
+from urllib.parse import urljoin
 
 # Django imports
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.shortcuts import reverse
 from django.template.loader import render_to_string
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiResponse
@@ -49,8 +49,11 @@ class UserRegistrationView(APIView):
 
     def _send_verification_email(self, request, user, token):
         """Send verification email to the user."""
-        verification_relative_url = reverse('verify-email', kwargs={'user_id': user.user_id, 'token': token})
-        verification_url = f"{request.scheme}://{request.get_host()}{verification_relative_url}"
+        verification_relative_url = settings.FRONTEND_ROUTES["verify_email"].format(
+            user_id=user.user_id,
+            token=token,
+        )
+        verification_url = urljoin(settings.FRONTEND_URL, verification_relative_url)
 
         context = {
             'user': user,
@@ -84,14 +87,16 @@ class UserRegistrationView(APIView):
 
         if not serializer.is_valid():
             logger.warning(f"Validation failed: {serializer.errors}")
-            email_errors = serializer.errors.get('email', [])
-            if not isinstance(email_errors, list):
-                email_errors = [email_errors]
-            is_conflict = any(getattr(err, 'code', '') in ('conflict', 'unique') for err in email_errors)
-
+            if 'email' in serializer.errors and User.objects.filter(
+                    email=request.data.get('email')
+            ).exists():
+                return Response(
+                    {'status': 'error', 'errors': serializer.errors},
+                    status=status.HTTP_409_CONFLICT
+                )
             return Response(
                 {'status': 'error', 'errors': serializer.errors},
-                status=status.HTTP_409_CONFLICT if is_conflict else status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
