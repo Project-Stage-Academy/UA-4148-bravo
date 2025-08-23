@@ -1,11 +1,11 @@
 from django.urls import reverse
 from rest_framework import status
-from tests.test_base_case import BaseAPITestCase
+from tests.test_base_case import BaseCompanyCreateAPITestCase
 from investors.models import Investor
 from startups.models import Industry, Location
 from users.models import User
 
-class InvestorCreateAPITests(BaseAPITestCase):
+class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
     """
     Tests for the investor creation API endpoint (POST /api/v1/investors/).
     """
