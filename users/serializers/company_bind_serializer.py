@@ -8,7 +8,7 @@ from validation.validate_string_fields import validate_max_length
 
 class CompanyBindingSerializer(serializers.Serializer):
     """ Serializer for validating company binding requests. """
-    company_name = serializers.CharField(max_length=254)
+    company_name = serializers.CharField(max_length=254, allow_blank=True)
     company_type = serializers.ChoiceField(choices=['startup', 'investor'])
 
     class Meta:

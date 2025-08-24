@@ -1,3 +1,4 @@
+import traceback
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,6 +13,7 @@ import logging
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from users.serializers.company_bind_serializer import CompanyBindingSerializer
+from django_countries.fields import Country
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +144,8 @@ class CompanyBindingView(APIView):
         except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.error(f"Error binding company: {str(e)}")
+            logger.error(f"Company binding error: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return Response(
                 {"error": "An unexpected error occurred."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -245,19 +248,22 @@ class CompanyBindingView(APIView):
     def _create_default_industry_and_location(self):
         """
         Create or get default industry and location instances.
-
-        Returns:
-            tuple: (industry_instance, location_instance)
         """
-        industry, _ = Industry.objects.update_or_create(
+        industry, _ = Industry.objects.get_or_create(
             name="Unknown",
             defaults={'description': 'Default unknown industry'}
         )
 
-        location, _ = Location.objects.update_or_create(
+        default_country = Country('US')
+
+        location, _ = Location.objects.get_or_create(
             city="Unknown",
-            country="Unknown",
-            defaults={'region': 'Unknown'}
+            country=default_country,
+            defaults={
+                'region': 'Unknown',
+                'address_line': 'Default address',
+                'postal_code': '00000'
+            }
         )
 
         return industry, location

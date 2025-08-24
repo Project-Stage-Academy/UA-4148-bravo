@@ -1,5 +1,9 @@
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
+from rest_framework import status
+from common.enums import Stage
+from investors.models import Investor
+from startups.models import Startup, Industry, Location
 from users.serializers.company_bind_serializer import CompanyBindingSerializer
 
 User = get_user_model()
@@ -51,16 +55,16 @@ class CompanyBindingSerializerTests(APITestCase):
     def test_serializer_company_name_validation(self):
         """Test company name validation scenarios"""
         test_cases = [
-            ('', False, 'cannot be empty'),
-            ('   ', False, 'cannot be empty'),
+            ('', False, 'Company name must not be empty'),
+            ('   ', False, 'Company name must not be empty'),
             ('Valid Name', True, None),
             ('Valid-Name', True, None),
             ("Valid's Name", True, None),
             ('Company 123', True, None),
             ('Компанія', False, 'Latin letters'),
             ('Company@Test', False, 'Latin letters'),
-            ('A' * 254, True, None),  # Max length
-            ('A' * 255, False, '254 characters'),  # Too long
+            ('A' * 254, True, None),
+            ('A' * 255, False, '254 characters'),
         ]
 
         for name, should_be_valid, error_contains in test_cases:
@@ -75,7 +79,9 @@ class CompanyBindingSerializerTests(APITestCase):
                     self.assertFalse(serializer.is_valid())
                     self.assertIn('company_name', serializer.errors)
                     if error_contains:
-                        self.assertIn(error_contains, str(serializer.errors['company_name']))
+                        error_text = str(serializer.errors['company_name'])
+                        self.assertIn(error_contains, error_text,
+                                      f"Error message '{error_text}' does not contain '{error_contains}'")
 
     def test_serializer_forbidden_company_names(self):
         """Test that serializer rejects forbidden company names"""
@@ -126,3 +132,64 @@ class CompanyBindingSerializerTests(APITestCase):
         self.assertTrue(serializer.is_valid())
         self.assertNotIn('extra_field', serializer.validated_data)
         self.assertNotIn('another_extra', serializer.validated_data)
+
+    def test_case_insensitive_company_name_check(self):
+        """Test that company name checking is case insensitive for both startups and investors"""
+        test_cases = [
+            ('startup', 'Different Case Startup', 'Startup with this name already exists'),
+            ('investor', 'Different Case Investor', 'Investor with this name already exists')
+        ]
+
+        other_user = User.objects.create_user(
+            email='other@example.com',
+            password='otherpass123',
+            first_name='Other',
+            last_name='User'
+        )
+
+        industry = Industry.objects.create(
+            name='Technology',
+            description='Tech industry'
+        )
+
+        location = Location.objects.create(
+            city='Test City',
+            country='US',
+            region='Test Region'
+        )
+
+        for company_type, company_name, expected_error in test_cases:
+            with self.subTest(company_type=company_type, company_name=company_name):
+                if company_type == 'startup':
+                    Startup.objects.create(
+                        user=other_user,
+                        company_name=company_name,
+                        industry=industry,
+                        location=location,
+                        email=f'{company_type}@example.com',
+                        founded_year=2020,
+                        team_size=5,
+                        stage=Stage.IDEA
+                    )
+                else:
+                    Investor.objects.create(
+                        user=other_user,
+                        company_name=company_name,
+                        industry=industry,
+                        location=location,
+                        email=f'{company_type}@example.com',
+                        founded_year=2020,
+                        team_size=5,
+                        stage=Stage.MVP,
+                        fund_size=100000
+                    )
+
+                data = {
+                    'company_name': company_name.upper(),
+                    'company_type': company_type
+                }
+
+                serializer = CompanyBindingSerializer(data=data)
+                self.assertFalse(serializer.is_valid())
+                self.assertIn('company_name', serializer.errors)
+                self.assertIn(expected_error, str(serializer.errors['company_name']))
