@@ -12,18 +12,30 @@ class IsInvestor(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        user = request.user
-
-        if not getattr(user, 'is_authenticated', False):
-            logger.warning(f"Permission denied: Unauthenticated user tried to access {view.__class__.__name__}.")
+        """
+        Checks if the request.user is authenticated and linked to an Investor profile.
+        Logs a warning if the user is not an investor.
+        """
+        if not request.user or not request.user.is_authenticated:
             return False
-
-        if hasattr(user, 'investor'):
-            logger.debug(f"Permission granted for user {user.id} as investor.")
+        
+        is_investor = Investor.objects.filter(user=request.user).exists()
+        
+        if is_investor:
+            logger.debug(
+                "Permission granted for user %s as investor for view %s.",
+                request.user.pk,
+                view.__class__.__name__
+            )
             return True
-
-        logger.warning(f"Permission denied for user {user.id}: Not an investor.")
-        return False
+        else:
+            logger.warning(
+                "Permission denied for user %s: Not an investor for view %s.",
+                request.user.pk,
+                view.__class__.__name__,
+                extra={"user_id": request.user.pk, "view": view.__class__.__name__}
+            )
+            return False
 
 
 class IsStartupUser(permissions.BasePermission):

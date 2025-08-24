@@ -83,7 +83,7 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("company_name", response2.data)
         self.assertIn("already exists", str(response2.data['company_name']))
-        
+
     def test_user_cannot_create_more_than_one_investor(self):
         """
         Ensure a user who already owns an investor profile cannot create another one.
@@ -109,3 +109,5 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("fund_size", response.data)
+
+        self.assertIn("Ensure this value is greater than or equal to 0.", str(response.data["fund_size"]))

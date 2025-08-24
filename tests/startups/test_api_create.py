@@ -115,19 +115,6 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
         error_messages = [str(e) for e in response.data['stage']]
         self.assertIn(expected_error_message, error_messages)
 
-    def test_creation_with_invalid_fund_size_fails(self):
-        """
-        Ensure creating an investor with a negative fund size fails validation.
-        """
-        payload = self.get_valid_payload()
-        payload["fund_size"] = "-1000.00"
-        response = self.client.post(self.url, payload, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("fund_size", response.data)
-
-        self.assertIn("Ensure this value is greater than or equal to 0.", str(response.data["fund_size"]))
-
     def test_creation_missing_required_fields_fails(self):
         """
         Ensure creating a startup without required fields like 'company_name' fails.
