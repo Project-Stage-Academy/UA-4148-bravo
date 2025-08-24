@@ -1,6 +1,5 @@
 from decimal import Decimal, ROUND_DOWN
 from common.enums import Stage
-from investments.serializers.subscription_create import SubscriptionCreateSerializer
 from investments.services.investment_share_service import recalculate_investment_shares, calculate_investment_share
 from tests.test_base_case import BaseAPITestCase
 

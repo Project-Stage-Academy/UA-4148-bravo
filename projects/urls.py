@@ -2,7 +2,6 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from projects.views import ProjectDocumentView, ProjectViewSet
-from investments.views import SubscriptionCreateView
 
 router = DefaultRouter()
 router.register(r'projects', ProjectViewSet, basename='project')
