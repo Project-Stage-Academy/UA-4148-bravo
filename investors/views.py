@@ -1,7 +1,7 @@
 import logging
 from django.db import IntegrityError
 from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from investors.models import Investor, SavedStartup
@@ -52,7 +52,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
     ViewSet for managing SavedStartup instances.
     Only authenticated investors who own the SavedStartup can modify/delete it.
     """
-    permission_classes = [IsAuthenticated, IsSavedStartupOwner]
+    permission_classes = [IsAuthenticated, IsInvestor, IsSavedStartupOwner]
     serializer_class = SavedStartupSerializer
 
     def get_queryset(self):
