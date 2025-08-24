@@ -7,9 +7,13 @@ from django.core.validators import (
 )
 from django.db import models
 
+from typing import cast
+from core import settings
+
 from common.enums import Stage
 from validation.validate_email import validate_email_custom
 from validation.validate_image import validate_image_file
+from validation.validate_social_links import validate_social_links_dict
 
 
 class Company(models.Model):
@@ -84,6 +88,12 @@ class Company(models.Model):
         choices=Stage.choices,
         blank=True
     )
+    social_links = models.JSONField(
+        blank=True,
+        default=dict,
+        verbose_name="Social Links",
+        help_text="Social media links as a JSON object"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -95,7 +105,13 @@ class Company(models.Model):
                 raise ValidationError({
                     'description': "Description must be at least 10 characters long if provided."
                 })
-
+            
+        social_links = cast(dict, self.social_links)
+        validate_social_links_dict(
+            social_links=social_links,
+            allowed_platforms=settings.ALLOWED_SOCIAL_PLATFORMS,
+            raise_serializer=False
+        )
     class Meta:
         abstract = True
         ordering = ['company_name']
