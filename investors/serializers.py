@@ -3,10 +3,11 @@ import datetime
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import transaction
 from rest_framework import serializers
-
+from django.core.exceptions import ValidationError
 from common.enums import Stage
 from investors.models import Investor, SavedStartup
 from startups.models import Startup
+from validation.validate_names import validate_company_name
 
 
 class InvestorSerializer(serializers.ModelSerializer):
@@ -16,6 +17,7 @@ class InvestorSerializer(serializers.ModelSerializer):
     """
     company_name = serializers.CharField(
         max_length=254,
+        unique=True,
         allow_blank=False,
         error_messages={
             'blank': "Company name must not be empty.",
@@ -26,6 +28,7 @@ class InvestorSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         max_length=254,
         required=True,
+        unique=True,
         error_messages={
             'blank': "Email is required.",
             'invalid': "Enter a valid email address.",
@@ -78,10 +81,11 @@ class InvestorSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at', 'user']
 
     def validate_company_name(self, value):
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("Company name must not be empty.")
-        return value
+        """ Validate company name using shared validation function. """
+        try:
+            return validate_company_name(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(str(e))
 
     def validate_description(self, value):
         if value and len(value.strip()) < 10:
@@ -96,7 +100,6 @@ class InvestorSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Request user is missing in serializer context.")
         validated_data['user'] = request.user
         return super().create(validated_data)
-
 
 
 class SavedStartupSerializer(serializers.ModelSerializer):

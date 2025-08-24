@@ -1,6 +1,7 @@
 # Forum Project Stage CC WebAPI Documentation
 
-This document describes the available endpoints, request formats, response structures, and validation rules for the **Forum Project Stage CC WebAPI**.  
+This document describes the available endpoints, request formats, response structures, and validation rules for the *
+*Forum Project Stage CC WebAPI**.  
 It is organized by module to allow each developer to maintain and extend their respective sections.
 
 ---
@@ -21,8 +22,8 @@ Authorization: Bearer <your_access_token>
 #### 1. CSRF Init
 
 - `GET /api/v1/auth/csrf/`
-Initializes CSRF protection by setting a CSRF cookie.
-This endpoint must be called by the frontend before sending any POST/PUT/PATCH/DELETE requests.
+  Initializes CSRF protection by setting a CSRF cookie.
+  This endpoint must be called by the frontend before sending any POST/PUT/PATCH/DELETE requests.
 
 ### Request Example
 
@@ -35,7 +36,7 @@ This endpoint must be called by the frontend before sending any POST/PUT/PATCH/D
 #### 2. JWT Create (Login)
 
 - `POST /api/v1/auth/jwt/create/`
-Authenticates a user. Returns an access token in the response body and stores the refresh token in an HttpOnly cookie.
+  Authenticates a user. Returns an access token in the response body and stores the refresh token in an HttpOnly cookie.
 
 ### Request Example
 
@@ -57,12 +58,13 @@ Authenticates a user. Returns an access token in the response body and stores th
   "access": "<your_access_token>"
 }
 ```
+
 (the refresh token is stored in the refresh_token HttpOnly cookie)
 
 #### 3. JWT Refresh
 
 - `POST /api/v1/auth/jwt/refresh/`
-Generates a new access token using the refresh token stored in the HttpOnly cookie.
+  Generates a new access token using the refresh token stored in the HttpOnly cookie.
 
 ### Request Example
 
@@ -81,7 +83,7 @@ Generates a new access token using the refresh token stored in the HttpOnly cook
 #### 4. JWT Logout
 
 - `POST /api/v1/auth/jwt/logout/`
-Invalidates the refresh token and clears the authentication cookie.
+  Invalidates the refresh token and clears the authentication cookie.
 
 ### Request Example
 
@@ -244,7 +246,9 @@ sequenceDiagram
 # OAuth Authentication API Documentation
 
 ## Part 1
+
 ## Overview
+
 This document describes the OAuth authentication endpoints for Google and GitHub integration.
 
 ---
@@ -252,7 +256,9 @@ This document describes the OAuth authentication endpoints for Google and GitHub
 ## POST /users/oauth/login/
 
 ### Description
-Authenticate users using Google or GitHub OAuth providers. The endpoint exchanges OAuth provider tokens for application JWT tokens and returns user information.
+
+Authenticate users using Google or GitHub OAuth providers. The endpoint exchanges OAuth provider tokens for application
+JWT tokens and returns user information.
 
 ## Request
 
@@ -266,7 +272,7 @@ Authenticate users using Google or GitHub OAuth providers. The endpoint exchange
     "token": "<OAuth token>"
   }
   ```
-  - **Response**
+    - **Response**
   ```json
   {
     "refresh": "jwt_refresh_token",
@@ -286,45 +292,51 @@ Authenticate users using Google or GitHub OAuth providers. The endpoint exchange
 
 **Status codes:**
 
-| Status Code | Description |
-|-------------|-------------|
-| `400 Bad Request` | Invalid request parameters or malformed data |
-| `401 Unauthorized` | Authentication failed or invalid credentials |
-| `403 Forbidden` | Authenticated but insufficient permissions |
-| `404 Not Found` | Requested resource doesn't exist |
-| `408 Request Timeout` | Provider API timeout |
-| `429 Too Many Requests` | Rate limit exceeded |
-| `500 Internal Server Error` | Unexpected server error |
-| `502 Bad Gateway` | Provider API communication failed |
+| Status Code                 | Description                                  |
+|-----------------------------|----------------------------------------------|
+| `400 Bad Request`           | Invalid request parameters or malformed data |
+| `401 Unauthorized`          | Authentication failed or invalid credentials |
+| `403 Forbidden`             | Authenticated but insufficient permissions   |
+| `404 Not Found`             | Requested resource doesn't exist             |
+| `408 Request Timeout`       | Provider API timeout                         |
+| `429 Too Many Requests`     | Rate limit exceeded                          |
+| `500 Internal Server Error` | Unexpected server error                      |
+| `502 Bad Gateway`           | Provider API communication failed            |
 
 ## Part 2
+
 ## Callback URLs
-The OAuth callback URLs are configured to handle redirects after successful authentication with the OAuth provider. These URLs are used by the frontend to receive authorization codes or tokens.
+
+The OAuth callback URLs are configured to handle redirects after successful authentication with the OAuth provider.
+These URLs are used by the frontend to receive authorization codes or tokens.
 
 ### Configured Callback URLs
+
 - **Production**: ----
 - **Development**: `http://127.0.0.1:8000/oauth/callback/`
 
 ## Usage Instructions
+
 1. **Initiate OAuth Flow**:
-   - Redirect users to the OAuth provider's authorization endpoint (e.g., `https://provider.com/oauth/authorize`).
-   - Include the appropriate `redirect_uri` parameter matching one of the configured callback URLs
+    - Redirect users to the OAuth provider's authorization endpoint (e.g., `https://provider.com/oauth/authorize`).
+    - Include the appropriate `redirect_uri` parameter matching one of the configured callback URLs
 
 2. **Handle Callback**:
-   - After authentication, the OAuth provider will redirect the user to the specified callback URL with an authorization code or token in the query parameters (e.g., `https://yourapp.com/auth/callback?code=abc123`).
-   - The frontend should extract the `code` from the URL query parameters using `URLSearchParams`.
+    - After authentication, the OAuth provider will redirect the user to the specified callback URL with an
+      authorization code or token in the query parameters (e.g., `https://yourapp.com/auth/callback?code=abc123`).
+    - The frontend should extract the `code` from the URL query parameters using `URLSearchParams`.
 
 3. **Extracting Query Parameters**:
-   - Example of JavaScript to extract parameters from the callback URL:
-     ```javascript
-     const urlParams = new URLSearchParams(window.location.search);
-     const code = urlParams.get('code');
-     const state = urlParams.get('state');
-     const error = urlParams.get('error');
-     ```
+    - Example of JavaScript to extract parameters from the callback URL:
+      ```javascript
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      ```
 
 4. **ExchangeCode for Token**:
-  -Send the authorization code to your backend API `/users/oauth/login/` to exchange it for an access token.
+   -Send the authorization code to your backend API `/users/oauth/login/` to exchange it for an access token.
 
 ## Notifications API (Communications)
 
@@ -399,3 +411,38 @@ Creation of notifications via public API is disabled.
 - `POST /notifications/mark_all_as_read/` → `{ "status": "marked <n> notifications as read" }`
 - `POST /notifications/mark_all_as_unread/` → `{ "status": "marked <n> notifications as unread" }`
 - `GET /notifications/{id}/resolve/` → `{ "redirect": { ... } }`
+
+# Company Binding API
+
+## Overview
+
+The Company Binding API allows authenticated users to associate themselves with a company (startup or investor) after
+registration. Users can either bind to an existing company or create a new one.
+
+## Endpoint
+
+**POST** `/api/v1/auth/bind-company/`
+
+## Authentication
+
+- Requires authentication via JWT token
+- Add `Authorization: Bearer <token>` to request headers
+
+## Request Body
+
+```json
+{
+  "company_name": "Tech Innovations Inc.",
+  "company_type": "startup"
+}
+```
+
+## Example Response
+
+```json 
+{
+  "message": "Successfully bound to existing startup: Tech Innovations Inc.",
+  "company_type": "startup",
+  "company_id": 1
+}
+```

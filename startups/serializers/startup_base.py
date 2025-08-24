@@ -2,6 +2,8 @@ from rest_framework import serializers
 from mixins.social_links_mixin import SocialLinksValidationMixin
 from startups.models import Startup
 from utils.get_field_value import get_field_value
+from validation.validate_names import validate_company_name
+from django.core.exceptions import ValidationError
 
 
 class StartupBaseSerializer(SocialLinksValidationMixin, serializers.ModelSerializer):
@@ -20,11 +22,43 @@ class StartupBaseSerializer(SocialLinksValidationMixin, serializers.ModelSeriali
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'company_name': {
+                'validators': []
+            },
+            'email': {
+                'validators': []
+            }
+        }
 
     def validate_company_name(self, value):
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("Company name must not be empty.")
+        """ Validate company name using shared validation function. """
+        try:
+            value = validate_company_name(value)
+
+            if self.instance:
+                if Startup.objects.filter(company_name__iexact=value).exclude(pk=self.instance.pk).exists():
+                    raise ValidationError("Company with this name already exists.")
+            else:
+                if Startup.objects.filter(company_name__iexact=value).exists():
+                    raise ValidationError("Company with this name already exists.")
+
+            return value
+        except ValidationError as e:
+            raise serializers.ValidationError(str(e))
+
+    def validate_email(self, value):
+        """ Validate email uniqueness. """
+        if value:
+            value = value.strip().lower()
+
+            if self.instance:
+                if Startup.objects.filter(email__iexact=value).exclude(pk=self.instance.pk).exists():
+                    raise ValidationError("Company with this email already exists.")
+            else:
+                if Startup.objects.filter(email__iexact=value).exists():
+                    raise ValidationError("Company with this email already exists.")
+
         return value
 
     def validate(self, data):
@@ -58,4 +92,3 @@ class StartupBaseSerializer(SocialLinksValidationMixin, serializers.ModelSeriali
             raise serializers.ValidationError(errors)
 
         return data
-
