@@ -1,13 +1,15 @@
 import logging
 from django.db import IntegrityError
-from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated, BasePermission
+
+from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
+
 from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
 from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
+
 from users.permissions import IsInvestor, CanCreateCompanyPermission
 
 logger = logging.getLogger(__name__)
@@ -26,8 +28,8 @@ class InvestorViewSet(viewsets.ModelViewSet):
         Instantiates and returns the list of permissions that this view requires.
         """
         if self.action == 'create':
-            return [IsAuthenticated(), CanCreateCompanyPermission()]
-        return [IsAuthenticated()]
+            return [permissions.IsAuthenticated(), CanCreateCompanyPermission()]
+        return [permissions.IsAuthenticated()]
 
     def get_serializer_class(self):
         """
@@ -37,22 +39,12 @@ class InvestorViewSet(viewsets.ModelViewSet):
             return InvestorCreateSerializer
         return InvestorSerializer
 
-class IsSavedStartupOwner(BasePermission):
-    """
-    Custom permission to allow only the owner of a SavedStartup (its investor) to modify or delete it.
-    """
-    def has_object_permission(self, request, view, obj):
-        if not hasattr(request.user, "investor"):
-            return False
-        return obj.investor_id == request.user.investor.pk
-
-
 class SavedStartupViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing SavedStartup instances.
     Only authenticated investors who own the SavedStartup can modify/delete it.
     """
-    permission_classes = [IsAuthenticated, IsInvestor, IsSavedStartupOwner]
+    permission_classes = [permissions.IsAuthenticated, IsInvestor, IsSavedStartupOwner]
     serializer_class = SavedStartupSerializer
 
     def get_queryset(self):
@@ -63,12 +55,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
                 extra={"by_user": getattr(user, "pk", None)},
             )
             raise PermissionDenied("Only investors can list saved startups.")
-        return (
-            SavedStartup.objects
-            .select_related("startup", "investor")
-            .filter(investor=user.investor)
-            .order_by("-saved_at")
-        )
+        return SavedStartup.objects.filter(investor=self.request.user.investor)
 
     def create(self, request, *args, **kwargs):
         user = request.user

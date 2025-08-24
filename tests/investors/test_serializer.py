@@ -1,6 +1,6 @@
 import datetime
 from common.enums import Stage
-from investors.serializers import InvestorSerializer
+from investors.serializers.investor import InvestorSerializer
 from ddt import ddt, data, unpack
 from tests.test_base_case import BaseAPITestCase
 

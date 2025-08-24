@@ -7,6 +7,12 @@ class IsSavedStartupOwner(permissions.BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
-        if not hasattr(request.user, "investor"):
+        """
+        Check if the request user's investor profile matches the
+        investor linked to the SavedStartup object.
+        """
+
+        investor_profile = getattr(request.user, 'investor', None)
+        if not investor_profile:
             return False
-        return obj.investor_id == request.user.investor.pk
+        return obj.investor == investor_profile
