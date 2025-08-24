@@ -15,26 +15,6 @@ class InvestorSerializer(serializers.ModelSerializer):
     Serializer for the Investor model.
     Includes all fields defined in the abstract Company base class and Investor-specific fields.
     """
-    company_name = serializers.CharField(
-        max_length=254,
-        unique=True,
-        allow_blank=False,
-        error_messages={
-            'blank': "Company name must not be empty.",
-            'max_length': "Company name cannot exceed 254 characters."
-        }
-    )
-
-    email = serializers.EmailField(
-        max_length=254,
-        required=True,
-        unique=True,
-        error_messages={
-            'blank': "Email is required.",
-            'invalid': "Enter a valid email address.",
-        }
-    )
-
     founded_year = serializers.IntegerField(
         validators=[MinValueValidator(1900), MaxValueValidator(datetime.datetime.now().year)],
         error_messages={
@@ -79,6 +59,20 @@ class InvestorSerializer(serializers.ModelSerializer):
             'team_size', 'stage', 'fund_size', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'user']
+        extra_kwargs = {
+            'company_name': {
+                'error_messages': {
+                    'blank': "Company name must not be empty.",
+                    'max_length': "Company name cannot exceed 254 characters."
+                }
+            },
+            'email': {
+                'error_messages': {
+                    'blank': "Email is required.",
+                    'invalid': "Enter a valid email address.",
+                }
+            }
+        }
 
     def validate_company_name(self, value):
         """ Validate company name using shared validation function. """

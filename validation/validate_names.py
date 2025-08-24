@@ -18,7 +18,7 @@ def validate_company_name(value):
     Raises:
         ValidationError: If company name is invalid
     """
-    value = value.strip()
+    value = str(value).strip()
 
     if not value:
         raise ValidationError("Company name must not be empty.")

@@ -120,7 +120,7 @@ class CompanyBindingView(APIView):
         serializer = CompanyBindingSerializer(data=request.data)
 
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         company_name = serializer.validated_data['company_name']
         company_type = serializer.validated_data['company_type']
@@ -158,7 +158,7 @@ class CompanyBindingView(APIView):
         Returns:
             bool: True if user is bound to a company, False otherwise
         """
-        return hasattr(user, 'startup') or hasattr(user, 'investor')
+        return getattr(user, 'startup', None) is not None or getattr(user, 'investor', None) is not None
 
     def _bind_to_startup(self, user, company_name):
         """
@@ -174,17 +174,20 @@ class CompanyBindingView(APIView):
         try:
             startup = Startup.objects.get(company_name__iexact=company_name)
 
-            if hasattr(startup, 'user') and startup.user is not None:
+            if startup.user is not None:
                 return Response(
                     {"error": "Startup is already associated with another user."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
-            startup.user = user
-            startup.save()
+            try:
+                startup.user = user
+                startup.save()
+            except Exception as e:
+                logger.error(f"Failed to save startup: {str(e)}")
+                raise ValidationError(f"Failed to update startup: {str(e)}")
 
             return Response({
-                "message": f"Successfully bound to existing startup: {company_name}",
+                "message": f"Successfully bound to existing startup: {startup.company_name}",
                 "company_type": "startup",
                 "company_id": startup.id
             }, status=status.HTTP_200_OK)
@@ -212,17 +215,20 @@ class CompanyBindingView(APIView):
         try:
             investor = Investor.objects.get(company_name__iexact=company_name)
 
-            if hasattr(investor, 'user') and investor.user is not None:
+            if investor.user is not None:
                 return Response(
                     {"error": "Investor is already associated with another user."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
-            investor.user = user
-            investor.save()
+            try:
+                investor.user = user
+                investor.save()
+            except Exception as e:
+                logger.error(f"Failed to save investor: {str(e)}")
+                raise ValidationError(f"Failed to update investor: {str(e)}")
 
             return Response({
-                "message": f"Successfully bound to existing investor: {company_name}",
+                "message": f"Successfully bound to existing investor: {investor.company_name}",
                 "company_type": "investor",
                 "company_id": investor.id
             }, status=status.HTTP_200_OK)
@@ -243,12 +249,12 @@ class CompanyBindingView(APIView):
         Returns:
             tuple: (industry_instance, location_instance)
         """
-        industry, _ = Industry.objects.get_or_create(
+        industry, _ = Industry.objects.update_or_create(
             name="Unknown",
             defaults={'description': 'Default unknown industry'}
         )
 
-        location, _ = Location.objects.get_or_create(
+        location, _ = Location.objects.update_or_create(
             city="Unknown",
             country="Unknown",
             defaults={'region': 'Unknown'}

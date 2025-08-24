@@ -2,7 +2,7 @@ from rest_framework import serializers
 from mixins.social_links_mixin import SocialLinksValidationMixin
 from startups.models import Startup
 from utils.get_field_value import get_field_value
-from validation.validate_names import validate_company_name
+from validation.validate_names import validate_company_name, validate_latin
 from django.core.exceptions import ValidationError
 
 
@@ -35,6 +35,10 @@ class StartupBaseSerializer(SocialLinksValidationMixin, serializers.ModelSeriali
         """ Validate company name using shared validation function. """
         try:
             value = validate_company_name(value)
+            if not validate_latin(value):
+                raise ValidationError(
+                    "The name must contain only Latin letters, spaces, hyphens, or apostrophes."
+                )
 
             if self.instance:
                 if Startup.objects.filter(company_name__iexact=value).exclude(pk=self.instance.pk).exists():
