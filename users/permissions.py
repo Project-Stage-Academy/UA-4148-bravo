@@ -1,6 +1,5 @@
 import logging
 from rest_framework import permissions
-from django.core.exceptions import PermissionDenied
 from startups.models import Startup
 from investors.models import Investor
 

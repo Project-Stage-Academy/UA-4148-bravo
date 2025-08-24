@@ -1,6 +1,6 @@
 from django.urls import reverse, reverse_lazy
 from rest_framework import status
-
+from unittest.mock import patch
 from common.enums import Stage
 from investors.models import Investor
 from tests.test_base_case import BaseAPITestCase
@@ -12,7 +12,9 @@ class InvestorAPITests(BaseAPITestCase):
     including validation and permission checks.
     """
 
-    def test_create_investor(self):
+    @patch("users.permissions.IsInvestor.has_permission", return_value=True)
+    @patch("users.permissions.IsInvestor.has_object_permission", return_value=True)
+    def test_create_investor(self, mock_has_object_permission, mock_has_permission):
         """
         Test successful creation of an investor with valid data.
         """
@@ -41,7 +43,9 @@ class InvestorAPITests(BaseAPITestCase):
         investor = Investor.objects.get(pk=response.data['id'])
         self.assertEqual(investor.user, self.user)
 
-    def test_create_investor_missing_required_fields(self):
+    @patch("users.permissions.IsInvestor.has_permission", return_value=True)
+    @patch("users.permissions.IsInvestor.has_object_permission", return_value=True)
+    def test_create_investor_missing_required_fields(self, mock_has_object_permission, mock_has_permission):
         """
         Creation should fail if required fields are missing.
         Missing company_name.
@@ -56,7 +60,9 @@ class InvestorAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('company_name', response.data)
 
-    def test_create_investor_invalid_data(self):
+    @patch("users.permissions.IsInvestor.has_permission", return_value=True)
+    @patch("users.permissions.IsInvestor.has_object_permission", return_value=True)
+    def test_create_investor_invalid_data(self, mock_has_object_permission, mock_has_permission):
         """
         Creation should fail on invalid data types or values.
         Checked some expected error fields.

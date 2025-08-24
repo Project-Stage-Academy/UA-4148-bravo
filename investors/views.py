@@ -1,16 +1,16 @@
 import logging
 from django.db import IntegrityError
 from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
-
 from investors.models import Investor, SavedStartup
+from investors.permissions import IsSavedStartupOwner
 from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
-from users.permissions import CanCreateCompanyPermission
+from users.permissions import IsInvestor, CanCreateCompanyPermission
 
-logger = logging.getLogger(__name__) 
+logger = logging.getLogger(__name__)
 
 
 class InvestorViewSet(viewsets.ModelViewSet):

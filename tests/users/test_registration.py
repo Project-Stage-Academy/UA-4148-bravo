@@ -105,7 +105,7 @@ class UserRegistrationTests(APITestCase):
         self.assertIn('errors', response.data)
         self.assertIn('password', response.data['errors'])
     
-    @patch('users.views.send_mail')
+    @patch('users.views.auth_views.send_mail')
     def test_verification_email_sent(self, mock_send_mail):
         """Test that verification email is sent after registration."""  
         from django.core.cache import cache
@@ -123,7 +123,7 @@ class UserRegistrationTests(APITestCase):
         args, kwargs = mock_send_mail.call_args
         self.assertEqual(kwargs['recipient_list'], [self.valid_payload['email']])
     
-    @patch('users.views.send_mail')
+    @patch('users.views.auth_views.send_mail')
     def test_verification_email_content(self, mock_send_mail):
         """Test the content of the verification email."""
         response = self.client.post(

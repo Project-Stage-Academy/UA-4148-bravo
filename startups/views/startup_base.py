@@ -13,7 +13,8 @@ class BaseValidatedModelViewSet(viewsets.ModelViewSet):
     """
 
     def _validate_and_log(self, serializer, action):
-        instance = serializer.instance if action == 'update' else serializer.Meta.model(**serializer.validated_data)
+        """ Validates the model and saves the instance. """
+        instance = serializer.instance or serializer.Meta.model(**serializer.validated_data)
 
         try:
             instance.clean()
@@ -34,5 +35,4 @@ class BaseValidatedModelViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         ''' Update first so instance exists for validation '''
-        serializer.save()
-        self._validate_and_log(serializer, 'update')
+        return self._validate_and_log(serializer, "update")

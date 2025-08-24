@@ -1,11 +1,12 @@
 import datetime
+
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import transaction
 from rest_framework import serializers
+
 from common.enums import Stage
 from investors.models import Investor, SavedStartup
 from startups.models import Startup
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import IntegrityError, transaction
 
 
 class InvestorSerializer(serializers.ModelSerializer):

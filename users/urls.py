@@ -1,36 +1,30 @@
-from django.urls import path, include
-from rest_framework_simplejwt.views import TokenBlacklistView
-from .views import (
+from django.urls import path
+from users.views.auth_views import UserRegistrationView, MeView
+from users.views.email_views import VerifyEmailView, ResendEmailView
+from users.views.oauth_view import OAuthTokenObtainPairView
+from users.views.password_views import CustomPasswordResetView, CustomPasswordResetConfirmView
+from users.views.token_views import (
     CustomTokenObtainPairView,
-    UserRegistrationView,
-    VerifyEmailView,
-    OAuthTokenObtainPairView,
-    CustomPasswordResetView,
-    CustomPasswordResetConfirmView,
-    ResendEmailView,
-    MeView,
-    JWTRefreshView,
+    CookieTokenRefreshView,
     JWTLogoutView,
+    CSRFTokenView
 )
-
 
 urlpatterns = [
     # Sign up
     path('register/', UserRegistrationView.as_view(), name='user_register'),
 
+    # For CSRF-cookie
+    path('csrf/', CSRFTokenView.as_view(), name='csrf-init'),
+
     # JWT Auth
     path('jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
-    path('jwt/refresh/', JWTRefreshView.as_view(), name='jwt-refresh'),
-    path('jwt/logout/', JWTLogoutView.as_view(), name='token_blacklist'),
+    path('jwt/refresh/', CookieTokenRefreshView.as_view(), name='jwt-refresh'),
+    path('jwt/logout/', JWTLogoutView.as_view(), name='jwt-logout'),
 
     # Password reset
     path('password/reset/', CustomPasswordResetView.as_view(), name='custom_reset_password'),
     path('password/reset/confirm/', CustomPasswordResetConfirmView.as_view(), name='custom_reset_password_confirm'),
-
-    # ----------------------------------------
-    # JWT Logout endpoint
-    # ----------------------------------------
-    path('auth/jwt/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
 
     # Get current user
     path("me/", MeView.as_view(), name="auth-me"),
