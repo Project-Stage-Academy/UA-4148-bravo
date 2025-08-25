@@ -78,7 +78,7 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_create_subscription_success(self):
         """Test successful creation of a subscription by an investor."""
         self.authenticate(self.investor_user)
-        url = reverse("projects:project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
             "amount": 200
@@ -98,7 +98,7 @@ class TestSubscriptionCreateAPI(TestCase):
         self.project.save()
         self.authenticate(self.investor_user)
 
-        url = reverse("projects:project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
             "amount": 100
@@ -113,7 +113,7 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_create_subscription_exceeds_goal_fails(self):
         """Test that an investment exceeding the goal is blocked."""
         self.authenticate(self.investor_user)
-        url = reverse("projects:project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
             "amount": 1500
@@ -126,7 +126,7 @@ class TestSubscriptionCreateAPI(TestCase):
 
     def test_unauthenticated_user_cannot_subscribe(self):
         """Test that an unauthenticated user cannot invest."""
-        url = reverse("projects:project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
             "amount": 200
@@ -139,7 +139,7 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_non_investor_cannot_subscribe(self):
         """Test that a non-investor user cannot create a subscription."""
         self.authenticate(self.startup_user)
-        url = reverse("projects:project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
             "amount": 100
@@ -172,7 +172,7 @@ class TestSubscriptionCreateAPI(TestCase):
         self.project.startup.save()
 
         self.authenticate(owner_investor_user)
-        url = reverse("projects:project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": owner_investor.id,
             "amount": 100
@@ -191,7 +191,7 @@ class TestSubscriptionCreateAPI(TestCase):
         self.project.save()
 
         self.authenticate(self.investor_user)
-        url = reverse("projects:project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
             "amount": 50
@@ -205,7 +205,7 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_invest_with_invalid_amount_fails(self):
         """Test that zero or negative investment amounts are blocked."""
         self.authenticate(self.investor_user)
-        url = reverse("projects:project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
 
         payload_zero = {"project": self.project.id, "amount": 0}
         response_zero = self.client.post(url, payload_zero, format="json")
@@ -220,7 +220,7 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_invest_in_nonexistent_project_fails(self):
         """Test that investing in a non-existent project returns a 400 error."""
         self.authenticate(self.investor_user)
-        url = reverse("projects:project-subscribe", kwargs={"project_id": 9999})
+        url = reverse("project-subscribe", kwargs={"project_id": 9999})
         payload = {
             "investor": self.investor.id,
             "amount": 100
