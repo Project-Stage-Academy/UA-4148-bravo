@@ -1,18 +1,124 @@
-from django.shortcuts import render
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.http import JsonResponse
+from django.shortcuts import render
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from chat.documents import Room, Message
+from .serializers import RoomSerializer, MessageSerializer
+from rest_framework.pagination import LimitOffsetPagination
 
 
-def index(request):
-    return render(request, "chat/index.html")
+class ConversationCreateView(generics.CreateAPIView):
+    """
+    Create a new conversation (Room).
+
+    Endpoint:
+        POST /api/conversations/
+
+    Request body example:
+        {
+            "name": "friends_group",
+            "is_group": true,
+            "participants": ["user1", "user2", "user3"]
+        }
+
+    Response example:
+        {
+            "name": "friends_group",
+            "is_group": true,
+            "participants": ["user1", "user2", "user3"]
+        }
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = RoomSerializer
 
 
-def room(request, room_name):
-    return render(request, "chat/room.html", {"room_name": room_name})
+class SendMessageView(APIView):
+    """
+    Send a new message within a conversation and broadcast it via WebSocket.
+
+    Endpoint:
+        POST /api/messages/
+
+    Request body example:
+        {
+            "room": "friends_group",
+            "sender_id": "user1",
+            "text": "Hello everyone!"
+        }
+
+    Response example:
+        {
+            "room": "friends_group",
+            "sender_id": "user1",
+            "receiver_id": null,
+            "text": "Hello everyone!",
+            "timestamp": "2025-08-25T20:00:00Z",
+            "is_read": false
+        }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = MessageSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        message = serializer.save()
+
+        channel_layer = get_channel_layer()
+        room_name = message.room.name
+        data = MessageSerializer(message).data
+
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{room_name}",
+            {"type": "chat_message", "message": data}
+        )
+
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
-def chat_config(request):
-    return JsonResponse({
-        "MAX_MESSAGE_LENGTH": 1000,
-        "FORBIDDEN_WORDS": getattr(settings, "FORBIDDEN_WORDS_SET", []),
-    })
+class ConversationMessagesView(generics.ListAPIView):
+    """
+    Retrieve the list of messages in a conversation.
+
+    Endpoint:
+        GET /api/conversations/{room_name}/messages/
+
+    Path parameter:
+        room_name (str): Name of the conversation/room.
+
+    Response example:
+        [
+            {
+                "room": "friends_group",
+                "sender_id": "user1",
+                "receiver_id": null,
+                "text": "Hello everyone!",
+                "timestamp": "2025-08-25T20:00:00Z",
+                "is_read": false
+            },
+            {
+                "room": "friends_group",
+                "sender_id": "user2",
+                "receiver_id": "user1",
+                "text": "Hi!",
+                "timestamp": "2025-08-25T20:01:00Z",
+                "is_read": false
+            }
+        ]
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = MessageSerializer
+    pagination_class = LimitOffsetPagination
+
+    def get_queryset(self):
+        room_name = self.kwargs["room_name"]
+        try:
+            room = Room.objects.get(name=room_name)
+        except Room.DoesNotExist:
+            return Message.objects.none()
+
+        return Message.objects.filter(room=room).order_by("timestamp")
