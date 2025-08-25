@@ -33,6 +33,13 @@ class NotificationPriority(models.TextChoices):
     HIGH = 'high', _('High')
 
 
+class NotificationChannel(models.TextChoices):
+    """Channels for delivering notifications."""
+    IN_APP = 'in_app', _('In-App')
+    EMAIL = 'email', _('Email')
+    PUSH = 'push', _('Push')
+
+
 class NotificationType(TimeStampedModel):
     """Model to store different types of notifications."""
     code = models.SlugField(
