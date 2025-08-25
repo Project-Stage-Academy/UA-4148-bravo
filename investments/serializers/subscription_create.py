@@ -32,7 +32,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
     class Meta:
         model = Subscription
-        fields = ["id", "investor", "amount"]
+        fields = ["id", "investor", 'project', "amount"]
         read_only_fields = ["id", "investor"]
 
     def validate(self, data):

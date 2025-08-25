@@ -58,6 +58,13 @@ class SubscriptionCreateView(CreateAPIView):
             )
         
     def perform_create(self, serializer):
+        """
+        Persist a new subscription instance.
+
+        - Retrieves the target project using the `project_id` from the URL.
+        - Associates the subscription with the authenticated investor (`request.user.investor`).
+        - Saves the subscription via the serializer.
+        """
         project_id = self.kwargs["project_id"]
         project = Project.objects.get(pk=project_id)
         serializer.save(
