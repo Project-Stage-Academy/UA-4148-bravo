@@ -143,3 +143,4 @@ class ViewedStartup(models.Model):
 
     def __str__(self):
         return f"{self.user} viewed {self.startup} at {self.viewed_at}"
+

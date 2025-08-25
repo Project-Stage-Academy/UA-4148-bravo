@@ -1,12 +1,20 @@
+from datetime import timezone
 import logging
 from django.db import IntegrityError
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics, pagination
 from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from investors.models import Investor, SavedStartup
 from investors.serializers import InvestorSerializer, SavedStartupSerializer
+
+from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
+
+from .models import ViewedStartup
+from startups.models import Startup
+from .serializers import ViewedStartupSerializer
 
 logger = logging.getLogger(__name__) 
 
@@ -199,3 +207,76 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
             extra={"saved_id": instance.pk, "by_user": self.request.user.pk},
         )
         super().perform_destroy(instance)
+
+class ViewedStartupPagination(pagination.PageNumberPagination):
+    """
+    Pagination class for recently viewed startups.
+    Default page size is 10, can be overridden via ?limit query parameter.
+    """
+    page_size = 10
+    page_size_query_param = "limit"
+    max_page_size = 50
+
+
+class ViewedStartupListView(generics.ListAPIView):
+    """
+    GET /api/v1/startups/viewed/
+    Retrieve a paginated list of recently viewed startups for the authenticated investor.
+    """
+    serializer_class = ViewedStartupSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = ViewedStartupPagination
+
+    def get_queryset(self):
+        # Only allow investors
+        if not hasattr(self.request.user, "investor"):
+            return ViewedStartup.objects.none()
+        return ViewedStartup.objects.filter(user=self.request.user).order_by("-viewed_at")
+
+
+class ViewedStartupCreateView(APIView):
+    """
+    POST /api/v1/startups/view/{startup_id}/
+    Log that the authenticated investor has viewed a specific startup.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, startup_id):
+        # Only investors can log views
+        if not hasattr(request.user, "investor"):
+            return Response({"detail": "Only investors can log viewed startups."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        startup = get_object_or_404(Startup, id=startup_id)
+
+        # Create or update the viewed record
+        viewed_obj, created = ViewedStartup.objects.update_or_create(
+            user=request.user,
+            startup=startup,
+            defaults={"viewed_at": timezone.now()}
+        )
+
+        if created:
+            message = "Startup view logged successfully."
+        else:
+            message = "Startup view timestamp updated."
+
+        return Response({"detail": message}, status=status.HTTP_200_OK)
+
+
+class ViewedStartupClearView(APIView):
+    """
+    DELETE /api/v1/startups/viewed/clear/
+    Clear the authenticated investor's viewed startups history.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        if not hasattr(request.user, "investor"):
+            return Response({"detail": "Only investors can clear viewed startups history."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        ViewedStartup.objects.filter(user=request.user).delete()
+        return Response({"detail": "Viewed startups history cleared successfully."},
+                        status=status.HTTP_200_OK)
+

@@ -2,7 +2,7 @@ import datetime
 from django.core.validators import MinValueValidator, MaxValueValidator
 from rest_framework import serializers
 from common.enums import Stage
-from investors.models import Investor, SavedStartup
+from investors.models import Investor, SavedStartup, ViewedStartup
 from startups.models import Startup
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
@@ -173,3 +173,12 @@ class SavedStartupSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'non_field_errors': ['Already saved.']})
 
         return obj
+
+class ViewedStartupSerializer(serializers.ModelSerializer):
+    startup_id = serializers.UUIDField(source="startup.id", read_only=True)
+    company_name = serializers.CharField(source="startup.company_name", read_only=True)
+
+    class Meta:
+        model = ViewedStartup
+        fields = ["id", "startup_id", "company_name", "viewed_at"]
+        
