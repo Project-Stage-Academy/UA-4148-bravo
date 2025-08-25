@@ -81,6 +81,7 @@ class TestSubscriptionCreateAPI(TestCase):
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
+            "project": self.project.id,
             "amount": 200
         }
         response = self.client.post(url, payload, format="json")
@@ -101,6 +102,7 @@ class TestSubscriptionCreateAPI(TestCase):
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
+            "project": self.project.id,
             "amount": 100
         }
         response = self.client.post(url, payload, format="json")
@@ -116,6 +118,7 @@ class TestSubscriptionCreateAPI(TestCase):
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
+            "project": self.project.id,
             "amount": 1500
         }
         response = self.client.post(url, payload, format="json")
@@ -129,6 +132,7 @@ class TestSubscriptionCreateAPI(TestCase):
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
+            "project": self.project.id,
             "amount": 200
         }
         response = self.client.post(url, payload, format="json")
@@ -142,6 +146,7 @@ class TestSubscriptionCreateAPI(TestCase):
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
+            "project": self.project.id,
             "amount": 100
         }
         response = self.client.post(url, payload, format="json")
@@ -175,6 +180,7 @@ class TestSubscriptionCreateAPI(TestCase):
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": owner_investor.id,
+            "project": self.project.id,
             "amount": 100
         }
         response = self.client.post(url, payload, format="json")
@@ -194,6 +200,7 @@ class TestSubscriptionCreateAPI(TestCase):
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {
             "investor": self.investor.id,
+            "project": self.project.id,
             "amount": 50
         }
         response = self.client.post(url, payload, format="json")
@@ -223,6 +230,7 @@ class TestSubscriptionCreateAPI(TestCase):
         url = reverse("project-subscribe", kwargs={"project_id": 9999})
         payload = {
             "investor": self.investor.id,
+            "project": self.project.id,
             "amount": 100
         }
         response = self.client.post(url, payload, format="json")
