@@ -30,20 +30,15 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         - Updates the project's current_funding field after saving the subscription.
     """
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
-    
-    project = serializers.PrimaryKeyRelatedField(
-        queryset=Project.objects.all(),
-        error_messages={
-            'does_not_exist': 'Project does not exist or is not available for investment.'
-        }
-    )
     class Meta:
         model = Subscription
-        fields = ["id", "investor", "project", "amount"]
-        extra_kwargs = {"amount": {"required": True}}
+        fields = ["id", "investor", "amount"]
+        read_only_fields = ["id", "investor"]
 
     def validate(self, data):
-        project = data.get("project")
+        project = self.context.get("project")
+        if not project:
+            raise serializers.ValidationError({"project": "Project is required."})
         investor = data.get("investor")
         amount = data.get("amount")
 

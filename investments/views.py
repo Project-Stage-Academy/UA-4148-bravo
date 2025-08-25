@@ -24,7 +24,9 @@ class SubscriptionCreateView(CreateAPIView):
     permission_classes = [IsAuthenticated, IsInvestor]
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        project_id = self.kwargs["project_id"]
+        project = Project.objects.get(pk=project_id)
+        serializer = self.get_serializer(data=request.data, context={"project": project})
         serializer.is_valid(raise_exception=True)
         try:
             self.perform_create(serializer)
@@ -54,3 +56,11 @@ class SubscriptionCreateView(CreateAPIView):
                 {"detail": "Failed to create subscription. Please try again."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        
+    def perform_create(self, serializer):
+        project_id = self.kwargs["project_id"]
+        project = Project.objects.get(pk=project_id)
+        serializer.save(
+            investor=self.request.user.investor,
+            project=project
+        )
