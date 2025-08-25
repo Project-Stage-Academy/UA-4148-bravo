@@ -108,7 +108,7 @@ class InvestorSerializerInvalidFieldsTests(BaseAPITestCase):
     @data(
         ('company_name', '   ', "Company name must not be empty."),
         ('company_name', 'A' * 255, "Company name cannot exceed 254 characters."),
-        ('email', 'invalid-email', "Enter a valid email address."),
+        ('email', 'invalid-email', "Invalid email address format."),
         ('fund_size', '-1000.00', "Ensure this value is greater than or equal to 0."),
         ('fund_size', '99999999999999999999.99', "Fund size is too large."),
         ('founded_year', datetime.datetime.now().year + 1, "Ensure this value is less than or equal to"),
