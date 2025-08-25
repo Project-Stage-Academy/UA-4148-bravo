@@ -33,13 +33,13 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ["id", "investor", 'project', "amount"]
-        read_only_fields = ["id", "investor"]
+        read_only_fields = ["id", "investor", "project"]
 
     def validate(self, data):
         project = self.context.get("project")
         if not project:
             raise serializers.ValidationError({"project": "Project is required."})
-        investor = data.get("investor")
+        investor = self.context["request"].user.investor
         amount = data.get("amount")
 
         startup = getattr(project, 'startup', None)
@@ -66,7 +66,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        project = validated_data["project"]
+        project = self.context["project"]
         amount = validated_data["amount"]
 
         with transaction.atomic():
