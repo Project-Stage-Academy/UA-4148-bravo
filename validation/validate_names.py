@@ -5,6 +5,27 @@ LATIN_REGEX = re.compile(r"^[A-Za-z0-9\s\-']+$")
 FORBIDDEN_NAMES = {name.lower() for name in {"other", "none", "misc", "default"}}
 
 
+def validate_company_name(value):
+    """
+    Validate company name for startups and investors.
+
+    Args:
+        value (str): Company name to validate
+
+    Returns:
+        str: Validated and stripped company name
+
+    Raises:
+        ValidationError: If company name is invalid
+    """
+    value = str(value).strip()
+
+    if not value:
+        raise ValidationError("Company name must not be empty.")
+
+    return value
+
+
 def validate_latin(value: str) -> bool:
     """
     Checks whether the text contains only Latin letters,
@@ -34,10 +55,7 @@ def validate_forbidden_names(name: str, field_name: str = "name"):
         ValidationError: If the name is empty, contains non-Latin characters,
                          or is a forbidden value.
     """
-    name = name.strip()
-
-    if not name:
-        raise ValidationError({field_name: "The name field cannot be empty."})
+    name = validate_company_name(name)
 
     if not validate_latin(name):
         raise ValidationError(
