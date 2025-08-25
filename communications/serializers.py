@@ -1,7 +1,6 @@
 from django.db.models import Q
 from django.urls import reverse
 from rest_framework import serializers
-from rest_framework.exceptions import NotFound
 from .models import (
     Notification, 
     UserNotificationPreference,
@@ -132,7 +131,7 @@ class UpdateTypePreferenceSerializer(serializers.Serializer):
         nt_id = attrs.get('notification_type_id')
         type_pref = pref.type_preferences.filter(notification_type_id=nt_id).first()
         if not type_pref:
-            raise NotFound('Notification type preference not found')
+            raise serializers.ValidationError('Notification type preference not found', code='not_found')
         attrs['type_pref'] = type_pref
         return attrs
 

@@ -18,7 +18,7 @@ User = get_user_model()
 
 def _get_user_pref(user: User) -> Optional[UserNotificationPreference]:
     try:
-        return user.notification_preferences
+        return UserNotificationPreference.objects.get(user=user)
     except UserNotificationPreference.DoesNotExist:
         return None
 
@@ -46,6 +46,25 @@ def _get_type_pref(pref: UserNotificationPreference, ntype: NotificationType) ->
     return pref.type_preferences.filter(notification_type=ntype).first()
 
 
+def _canonical_channel(channel: str) -> Optional[str]:
+    """Normalize a channel string to a canonical value from NotificationChannel.
+
+    Accepts variations like "in_app", "inapp", "in-app", "in app"; "email", "e-mail", "mail"; and
+    "push", "push-notification", "push_notification".
+    Returns one of NotificationChannel.IN_APP/EMAIL/PUSH or None if unknown.
+    """
+    s = str(channel or "").strip().lower()
+    # unify spaces and hyphens to underscores
+    s = s.replace(" ", "_").replace("-", "_")
+    if s in {"in_app", "inapp"}:
+        return NotificationChannel.IN_APP
+    if s in {"email", "e_mail", "mail"}:
+        return NotificationChannel.EMAIL
+    if s in {"push", "push_notification", "pushnotification"}:
+        return NotificationChannel.PUSH
+    return None
+
+
 def is_channel_enabled(user: User, channel: str) -> bool:
     """Return whether a channel ("in_app", "email", "push") is enabled for user.
     Falls back to True if preferences are missing (fail-open) to avoid blocking messages unintentionally.
@@ -53,14 +72,14 @@ def is_channel_enabled(user: User, channel: str) -> bool:
     pref = _get_user_pref(user)
     if not pref:
         return True
-    normalized = str(channel).lower()
-    if normalized in {NotificationChannel.IN_APP, "in-app", "inapp"}:
+    normalized = _canonical_channel(channel)
+    if normalized == NotificationChannel.IN_APP:
         return bool(pref.enable_in_app)
     if normalized == NotificationChannel.EMAIL:
         return bool(pref.enable_email)
     if normalized == NotificationChannel.PUSH:
         return bool(pref.enable_push)
-    return True
+    raise ValueError(f"Unknown notification channel: {channel}")
 
 
 def is_type_allowed(user: User, ntype: NotificationType) -> bool:
@@ -112,7 +131,7 @@ def create_in_app_notification(
         notification_type=ntype,
         title=title,
         message=message,
-        priority=priority or Notification._meta.get_field("priority").default,
+        priority=priority or Notification._meta.get_field("priority").get_default(),
         related_startup_id=related_startup_id,
         related_project_id=related_project_id,
         related_message_id=related_message_id,

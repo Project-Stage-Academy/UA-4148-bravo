@@ -6,6 +6,7 @@ from rest_framework.authtoken.models import Token
 from tests.factories import StartupFactory, UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from communications.models import UserNotificationPreference, NotificationType
+from startups.models import Startup
 
 
 class StartupNotificationPreferencesAPITests(APITestCase):
@@ -94,7 +95,8 @@ class StartupNotificationPreferencesAPITests(APITestCase):
             format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(resp.data.get('error'), 'notification_type_id must be an integer')
+        self.assertIn('notification_type_id', resp.data)
+        self.assertEqual(resp.data['notification_type_id'], ['A valid integer is required.'])
 
     def test_update_type_preference_not_found(self):
         """Return 404 when the user's seeded preferences do not include the requested type."""
@@ -125,3 +127,9 @@ class StartupNotificationPreferencesAPITests(APITestCase):
         update_url = reverse('startup-preferences-update-type')
         resp = client.patch(update_url, {}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def tearDown(self):
+        """Ensure DB cleanup to avoid cross-test contamination when using file-based SQLite."""
+        UserNotificationPreference.objects.all().delete()
+        NotificationType.objects.all().delete()
+        Startup.objects.all().delete()

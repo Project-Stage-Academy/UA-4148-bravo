@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import ValidationError, NotFound
 from startups.models import Startup
 from startups.serializers.startup_full import StartupSerializer
 from startups.views.startup_base import BaseValidatedModelViewSet
@@ -67,18 +68,17 @@ class StartupViewSet(BaseValidatedModelViewSet):
         frequency = request.data.get('frequency')
 
         if notification_type_id is None or frequency is None:
-            return Response(
-                {'error': 'notification_type_id and frequency are required'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            errors = {}
+            if notification_type_id is None:
+                errors['notification_type_id'] = ['This field is required.']
+            if frequency is None:
+                errors['frequency'] = ['This field is required.']
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             nt_id = int(notification_type_id)
         except (TypeError, ValueError):
-            return Response(
-                {'error': 'notification_type_id must be an integer'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({'notification_type_id': ['A valid integer is required.']}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = UpdateTypePreferenceSerializer(
             data={'notification_type_id': nt_id, 'frequency': frequency},
@@ -86,12 +86,19 @@ class StartupViewSet(BaseValidatedModelViewSet):
         )
         try:
             if not serializer.is_valid():
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as exc:
-            message = str(getattr(exc, 'detail', exc))
-            if 'not found' in message.lower():
-                return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
-            raise
+                errors = serializer.errors
+                non_field = errors.get('non_field_errors') if isinstance(errors, dict) else None
+                if non_field:
+                    for err in non_field:
+                        code = getattr(err, 'code', None)
+                        if code == 'not_found' or str(err) == 'Notification type preference not found':
+                            return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        except NotFound:
+            return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
+        except ValidationError as exc:
+            detail = getattr(exc, 'detail', None)
+            return Response(detail or serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         type_pref = serializer.save()
         return Response(UserNotificationTypePreferenceSerializer(type_pref, context={'request': request}).data)
