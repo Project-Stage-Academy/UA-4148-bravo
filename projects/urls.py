@@ -4,8 +4,6 @@ from rest_framework.routers import DefaultRouter
 from investments.views import SubscriptionCreateView
 from projects.views import ProjectDocumentView, ProjectViewSet
 
-app_name = "projects"
-
 router = DefaultRouter()
 router.register(r'projects', ProjectViewSet, basename='project')
 router.register(r'projects-documents', ProjectDocumentView, basename='project-document')
