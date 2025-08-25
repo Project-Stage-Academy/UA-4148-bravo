@@ -25,7 +25,13 @@ class SubscriptionCreateView(CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         project_id = self.kwargs["project_id"]
-        project = Project.objects.get(pk=project_id)
+        try:
+            project = Project.objects.get(pk=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {"project": "Project does not exist."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = self.get_serializer(data=request.data, context={"request": request, "project": project})
         serializer.is_valid(raise_exception=True)
         try:

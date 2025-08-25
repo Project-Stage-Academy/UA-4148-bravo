@@ -20,8 +20,9 @@ class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
         factory = APIRequestFactory()
         request = factory.get('/')
         request.user = user
-        if 'project' not in extra_context:
-            extra_context['project'] = self.project  
+        project = extra_context.get('project', getattr(self, "project", None))
+        if not project:
+            raise ValueError("Project must be provided to serializer_with_user")
         context = {'request': request, **extra_context}
         return SubscriptionCreateSerializer(data=data, context=context)
 

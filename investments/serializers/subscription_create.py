@@ -67,6 +67,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         project = self.context["project"]
+        investor = self.context["request"].user.investor
         amount = validated_data["amount"]
 
         with transaction.atomic():
@@ -85,7 +86,9 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
                 amount, project_locked.funding_goal
             )
             
-            subscription = Subscription.objects.create(**validated_data)
+            subscription = Subscription.objects.create(
+                investor=investor, project=project_locked, **validated_data
+            )
             project_locked.current_funding = effective_current + amount
             project_locked.save(update_fields=["current_funding"])
 
