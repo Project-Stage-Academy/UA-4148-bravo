@@ -37,8 +37,15 @@ class IsStartupUser(permissions.BasePermission):
             logger.warning(f"Permission denied: Unauthenticated user tried to access {view.__class__.__name__}.")
             return False
 
-        if hasattr(user, 'startup'):
-            logger.debug(f"Permission granted: User {user.id} linked to startup {getattr(user.startup, 'id', None)}.")
+        try:
+            startup = getattr(user, 'startup', None)
+            _ = startup.id
+        except Startup.DoesNotExist:
+            startup = None
+        except Exception:
+            startup = None
+        if startup is not None:
+            logger.debug(f"Permission granted: User {user.id} linked to startup {getattr(startup, 'id', None)}.")
             return True
 
         if Startup.objects.filter(user_id=getattr(user, 'id', None)).exists():

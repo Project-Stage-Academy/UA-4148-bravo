@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from rest_framework.authtoken.models import Token
 
-from tests.elasticsearch.factories import StartupFactory, UserFactory
+from tests.factories import StartupFactory, UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from communications.models import UserNotificationPreference, NotificationType
 
