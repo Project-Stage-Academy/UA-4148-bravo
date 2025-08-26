@@ -1,0 +1,22 @@
+.hidden-field {
+    position: relative;
+    align-content: center;
+}
+
+.hidden-input {
+    padding: calc(10 - 1px) 30px calc(10 - 1px) 12px !important;
+}
+
+.toggle-hidden {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 14px;
+    width: 14px;
+    cursor: pointer;
+}
+
+.toggle-hidden svg {
+    margin: auto;
+}
