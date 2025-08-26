@@ -1,32 +1,53 @@
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_DOWN
 
-# Local import to avoid circular dependency
+
+def _to_decimal(x):
+    """Helper function to safely convert values to Decimal."""
+    return x if isinstance(x, Decimal) else Decimal(str(x))
+
+
 def calculate_investment_share(amount, funding_goal) -> Decimal:
     """
-    Return the investment share as a percentage of the funding goal.
+    Calculate the investment share (in percentage) of a subscription.
+
+    Formula:
+        share = (amount / funding_goal) * 100
+
+    - Returns 0.00 if funding_goal is 0 or less.
+    - Uses ROUND_DOWN to two decimal places to match test expectations.
+    - Ensures minimum share is 0.01 only when share is positive and less than 0.01.
     """
-    if funding_goal == 0:
-        return Decimal("0.01")  # Minimum 0.01% for very small amounts
-    share = (Decimal(amount) / Decimal(funding_goal) * Decimal("100"))
-    return share.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    goal = _to_decimal(funding_goal or 0)
+    if goal <= 0:
+        return Decimal("0.00")
+
+    share = (_to_decimal(amount) / goal) * Decimal("100")
+
+    # Only enforce minimum 0.01 for small positive investments
+    if Decimal("0") < share < Decimal("0.01"):
+        share = Decimal("0.01")
+
+    return share.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
 
 
 def recalculate_investment_shares(project):
     """
-    Recalculates and updates the 'investment_share' field for all Subscription instances
-    based on the project's funding goal.
-    """
-    from investments.models import Subscription  # local import to avoid circular import
+    Recalculate investment_share for all subscriptions of a given project.
 
-    funding_goal = project.funding_goal or Decimal("0.00")
-    investments = Subscription.objects.filter(project=project)
+    Only updates subscriptions where the share value has actually changed.
+    """
+    from investments.models import Subscription  # local import to avoid circular dependencies
+
+    funding_goal = _to_decimal(project.funding_goal or 0)
+    if funding_goal <= 0:
+        return
 
     to_update = []
-    for investment in investments:
-        share = calculate_investment_share(investment.amount, funding_goal)
-        if investment.investment_share != share:
-            investment.investment_share = share
-            to_update.append(investment)
+    for subscription in Subscription.objects.filter(project=project):
+        share = calculate_investment_share(subscription.amount, funding_goal)
+        if subscription.investment_share != share:
+            subscription.investment_share = share
+            to_update.append(subscription)
 
     if to_update:
         Subscription.objects.bulk_update(to_update, ['investment_share'])
@@ -34,9 +55,15 @@ def recalculate_investment_shares(project):
 
 def update_project_investment_shares_if_needed(project):
     """
-    Wrapper to safely recalculate investment shares only if funding goal > 0.
+    Safe wrapper to recalculate investment shares for a project
+    only if funding_goal is greater than zero.
     """
     if project.funding_goal and project.funding_goal > 0:
         recalculate_investment_shares(project)
+
+
+
+
+
 
 

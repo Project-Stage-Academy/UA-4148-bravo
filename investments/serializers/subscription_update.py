@@ -1,10 +1,11 @@
+from decimal import Decimal
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from projects.models import Project
 from ..models import Subscription
 from ..services.subscription_validation_service import validate_subscription_business_rules
-from ..services.investment_share_service import update_project_investment_shares_if_needed
+from ..services.investment_share_service import update_project_investment_shares_if_needed, calculate_investment_share
 
 
 class SubscriptionUpdateSerializer(serializers.ModelSerializer):
@@ -41,14 +42,18 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
                 instance.investor, project, new_amount, exclude_amount=instance.amount
             )
 
+            # Update instance fields
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
 
-            instance.save()
+            # Recalculate investment share for this subscription
+            instance.investment_share = calculate_investment_share(instance.amount, project.funding_goal)
+            instance.save(update_fields=['amount', 'investment_share'])
 
-            # Recalculate all shares after update
+            # Recalculate all shares for other subscriptions
             update_project_investment_shares_if_needed(project)
             return instance
+
 
 
 

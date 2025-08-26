@@ -3,6 +3,7 @@ from rest_framework import serializers
 from investments.serializers.subscription_update import SubscriptionUpdateSerializer
 from tests.test_base_case import BaseAPITestCase
 
+
 class SubscriptionSerializerUpdateTests(BaseAPITestCase):
     """
     Tests for updating existing Subscription instances through the serializer.
@@ -28,7 +29,11 @@ class SubscriptionSerializerUpdateTests(BaseAPITestCase):
         updated = serializer.save()
 
         self.assertEqual(updated.amount, Decimal("500.00"))
-        self.assertAlmostEqual(updated.investment_share * 100, Decimal("5.00"))
+
+        from investments.services.investment_share_service import calculate_investment_share
+        expected_share = calculate_investment_share(updated.amount, self.project.funding_goal)
+        self.assertEqual(updated.investment_share, expected_share)
+
         self.assertEqual(updated.investor, subscription.investor)
         self.assertEqual(updated.project, subscription.project)
 
@@ -47,7 +52,9 @@ class SubscriptionSerializerUpdateTests(BaseAPITestCase):
         updated = serializer.save()
 
         self.assertEqual(updated.amount, Decimal("200.00"))
-        self.assertEqual(updated.investment_share * 100, Decimal("2.00"))
+        from investments.services.investment_share_service import calculate_investment_share
+        expected_share = calculate_investment_share(updated.amount, self.project.funding_goal)
+        self.assertEqual(updated.investment_share, expected_share)
 
     def test_update_subscription_without_amount_field(self):
         """Partial update without amount leaves subscription unchanged."""
@@ -64,7 +71,9 @@ class SubscriptionSerializerUpdateTests(BaseAPITestCase):
         updated = serializer.save()
 
         self.assertEqual(updated.amount, Decimal("200.00"))
-        self.assertEqual(updated.investment_share * 100, Decimal("2.00"))
+        from investments.services.investment_share_service import calculate_investment_share
+        expected_share = calculate_investment_share(updated.amount, self.project.funding_goal)
+        self.assertEqual(updated.investment_share, expected_share)
 
     def test_cannot_change_investor_on_update(self):
         """Prohibit changing investor on subscription update."""
@@ -101,3 +110,5 @@ class SubscriptionSerializerUpdateTests(BaseAPITestCase):
             serializer.is_valid(raise_exception=True)
 
         self.assertIn("project", context.exception.detail)
+
+

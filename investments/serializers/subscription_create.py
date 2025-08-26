@@ -6,7 +6,7 @@ from investors.models import Investor
 from projects.models import Project
 from ..models import Subscription
 from ..services.subscription_validation_service import validate_subscription_business_rules
-from ..services.investment_share_service import update_project_investment_shares_if_needed
+from ..services.investment_share_service import update_project_investment_shares_if_needed, calculate_investment_share
 
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
@@ -53,7 +53,11 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
             validate_subscription_business_rules(validated_data['investor'], project_locked, amount)
             subscription = Subscription.objects.create(**validated_data)
 
-            # Recalculate all shares after creation
+            # Recalculate investment share for this subscription
+            subscription.investment_share = calculate_investment_share(subscription.amount, project_locked.funding_goal)
+            subscription.save(update_fields=['investment_share'])
+
+            # Recalculate all shares after creation for other subscriptions
             update_project_investment_shares_if_needed(project_locked)
             return subscription
 
