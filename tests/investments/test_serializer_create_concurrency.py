@@ -104,10 +104,7 @@ class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
             close_old_connections()
             time.sleep(delay)
             data = self.get_subscription_data(investor, self.project1, amount)
-            serializer = SubscriptionCreateSerializer(
-                data=data,
-                context={"request": type("Req", (), {"user": investor.user})(), "project": self.project1}
-            )
+            serializer = SubscriptionCreateSerializer(data=data)
             try:
                 with transaction.atomic():
                     from projects.models import Project

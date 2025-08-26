@@ -95,7 +95,11 @@ class TestSubscriptionCreateAPI(TestCase):
         self.project.save()
         self.authenticate(self.investor_user)
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
-        payload = {"amount": 100}
+        payload = {
+            "investor": self.investor.id,
+            "project": self.project.id,
+            "amount": 100
+        }
         response = self.client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -107,7 +111,11 @@ class TestSubscriptionCreateAPI(TestCase):
         """Test that an investment exceeding the goal is blocked."""
         self.authenticate(self.investor_user)
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
-        payload = {"amount": 1500}
+        payload = {
+            "investor": self.investor.id,
+            "project": self.project.id,
+            "amount": 1500
+        }
         response = self.client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -117,7 +125,11 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_unauthenticated_user_cannot_subscribe(self):
         """Test that an unauthenticated user cannot invest."""
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
-        payload = {"amount": 200}
+        payload = {
+            "investor": self.investor.id,
+            "project": self.project.id,
+            "amount": 200
+        }
         response = self.client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -127,7 +139,11 @@ class TestSubscriptionCreateAPI(TestCase):
         """Test that a non-investor user cannot create a subscription."""
         self.authenticate(self.startup_user)
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
-        payload = {"amount": 100}
+        payload = {
+            "investor": self.investor.id,
+            "project": self.project.id,
+            "amount": 100
+        }
         response = self.client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -155,7 +171,11 @@ class TestSubscriptionCreateAPI(TestCase):
 
         self.authenticate(owner_investor_user)
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
-        payload = {"amount": 100}
+        payload = {
+            "investor": owner_investor.id,
+            "project": self.project.id,
+            "amount": 100
+        }
         response = self.client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -169,7 +189,11 @@ class TestSubscriptionCreateAPI(TestCase):
 
         self.authenticate(self.investor_user)
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
-        payload = {"amount": 50}
+        payload = {
+            "investor": self.investor.id,
+            "project": self.project.id,
+            "amount": 50
+        }
         response = self.client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -195,7 +219,11 @@ class TestSubscriptionCreateAPI(TestCase):
         """Test that investing in a non-existent project returns a 400 error."""
         self.authenticate(self.investor_user)
         url = reverse("project-subscribe", kwargs={"project_id": 9999})
-        payload = {"amount": 100}
+        payload = {
+            "investor": self.investor.id,
+            "project": self.project.id,
+            "amount": 100
+        }
         response = self.client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
