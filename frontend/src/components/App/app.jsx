@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import React from 'react';
-import AuthProvider from '../../context/AuthContext/authContext';
+import AuthProvider from '../../provider/AuthProvider/authProvider';
 import Layout from '../Layout/layout';
 import ProfileEditing from '../../pages/ProfileEditing/profileEditing';
 import NotFound from '../../pages/NotFound/notFound';
@@ -9,33 +9,31 @@ import CompanyList from '../../pages/CompanyList/companyList';
 import FeedbackForm from '../../pages/FeedbackForm/feedbackForm';
 import ForgotPassword from '../../pages/ForgotPassword/forgotPassword';
 import RestorePassword from '../../pages/RestorePassword/restorePassword';
+import ProfilePage from '../../pages/ProfilePage/profilePage';
 import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
-import Registration from '../../pages/Registration/registration';
+import RegistrationPage from '../../pages/Registration/registration';
 import AuthorizationWrapper from '../../pages/AuthorizationWrapper/authorizationWrapper';
 import RegistrationConfirmation from '../../pages/RegistrationConfirmation/registrationConfirmation';
-import RegisterReconfirmation from '../../pages/RegisterReconfirmation/registerReconfirmation';
+import RegistrationReconfirmation from '../../pages/RegistrationReconfirmation/registrationReconfirmation';
 import RegistrationError from '../../pages/RegistrationError/registrationError';
-import RegistrationDone from '../../pages/RegistrationDone/registrationDone';
-import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/EmailConfirmationHandler';
+import RegistrationUserConfirmed from '../../pages/RegistrationUserConfirmed/registrationUserConfirmed';
+import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/emailConfirmationHandler';
 import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
+import RegistrationUserRepresent from '../../pages/RegistrationUserRepresent/registrationUserRepresent';
+import RegistrationCompleted from '../../pages/RegistrationCompleted/registrationCompleted';
 
 /**
- * Main application component that sets up routing and context providers.
- * It wraps the application in an AuthProvider for authentication context
+ * Main application component that sets up routing and provider providers.
+ * It wraps the application in an AuthProvider for authentication provider
  * and uses React Router for navigation.
  * The main layout is defined in the Layout component, which includes
  * the header, sidebar, and footer.
  * The Routes define the various pages of the application, including:
- * - Home page
- * - Company list
- * - Feedback form
- * - Policy page
- * - Who we are page
- * - Authentication routes (login, registration, forgot password, restore password)
- * - Profile editing
- * - Not found page for unmatched routes.
+ *
+ * @component
+ *
  * @returns {JSX.Element} The main application component.
  */
 function App() {
@@ -68,12 +66,14 @@ function App() {
                             <Route path="login" element={<LogInPage />} />
 
                             {/* Registration */}
-                            <Route path="register" element={<Registration />} />
+                            <Route path="register" element={<RegistrationPage />} />
+
                             <Route path="register/confirm" element={<RegistrationConfirmation />} />
-                            <Route path="register/confirm-email" element={<EmailConfirmationHandler />} />
-                            <Route path="register/re-confirm" element={<RegisterReconfirmation />} />
+                            <Route path="register/re-confirm" element={<RegistrationReconfirmation />} />
                             <Route path="register/error" element={<RegistrationError />} />
-                            <Route path="register/done" element={<RegistrationDone />} />
+                            <Route path="register/user-confirmed" element={<RegistrationUserConfirmed />} />
+                            <Route path="register/user-represent" element={<RegistrationUserRepresent />} />
+                            <Route path="register/completed" element={<RegistrationCompleted />} />
 
                             {/* Forgot password */}
                             <Route path="forgot" element={<ForgotPassword />} />
@@ -86,9 +86,16 @@ function App() {
                         {/* Profile */}
                         <Route path="profile">
 
-                            {/* Profile editing */}
-                            <Route path="edit" element={<ProfileEditing />} />
+                            {/* Company profile */}
+                            <Route path="company/:uid" element={<ProfilePage />}>
+
+                                {/* Profile editing */}
+                                <Route path="edit" element={<ProfileEditing />} />
+                            </Route>
                         </Route>
+
+                        {/* Email verificator */}
+                        <Route path="api/v1/auth/verify-email/:user_id/:token" element={<EmailConfirmationHandler />} />
 
                         {/* Page not found */}
                         <Route path="*" element={<NotFound />} />

@@ -11,12 +11,12 @@ export class Validator {
      * @type {Object<string, function(value: any, data?: Object): boolean>}
      */
     static validators = {
-        companyName: (value) => /^[\w\s]{2,}$/.test(value),
+        companyName: (value) => /^[\p{L}’ʼ-]{2,}$/u.test(value),
         email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-        password: (value) => /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value),
+        password: (value) => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(value),
         confirmPassword: (value, data) => typeof value === "string" && value.trim() !== "" && value === data.password,
-        firstName: (value) => /^[A-Za-z]{2,}$/.test(value),
-        lastName: (value) => /^[A-Za-z]{2,}$/.test(value),
+        firstName: (value) => /^[\p{L}’ʼ-]{2,}$/u.test(value),
+        lastName: (value) => /^[\p{L}’ʼ-]{2,}$/u.test(value),
         representation: (value) => Object.values(value).some(v => v),
         businessType: (value) => Object.values(value).some(v => v)
     };
@@ -70,6 +70,7 @@ export class Validator {
      */
     static serverSideErrorMessages = {
         emailAlreadyExist: "Ця електронна пошта вже зареєстрована",
+        companyAlreadyExist: "Компанія з такою назвою вже зареєстрована",
         unexpected: "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз пізніше"
     }
 

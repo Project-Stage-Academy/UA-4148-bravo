@@ -1,5 +1,6 @@
 import './checkbox.css';
 import PropTypes from 'prop-types';
+import clsx from 'clsx';
 
 /**
  * Checkbox component to render a group of checkboxes.
@@ -11,9 +12,26 @@ import PropTypes from 'prop-types';
  * @param errors - An object containing error messages for the group, where the key is the group key and the value is an error message if applicable.
  * @param handleChange - A function to handle changes to the checkboxes, typically updating the form data state.
  * @param labels - An object containing labels for each checkbox, where keys match the values object and values are the label text to be displayed next to each checkbox.
+ * @param isGrouped - If is grouped true then checkbox is now inherits radiobutton and only one checkbox can be selected
  * @returns {JSX.Element}
  */
-function Checkbox({ groupKey, values, errors = {}, handleChange, labels }) {
+function Checkbox({ groupKey, values, errors = {}, handleChange, labels, isGrouped }) {
+    const handleCheckboxChange = (e) => {
+        const { name, checked } = e.target;
+
+        if (isGrouped) {
+            const newValues = Object.keys(values).reduce((acc, key) => {
+                acc[key] = false;
+                return acc;
+            }, {});
+
+            newValues[name.split(".")[1]] = checked;
+            handleChange({ target: { name: groupKey, value: newValues } });
+        } else {
+            handleChange(e);
+        }
+    };
+
     return (
         <div className={'checkbox--container'}>
             {Object.keys(values).map((key) => (
@@ -22,10 +40,11 @@ function Checkbox({ groupKey, values, errors = {}, handleChange, labels }) {
                         type="checkbox"
                         name={`${groupKey}.${key}`}
                         checked={values[key]}
-                        onChange={handleChange}
-                        className={`checkbox ${
-                            errors[groupKey] ? 'checkbox__error-color' : 'checkbox__active-color'
-                        }`}
+                        onChange={handleCheckboxChange}
+                        className={clsx('checkbox', errors[groupKey] ?
+                            'checkbox__error-color' :
+                            'checkbox__active-color')
+                        }
                     />
                     <label className="panel--font-size">{labels[key]}</label>
                 </div>
@@ -50,7 +69,8 @@ Checkbox.propTypes = {
     values: PropTypes.objectOf(PropTypes.bool).isRequired,
     errors: PropTypes.objectOf(PropTypes.string),
     handleChange: PropTypes.func.isRequired,
-    labels: PropTypes.objectOf(PropTypes.string).isRequired
+    labels: PropTypes.objectOf(PropTypes.string).isRequired,
+    isGrouped: PropTypes.bool
 };
 
 export default Checkbox;

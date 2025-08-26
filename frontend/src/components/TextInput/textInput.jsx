@@ -1,5 +1,6 @@
 import './textInput.css';
 import PropTypes from 'prop-types';
+import clsx from 'clsx';
 
 /**
  * TextInput component to render a styled text input field.
@@ -37,7 +38,7 @@ function TextInput({
             placeholder={placeholder}
             value={value}
             onChange={onChange}
-            className={`input input-text input__width ${className}`}
+            className={clsx('input', 'input-text', 'input__width', className)}
         />
     );
 }

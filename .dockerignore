@@ -1,0 +1,40 @@
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore environment files
+.env
+.env.*
+
+# Ignore Git and version control
+.git/
+.gitignore
+
+# Ignore IDE/editor config
+.vscode/
+.idea/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore users output, coverage, etc.
+*.log
+*.sqlite3
+.coverage
+htmlcov/
+
+# Ignore compiled files
+*.so
+
+# Ignore build artifacts
+build/
+dist/
+*.egg-info/
+
+# Ignore media/static files (optional, depending on how you handle them)
+staticfiles/
+media/

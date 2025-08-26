@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import Button from '../../components/Button/button';
-import { registerUser } from '../../api';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import TextInput from '../../components/TextInput/textInput';
-import Checkbox from '../../components/Checkbox/checkbox';
+import HiddenInput from '../../components/HiddenInput/hiddenInput';
+import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 
 /**
  * Registration component handles user registration.
@@ -19,25 +19,23 @@ import Checkbox from '../../components/Checkbox/checkbox';
  */
 function Registration() {
     // This component handles user registration
+    const { setUser, register } = useAuthContext();
+
+    // Simple brute force protection
+    const [attempts, setAttempts] = useState(0);
+    const [isLocked, setIsLocked] = useState(false);
+
+    // Hook to navigate programmatically
     const navigate = useNavigate();
 
     // State to hold form data
     const [formData, setFormData] = useState(
         {
-            companyName: "",
             email: "",
             password: "",
             confirmPassword: "",
             lastName: "",
             firstName: "",
-            representation: {
-                company: false,
-                startup: false
-            },
-            businessType: {
-                individual: false,
-                legal: false
-            },
             unexpected: ""
         });
 
@@ -46,7 +44,7 @@ function Registration() {
 
     // Function to handle server-side errors
     const handleError = (error) => {
-        if (error.response && error.response.status === 409) {
+        if (error?.response && error?.response?.data?.errors?.email) {
             setErrors(prev => ({
                 ...prev,
                 email: Validator.serverSideErrorMessages.emailAlreadyExist
@@ -61,17 +59,58 @@ function Registration() {
 
     // Function to handle form submission
     const handleSubmit = () => {
+        if (isLocked) return;
+
         const validationErrors = Validator.validate(
             formData
         );
         setErrors(validationErrors);
 
         if (Object.values(validationErrors).every(value => value === null)) {
-            registerUser(formData)
-                .then(() => navigate('/auth/register/confirm'))
-                .catch(handleError);
+            register(
+                formData.email,
+                formData.firstName,
+                formData.lastName,
+                formData.password,
+                formData.confirmPassword
+            )
+                .then((res) => {
+                    setUser({
+                        id: res.data.user_id,
+                        email: res.data.email
+                    });
+
+                    navigate('/auth/register/confirm');
+                })
+                .catch((error) => {
+                    setAttempts(() => {
+                        const next = attempts + 1;
+                        console.log(next);
+
+                        if (next >= 5) {
+                            setIsLocked(true);
+                            setErrors(prevErrors => ({
+                                ...prevErrors,
+                                unexpected: "Повторіть спробу через 30 секунд"
+                            }));
+
+                            setTimeout(() => {
+                                setAttempts(0);
+                                setErrors(prevErrors => ({
+                                    ...prevErrors,
+                                    unexpected: null
+                                }));
+                                setIsLocked(false);
+                            }, 30000);
+                        } else {
+                            handleError(error);
+                        }
+
+                        return next;
+                    });
+                });
         } else {
-            console.log('Errors:', validationErrors);
+            console.warn('Errors:', validationErrors);
         }
     };
 
@@ -87,27 +126,20 @@ function Registration() {
 
     return (
         <>
-            <Panel>
-                <PanelTitle>Реєстрація</PanelTitle>
+            <Panel aria-labelledby="register-form-title">
+                <PanelTitle id="register-form-title">Реєстрація</PanelTitle>
                 <PanelBody>
-                    <PanelBodyTitle title={'Обов’язкові поля позначені зірочкою'} />
+                    <PanelBodyTitle
+                        title={'Обов’язкові поля позначені зірочкою'}
+                    />
                     <div>
-                        <PanelBodyTitle title={'Назва компанії'} className={'content--text-container__margin'} />
-                        <TextInput
-                            name="companyName"
-                            autoComplete="off"
-                            autoCorrect="off"
-                            spellCheck="false"
-                            value={formData.companyName}
-                            onChange={handleChange}
-                            placeholder={'Введіть назву вашої компанії'}
-                            className={errors['companyName'] && 'input__error-border-color'}
+                        <PanelBodyTitle
+                            id="email-label"
+                            title={'Електронна пошта'}
+                            className={'content--text-container__margin'}
                         />
-                        { errors['companyName'] ? <p className={"panel--danger-text"}>{ errors['companyName'] }</p> : "" }
-                    </div>
-                    <div>
-                        <PanelBodyTitle title={'Електронна пошта'} className={'content--text-container__margin'} />
                         <TextInput
+                            id="email"
                             name="email"
                             autoComplete="off"
                             autoCorrect="off"
@@ -115,15 +147,34 @@ function Registration() {
                             value={formData.email}
                             onChange={handleChange}
                             placeholder={'Введіть свою електронну пошту'}
-                            className={errors['email'] && 'input__error-border-color'}
+                            className={
+                                errors['email'] && 'input__error-border-color'
+                            }
+                            aria-labelledby="email-label"
+                            aria-describedby={errors['email'] ? 'email-error' : undefined}
+                            aria-invalid={!!errors['email']}
+                            aria-required="true"
                         />
-                        { errors['email'] ? <p className={"panel--danger-text"}>{ errors['email'] }</p> : ""}
+                        {errors['email'] && (
+                            <p id="email-error"
+                               className={'panel--danger-text'}
+                               role="alert"
+                            >
+                                {errors['email']}
+                            </p>
+                        )}
                     </div>
                     <div>
-                        <PanelBodyTitle title={'Пароль'} className={'content--text-container__margin'}>
-                            Пароль повинен мати 8+ символів, містити принаймні велику, малу літеру (A..Z, a..z) та цифру (0..9).
+                        <PanelBodyTitle
+                            id="password-label"
+                            title={'Пароль'}
+                            className={'content--text-container__margin'}
+                        >
+                            Пароль повинен мати 8+ символів, містити принаймні
+                            велику, малу літеру (A..Z, a..z) та цифру (0..9).
                         </PanelBodyTitle>
-                        <TextInput
+                        <HiddenInput
+                            id="password"
                             name="password"
                             autoComplete="off"
                             autoCorrect="off"
@@ -131,13 +182,31 @@ function Registration() {
                             value={formData.password}
                             onChange={handleChange}
                             placeholder={'Введіть пароль'}
-                            className={errors['password'] && 'input__error-border-color'}
+                            className={
+                                errors['password'] && 'input__error-border-color'
+                            }
+                            aria-labelledby="password-label"
+                            aria-describedby={errors['password'] ? 'password-error' : undefined}
+                            aria-invalid={!!errors['password']}
+                            aria-required="true"
                         />
-                        { errors['password'] ? <p className={"panel--danger-text"}>{ errors['password'] }</p> : "" }
+                        {errors['password'] && (
+                            <p id="password-error"
+                               className={'panel--danger-text'}
+                               role="alert"
+                            >
+                                {errors['password']}
+                            </p>
+                        )}
                     </div>
                     <div>
-                        <PanelBodyTitle title={'Повторіть пароль'} className={'content--text-container__margin'} />
-                        <TextInput
+                        <PanelBodyTitle
+                            id="confirmPassword-label"
+                            title={'Повторіть пароль'}
+                            className={'content--text-container__margin'}
+                        />
+                        <HiddenInput
+                            id="confirmPassword"
                             name="confirmPassword"
                             autoComplete="off"
                             autoCorrect="off"
@@ -145,13 +214,32 @@ function Registration() {
                             value={formData.confirmPassword}
                             onChange={handleChange}
                             placeholder={'Введіть пароль ще раз'}
-                            className={errors['confirmPassword'] && 'input__error-border-color'}
+                            className={
+                                errors['confirmPassword'] &&
+                                'input__error-border-color'
+                            }
+                            aria-labelledby="confirmPassword-label"
+                            aria-describedby={errors['confirmPassword'] ? 'confirmPassword-error' : undefined}
+                            aria-invalid={!!errors['confirmPassword']}
+                            aria-required="true"
                         />
-                        { errors['confirmPassword'] ? <p className={"panel--danger-text"}>{ errors["confirmPassword"] }</p> : "" }
+                        {errors['confirmPassword'] && (
+                            <p id="confirmPassword-error"
+                               className={'panel--danger-text'}
+                               role="alert"
+                            >
+                                {errors['confirmPassword']}
+                            </p>
+                        )}
                     </div>
                     <div>
-                        <PanelBodyTitle title={'Прізвище'} className={'content--text-container__margin'} />
+                        <PanelBodyTitle
+                            id="lastName-label"
+                            title={'Прізвище'}
+                            className={'content--text-container__margin'}
+                        />
                         <TextInput
+                            id="lastName"
                             name="lastName"
                             autoComplete="off"
                             autoCorrect="off"
@@ -159,12 +247,30 @@ function Registration() {
                             value={formData.lastName}
                             onChange={handleChange}
                             placeholder={'Введіть ваше прізвище'}
-                            className={errors['lastName'] && 'input__error-border-color'}
+                            className={
+                                errors['lastName'] &&
+                                'input__error-border-color'
+                            }
+                            aria-labelledby="lastName-label"
+                            aria-describedby={errors['lastName'] ? 'lastName-error' : undefined}
+                            aria-invalid={!!errors['lastName']}
+                            aria-required="true"
                         />
-                        { errors['lastName'] ? <p className={"panel--danger-text"}>{ errors["lastName"] }</p> : "" }
+                        {errors['lastName'] && (
+                            <p id="lastName-error"
+                               className={'panel--danger-text'}
+                               role="alert"
+                            >
+                                {errors['lastName']}
+                            </p>
+                        )}
                     </div>
                     <div>
-                        <PanelBodyTitle title={'Ім‘я'} className={'content--text-container__margin'} />
+                        <PanelBodyTitle
+                            id="firstName-label"
+                            title={'Ім‘я'}
+                            className={'content--text-container__margin'}
+                        />
                         <TextInput
                             name="firstName"
                             autoComplete="off"
@@ -173,59 +279,49 @@ function Registration() {
                             value={formData.firstName}
                             onChange={handleChange}
                             placeholder={'Введіть ваше ім’я'}
-                            className={errors['firstName'] && 'input__error-border-color'}
+                            className={
+                                errors['firstName'] &&
+                                'input__error-border-color'
+                            }
+                            aria-labelledby="firstName-label"
+                            aria-describedby={errors['firstName'] ? 'firstName-error' : undefined}
+                            aria-invalid={!!errors['firstName']}
+                            aria-required="true"
                         />
-                        { errors['firstName'] ? <p className={"panel--danger-text"}>{ errors["firstName"] }</p> : "" }
+                        {errors['firstName'] && (
+                            <p id="firstName-error"
+                               className={'panel--danger-text'}
+                               role="alert"
+                            >
+                                {errors['firstName']}
+                            </p>
+                        )}
                     </div>
-                    <div>
-                        <PanelBodyTitle title={'Кого ви представляєте?'} className={'content--text-container__margin'} />
-                        <Checkbox
-                            groupKey={"representation"}
-                            values={formData.representation}
-                            labels={{
-                                company: "Зареєстрована компанія",
-                                startup: "Стартап проєкт, який шукає інвестиції"
-                            }}
-                            errors={errors}
-                            handleChange={handleChange}
-                        />
-                        { errors['representation'] ? <p className={"panel--danger-text"}>{ errors["representation"] }</p> : "" }
-                    </div>
-                    <div>
-                        <PanelBodyTitle title={'Який суб’єкт господарювання ви представляєте?'} className={'content--text-container__margin'} />
-                        <Checkbox
-                            groupKey={"businessType"}
-                            values={formData.businessType}
-                            labels={{
-                                individual: "Фізична особа-підприємець",
-                                legal: "Юридична особа"
-                            }}
-                            errors={errors}
-                            handleChange={handleChange}
-                        />
-                        { errors['businessType'] ? <p className={"panel--danger-text"}>{ errors["businessType"] }</p> : "" }
-                    </div>
-                    { errors['unexpected'] ? <p className={"panel--danger-text"}>{ errors['unexpected'] }</p> : ""}
-                    <div>
-                        <span className={"panel--font-size"}>Реєструючись, я погоджуюсь з </span>
-                        <Link className={"panel--font-size text-underline text-bold"} to={"/policy"}>правилами використання</Link>
-                        <span className={"panel--font-size"}> сайту Craftmerge</span>
-                    </div>
+                    {!isLocked && attempts >= 3 - 1 && (
+                        <p className={'content--text'}>
+                            Залишилося спроб: {5 - attempts}
+                        </p>
+                    )}
+                    {errors['unexpected'] && (
+                        <p className={'panel--danger-text'}>
+                            {errors['unexpected']}
+                        </p>
+                    )}
                 </PanelBody>
                 <PanelNavigation>
                     <Button
                         onClick={handleSubmit}
+                        disabled={isLocked}
                         className={'button__padding panel--button'}
+                        type="submit"
                     >
                         Зареєструватися
                     </Button>
                 </PanelNavigation>
             </Panel>
-            <div className={"panel--under-panel"}>
-                <span>
-                    Ви вже зареєстровані у нас?
-                </span>
-                <Link className={'text-underline text-bold'} to={'/login'}>
+            <div className={'panel--under-panel'}>
+                <span>Ви вже зареєстровані у нас?</span>
+                <Link className={'text-underline text-bold'} to={'/auth/login'}>
                     Увійти
                 </Link>
             </div>

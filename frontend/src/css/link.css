@@ -33,3 +33,28 @@ Link:disabled {
 .link__underline:disabled::after {
     background-color: var(--link-btn-text-color-inactive);
 }
+
+.link-right-arrow {
+    position: relative;
+    padding-right: calc(18px + 9px);
+}
+
+.link-right-arrow::after {
+    content: " ";
+    background-image: url('../../public/pictures/svg/arrow-right.svg');
+    background-repeat: no-repeat;
+    height: 18px;
+    width: 18px;
+    background-position: center;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.link-right-arrow:hover::after {
+    transform: translateX(4px);
+}

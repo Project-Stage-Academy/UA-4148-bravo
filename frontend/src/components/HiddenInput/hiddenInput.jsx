@@ -1,5 +1,5 @@
 import './hiddenInput.css';
-import { useState } from 'react';
+import {useRef, useState} from 'react';
 import PropTypes from 'prop-types';
 
 /**
@@ -26,15 +26,29 @@ function HiddenInput({
                          onChange = () => {},
                          className = ''
                      }) {
+    const fieldRef = useRef(null);
     const [show, setShow] = useState(false);
 
     const togglePassword = () => {
-        setShow(prev => !prev);
+        const input = fieldRef.current;
+
+        if (input) {
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+
+            setShow(prev => !prev);
+
+            setTimeout(() => {
+                input.focus();
+                input.setSelectionRange(start, end);
+            }, 0);
+        }
     };
 
     return (
         <div className={'hidden-field'}>
             <input
+                ref={fieldRef}
                 type={show ? "text" : "password"}
                 name={name}
                 autoComplete={autoComplete}
@@ -45,9 +59,12 @@ function HiddenInput({
                 onChange={onChange}
                 className={`input input-text input__width hidden-input ${className}`}
             />
-            <div className={'toggle-hidden'}
-                 onClick={togglePassword}
-                 onKeyDown={togglePassword}>
+            <div
+                className="toggle-hidden"
+                onClick={togglePassword}
+                onMouseDown={(e) => e.preventDefault()}
+                onKeyDown={togglePassword}
+            >
                 {show ?
                     <>
                         <svg width="14" height="14" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
