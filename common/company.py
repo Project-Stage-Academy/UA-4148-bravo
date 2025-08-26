@@ -13,6 +13,7 @@ from core import settings
 from common.enums import Stage
 from validation.validate_email import validate_email_custom
 from validation.validate_image import validate_image_file
+from validation.validate_names import validate_company_name, validate_latin
 from validation.validate_social_links import validate_social_links_dict
 
 
@@ -54,7 +55,11 @@ class Company(models.Model):
         'startups.Industry',
         on_delete=models.PROTECT
     )
-    company_name = models.CharField(max_length=254, unique=True)
+    company_name = models.CharField(
+        max_length=254,
+        validators=[validate_company_name, validate_latin],
+        unique=True
+    )
     location = models.ForeignKey(
         'startups.Location',
         on_delete=models.PROTECT
