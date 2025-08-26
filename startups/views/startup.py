@@ -9,7 +9,7 @@ from startups.models import Startup
 from startups.serializers.startup_full import StartupSerializer
 from startups.serializers.startup_create import StartupCreateSerializer
 from startups.views.startup_base import BaseValidatedModelViewSet
-from users.permissions import IsStartupUser
+from users.permissions import IsStartupUser, CanCreateCompanyPermission
 from communications.models import (
     UserNotificationPreference,
     NotificationType,
@@ -21,8 +21,6 @@ from communications.serializers import (
     UpdateTypePreferenceSerializer,
 )
 from communications.services import get_or_create_user_pref
-
-from users.permissions import IsStartupUser, CanCreateCompanyPermission
 
 class StartupViewSet(BaseValidatedModelViewSet):
     queryset = Startup.objects.select_related('user', 'industry', 'location') \
@@ -186,7 +184,7 @@ class StartupViewSet(BaseValidatedModelViewSet):
         """
         if self.action == 'create':
             return [IsAuthenticated(), CanCreateCompanyPermission()]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), IsStartupUser()]
 
     def get_serializer_class(self):
         """
