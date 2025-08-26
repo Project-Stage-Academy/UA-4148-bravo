@@ -38,7 +38,7 @@ class SubscriptionCreateView(CreateAPIView):
             self.perform_create(serializer)
             subscription = serializer.instance
 
-            remaining_funding = project.funding_goal - project.current_funding
+            remaining_funding = self.project.funding_goal - self.project.current_funding
             project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
 
             logger.info(
