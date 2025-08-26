@@ -24,8 +24,9 @@ class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
         if not project:
             raise ValueError("Project must be provided to serializer_with_user")
         if 'project' not in data:
-            data = {**data, 'project': project.id}
-        context = {'request': request, **extra_context}
+            data = data.copy()
+            data['project'] = project.id
+        context = {'request': request, 'project': project, **extra_context}
         return SubscriptionCreateSerializer(data=data, context=context)
 
     @classmethod
