@@ -30,7 +30,7 @@ class SubscriptionCreateView(CreateAPIView):
         except Project.DoesNotExist:
             return Response(
                 {"project": "Project does not exist."},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_404_NOT_FOUND,
             )
         serializer = self.get_serializer(data=request.data, context={"request": request, "project": self.project})
         serializer.is_valid(raise_exception=True)
