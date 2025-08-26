@@ -26,7 +26,7 @@ class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
         if 'project' not in data:
             data = data.copy()
             data['project'] = project.id
-        context = {'request': request, 'project': project, **extra_context}
+        context = {'request': request, **extra_context}
         return SubscriptionCreateSerializer(data=data, context=context)
 
     @classmethod
