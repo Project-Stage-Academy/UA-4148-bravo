@@ -26,25 +26,24 @@ class SubscriptionCreateView(CreateAPIView):
     def create(self, request, *args, **kwargs):
         project_id = self.kwargs["project_id"]
         try:
-            project = Project.objects.get(pk=project_id)
+            self.project = Project.objects.get(pk=project_id)
         except Project.DoesNotExist:
             return Response(
                 {"project": "Project does not exist."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        serializer = self.get_serializer(data=request.data, context={"request": request, "project": project})
+        serializer = self.get_serializer(data=request.data, context={"request": request, "project": self.project})
         serializer.is_valid(raise_exception=True)
         try:
             self.perform_create(serializer)
             subscription = serializer.instance
 
-            project = Project.objects.select_related('startup', 'category').get(pk=subscription.project_id)
             remaining_funding = project.funding_goal - project.current_funding
             project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
 
             logger.info(
                 "Subscription created successfully for project %s by user %s",
-                project.id,
+                self.project.id,
                 request.user.id,
             )
 
@@ -71,9 +70,7 @@ class SubscriptionCreateView(CreateAPIView):
         - Associates the subscription with the authenticated investor (`request.user.investor`).
         - Saves the subscription via the serializer.
         """
-        project_id = self.kwargs["project_id"]
-        project = Project.objects.get(pk=project_id)
         serializer.save(
             investor=self.request.user.investor,
-            project=project
+            project=getattr(self, 'project', None)
         )
