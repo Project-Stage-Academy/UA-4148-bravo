@@ -112,6 +112,7 @@ class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
                 data=data,
                 context={'request': DummyRequest(investor.user), 'project': self.project1}
             )
+            assert serializer.is_valid(), serializer.errors
     
             try:
                 with transaction.atomic():
