@@ -22,7 +22,7 @@ class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
         request.user = user
         project = extra_context.get('project', getattr(self, "project", None))
         if not project:
-            raise ValueError("Project must be provided to serializer_with_user")
+            raise ValueError("Project must be passed to serializer_with_user via extra_context or as self.project.")
         # if 'project' not in data:
         #     data = data.copy()
         #     data['project'] = project.id
