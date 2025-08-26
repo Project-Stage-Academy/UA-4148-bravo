@@ -29,3 +29,23 @@ class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
+
+class BaseCompanyCreateAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
+    """
+    Base test case for company creation tests.
+    Sets up users and basic dependencies but does NOT create default startups/investors,
+    ensuring a clean slate for creation tests.
+    """
+    @classmethod
+    def setUpTestData(cls):
+        """Setup only the necessary prerequisite data."""
+        cls.setup_users()
+        cls.setup_industries()
+        cls.setup_locations()
+
+    def setUp(self):
+        self.client = APIClient()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
