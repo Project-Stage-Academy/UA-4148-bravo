@@ -69,8 +69,18 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        project = self.context["project"]
-        investor = self.context["request"].user.investor
+        project = self.context.get("project")
+        if not project:
+            raise serializers.ValidationError({"project": "Project is required."})
+
+        request = self.context.get("request")
+        if not request or not hasattr(request, "user") or not hasattr(request.user, "investor"):
+            raise serializers.ValidationError({"investor": "Authenticated investor required."})
+
+        investor = request.user.investor
+        
+        validated_data["project"] = project
+        validated_data["investor"] = investor
         amount = validated_data["amount"]
 
         with transaction.atomic():
