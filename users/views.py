@@ -797,7 +797,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 }, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-        is_active = data.get("email_verified", False)
+        is_active = bool(data.get("email_verified", False))
 
         first_name = data.get("given_name", "")
         last_name = data.get("family_name", "")
@@ -898,7 +898,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                     status=status.HTTP_403_FORBIDDEN
                 )
             email = primary_email['email']
-            is_active = primary_email.get("verified", False) 
+            is_active = bool(primary_email.get("verified", False))
     
             # Process name
             full_name = user_data.get("name", "").strip()
