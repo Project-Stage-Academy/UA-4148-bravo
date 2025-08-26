@@ -104,14 +104,22 @@ class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
             close_old_connections()
             time.sleep(delay)
             data = self.get_subscription_data(investor, self.project1, amount)
-            serializer = SubscriptionCreateSerializer(data=data)
+            class DummyRequest:
+                def __init__(self, user):
+                    self.user = user
+    
+            serializer = SubscriptionCreateSerializer(
+                data=data,
+                context={'request': DummyRequest(investor.user), 'project': self.project1}
+            )
+    
             try:
                 with transaction.atomic():
                     from projects.models import Project
                     Project.objects.select_for_update().get(pk=self.project1.pk)
 
                     if serializer.is_valid(raise_exception=True):
-                        serializer.save(investor=investor, project=self.project1)
+                        serializer.save() 
             except serializers.ValidationError as e:
                 errors.append(e.detail)
 

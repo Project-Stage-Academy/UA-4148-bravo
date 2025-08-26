@@ -86,9 +86,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
                 amount, project_locked.funding_goal
             )
             
-            subscription = Subscription.objects.create(
-                investor=investor, project=project_locked, **validated_data
-            )
+            subscription = Subscription.objects.create( **validated_data)
             project_locked.current_funding = effective_current + amount
             project_locked.save(update_fields=["current_funding"])
 
