@@ -78,9 +78,6 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"investor": "Authenticated investor required."})
 
         investor = request.user.investor
-        
-        validated_data["project"] = project
-        validated_data["investor"] = investor
         amount = validated_data["amount"]
 
         with transaction.atomic():
@@ -94,12 +91,13 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
                 )
-
-            validated_data['investment_share'] = calculate_investment_share(
-                amount, project_locked.funding_goal
-            )
             
-            subscription = Subscription.objects.create( **validated_data)
+            subscription = Subscription.objects.create(
+                investor=investor,
+                project=project_locked,
+                amount=amount,
+                investment_share=calculate_investment_share(amount, project_locked.funding_goal),
+            )
             project_locked.current_funding = effective_current + amount
             project_locked.save(update_fields=["current_funding"])
 
