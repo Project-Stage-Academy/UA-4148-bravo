@@ -3,8 +3,8 @@ import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '.
 import Button from '../../components/Button/button';
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
-import { restorePassword } from '../../api';
 import HiddenInput from '../../components/HiddenInput/hiddenInput';
+import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 
 /**
  * RestorePassword component handles the user password restoration process.
@@ -17,6 +17,8 @@ import HiddenInput from '../../components/HiddenInput/hiddenInput';
 function RestorePassword() {
     // This component handles user registration
     const navigate = useNavigate();
+
+    const { confirmReset } = useAuthContext();
 
     // State to hold form data
     const [formData, setFormData] = useState(
@@ -45,9 +47,10 @@ function RestorePassword() {
         setErrors(validationErrors);
 
         if (Object.values(validationErrors).every(value => value === null)) {
-            restorePassword(formData)
-                .then(() => navigate('/restore-password/done'))
-                .catch(handleError);
+            // TODO
+            // confirmReset(formData)
+            //     .then(() => navigate('/restore-password/done'))
+            //     .catch(handleError);
         } else {
             console.log('Errors:', validationErrors);
         }
