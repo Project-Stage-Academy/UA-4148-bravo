@@ -4,6 +4,7 @@ from rest_framework import status
 from common.enums import Stage
 from startups.documents import StartupDocument
 from tests.elasticsearch.setup_tests_data import BaseElasticsearchAPITestCase
+from unittest.mock import patch
 
 
 class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
@@ -36,7 +37,9 @@ class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
         except Exception:
             pass
 
-    def test_empty_query_returns_all_startups(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_empty_query_returns_all_startups(self, mock_has_object_permission, mock_has_permission):
         """
         Ensure that an empty search query returns all startups in the index.
         """
@@ -45,7 +48,9 @@ class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
-    def test_no_results_for_non_existent_company_name(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_no_results_for_non_existent_company_name(self, mock_has_object_permission, mock_has_permission):
         """
         Ensure that searching for a non-existent company name returns no results.
         """
@@ -54,7 +59,9 @@ class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
 
-    def test_combined_filters_work_correctly(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_combined_filters_work_correctly(self, mock_has_object_permission, mock_has_permission):
         """
         Ensure that filtering by stage and location returns the correct startup.
         """

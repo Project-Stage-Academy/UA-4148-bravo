@@ -22,6 +22,11 @@ ALLOWED_HOSTS = config(
 
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
+FRONTEND_ROUTES = {
+    "verify_email": "/auth/verify-email/{user_id}/{token}/",
+    "reset_password": "/password/reset/confirm/{uid}/{token}/",
+}
+
 INSTALLED_APPS = [
     'daphne',
     'channels',
@@ -297,10 +302,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    "http://127.0.0.1:3000",
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
+# Allow cookies/credentials to be sent with cross-origin requests
 CORS_ALLOW_CREDENTIALS = True
 
 # Elasticsearch DSL Configuration

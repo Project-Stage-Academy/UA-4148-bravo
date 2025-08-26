@@ -10,7 +10,7 @@ from common.enums import Stage
 from investments.serializers.subscription_create import SubscriptionCreateSerializer
 from investments.services.subscriptions import get_total_subscribed
 from investors.models import Investor
-from tests.elasticsearch.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, ProjectFactory, \
+from tests.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, ProjectFactory, \
     CategoryFactory
 
 

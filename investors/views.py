@@ -1,14 +1,15 @@
 import logging
 from django.db import IntegrityError
 from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
-
 from investors.models import Investor, SavedStartup
+from investors.permissions import IsSavedStartupOwner
 from investors.serializers import InvestorSerializer, SavedStartupSerializer
+from users.permissions import IsInvestor
 
-logger = logging.getLogger(__name__) 
+logger = logging.getLogger(__name__)
 
 
 class InvestorViewSet(viewsets.ModelViewSet):
@@ -18,17 +19,7 @@ class InvestorViewSet(viewsets.ModelViewSet):
     """
     queryset = Investor.objects.select_related("user", "industry", "location")
     serializer_class = InvestorSerializer
-    permission_classes = [IsAuthenticated]
-
-
-class IsSavedStartupOwner(BasePermission):
-    """
-    Custom permission to allow only the owner of a SavedStartup (its investor) to modify or delete it.
-    """
-    def has_object_permission(self, request, view, obj):
-        if not hasattr(request.user, "investor"):
-            return False
-        return obj.investor_id == request.user.investor.pk
+    permission_classes = [IsAuthenticated, IsInvestor]
 
 
 class SavedStartupViewSet(viewsets.ModelViewSet):

@@ -9,40 +9,35 @@ info:
   license:
     name: Proprietary
 paths:
-  /api/v1/auth/auth/jwt/logout/:
-    post:
-      operationId: auth_auth_jwt_logout_create
-      description: |-
-        Takes a token and blacklists it. Must be used with the
-        `rest_framework_simplejwt.token_blacklist` app installed.
+  /api/v1/auth/csrf/:
+    get:
+      operationId: auth_csrf_init
+      description: |
+        Initializes CSRF protection by setting a CSRF cookie.
+        Frontend must call this endpoint before sending any POST/PUT/PATCH/DELETE requests.
+      summary: Initialize CSRF protection
       tags:
-      - auth
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TokenBlacklistRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/TokenBlacklistRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/TokenBlacklistRequest'
-        required: true
-      security:
-      - bearerAuth: []
+        - Auth
       responses:
         '200':
-          description: No response body
+          description: CSRF cookie set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: CSRF cookie set
   /api/v1/auth/jwt/create/:
     post:
       operationId: auth_jwt_create_create
-      description: |-
+      description: |
         Custom view for obtaining JWT tokens.
         Uses CustomTokenObtainPairSerializer for token generation.
       summary: Obtain JWT access/refresh tokens
       tags:
-      - Auth
+        - Auth
       requestBody:
         content:
           application/json:
@@ -56,68 +51,89 @@ paths:
               $ref: '#/components/schemas/CustomTokenObtainPairRequest'
         required: true
       security:
-      - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
-          description: No response body
-        '401':
-          description: Invalid credentials
-  /api/v1/auth/jwt/logout/:
-    post:
-      operationId: auth_jwt_logout_create
-      description: |-
-        Takes a token and blacklists it. Must be used with the
-        `rest_framework_simplejwt.token_blacklist` app installed.
-      summary: Logout (blacklist refresh token)
-      tags:
-      - Auth
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TokenBlacklistRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/TokenBlacklistRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/TokenBlacklistRequest'
-        required: true
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: No response body
-  /api/v1/auth/jwt/refresh/:
-    post:
-      operationId: auth_jwt_refresh_create
-      description: |-
-        Takes a refresh type JSON web token and returns an access type JSON web
-        token if the refresh token is valid.
-      summary: Refresh JWT access token
-      tags:
-      - Auth
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-        required: true
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
+          description: Access token returned; refresh token set in HttpOnly cookie
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenRefresh'
-          description: ''
+                type: object
+                properties:
+                  access:
+                    type: string
+                    description: Access JWT token
+        '401':
+          description: Invalid credentials
+  /api/v1/auth/jwt/refresh/:
+    post:
+      operationId: auth_jwt_refresh_create
+      description: |
+        Takes a refresh token from HttpOnly cookie and returns a new access token if valid.
+      summary: Refresh JWT access token
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: New access token returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                    description: New access JWT token
+        '401':
+          description: Unauthorized / Invalid refresh token
+  /api/v1/auth/jwt/logout/:
+    post:
+      operationId: auth_jwt_logout_create
+      description: |
+        Invalidates the refresh token and clears the authentication cookie.
+        Requires `rest_framework_simplejwt.token_blacklist` app installed.
+      summary: Logout (blacklist refresh token)
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+        required: true
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Successfully logged out
   /api/v1/auth/me/:
     get:
       operationId: auth_me
@@ -142,6 +158,205 @@ paths:
           description: Forbidden - user account is inactive
         '404':
           description: Not Found - user no longer exists
+  /api/v1/communications/notifications/:
+    get:
+      operationId: communications_notifications_list
+      description: |-
+        API endpoint that allows a user to list their notifications with filtering.
+      parameters:
+      - in: query
+        name: is_read
+        schema:
+          type: boolean
+      - in: query
+        name: type
+        schema:
+          type: string
+        description: Notification type code (slug)
+      - in: query
+        name: priority
+        schema:
+          type: string
+          enum: [low, medium, high]
+      - in: query
+        name: created_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+  /api/v1/communications/notifications/{notification_id}/:
+    get:
+      operationId: communications_notifications_retrieve
+      description: Retrieve a single notification by its UUID.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    delete:
+      operationId: communications_notifications_destroy
+      description: Delete a notification.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/communications/notifications/unread_count/:
+    get:
+      operationId: communications_notifications_unread_count_retrieve
+      description: Get the count of unread notifications for the current user.
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnreadCount'
+          description: ''
+  /api/v1/communications/notifications/mark_all_as_read/:
+    post:
+      operationId: communications_notifications_mark_all_as_read_create
+      description: Mark all notifications as read for the current user.
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/mark_all_as_unread/:
+    post:
+      operationId: communications_notifications_mark_all_as_unread_create
+      description: Mark all notifications as unread for the current user.
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/{notification_id}/mark_as_read/:
+    post:
+      operationId: communications_notifications_mark_as_read_create
+      description: Mark a notification as read.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/{notification_id}/mark_as_unread/:
+    post:
+      operationId: communications_notifications_mark_as_unread_create
+      description: Mark a notification as unread.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStatus'
+          description: ''
+        '401':
+          description: Unauthorized
+  /api/v1/communications/notifications/{notification_id}/resolve/:
+    get:
+      operationId: communications_notifications_resolve_retrieve
+      description: Return only the redirect payload for the notification.
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - communications
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
+          description: ''
   /api/v1/auth/oauth/login/:
     post:
       operationId: auth_oauth_login_create
@@ -2338,6 +2553,103 @@ components:
           description: Whether this notification type is active
       required:
       - name
+    Notification:
+      type: object
+      description: Serializer for user notifications.
+      properties:
+        notification_id:
+          type: string
+          format: uuid
+          readOnly: true
+        notification_type:
+          $ref: '#/components/schemas/NotificationType'
+        title:
+          type: string
+        message:
+          type: string
+        is_read:
+          type: boolean
+        priority:
+          type: string
+          enum: [low, medium, high]
+        priority_display:
+          type: string
+          description: Human-readable display value of priority
+        actor:
+          type: object
+          nullable: true
+          additionalProperties: true
+        redirect:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - notification_id
+      - notification_type
+      - title
+      - message
+      - is_read
+      - priority
+      - created_at
+      - updated_at
+    ActionStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    UnreadCount:
+      type: object
+      properties:
+        unread_count:
+          type: integer
+      required:
+      - unread_count
+    ResolveResponse:
+      type: object
+      properties:
+        redirect:
+          type: object
+          nullable: true
+          additionalProperties: true
+      required:
+      - redirect
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 1
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/communications/notifications/?page=2
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: null
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
     PaginatedProjectDocumentList:
       type: object
       required:

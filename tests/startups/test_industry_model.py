@@ -1,5 +1,3 @@
-from django.core.exceptions import ValidationError
-from startups.models import Industry
 from tests.test_base_case import BaseAPITestCase
 from startups.models import Industry
 from django.core.exceptions import ValidationError

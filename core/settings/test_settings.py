@@ -1,5 +1,4 @@
-import sys
-from core.settings import * 
+from core.settings import *
 
 ELASTICSEARCH_DSL = {
     'default': {
