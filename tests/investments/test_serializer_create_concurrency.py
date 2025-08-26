@@ -112,15 +112,11 @@ class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
                 data=data,
                 context={'request': DummyRequest(investor.user), 'project': self.project1}
             )
-            assert serializer.is_valid(), serializer.errors
     
             try:
+                serializer.is_valid(raise_exception=True)
                 with transaction.atomic():
-                    from projects.models import Project
-                    Project.objects.select_for_update().get(pk=self.project1.pk)
-
-                    if serializer.is_valid(raise_exception=True):
-                        serializer.save() 
+                    serializer.save() 
             except serializers.ValidationError as e:
                 errors.append(e.detail)
 

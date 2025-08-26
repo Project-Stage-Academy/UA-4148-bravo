@@ -192,11 +192,11 @@ class TestSubscriptionCreateAPI(TestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
     def test_invest_in_nonexistent_project_fails(self):
-        """Test that investing in a non-existent project returns a 400 error."""
+        """Test that investing in a non-existent project returns a 404 error."""
         self.authenticate(self.investor_user)
         url = reverse("project-subscribe", kwargs={"project_id": 9999})
         payload = {"amount": 100}
         response = self.client.post(url, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("Project does not exist", str(response.data.get('project')))
