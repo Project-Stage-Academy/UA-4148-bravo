@@ -33,7 +33,7 @@ class SubscriptionSerializerValidDataTests(BaseAPITestCase):
             for field, errors in serializer.errors.items():
                 print(f"Validation errors in field '{field}': {errors}")
         self.assertTrue(is_valid, "Serializer validation failed")
-        subscription = serializer.save()
+        subscription = serializer.save(project=self.project, investor=self.investor1)
         recalculate_investment_shares(self.project)
         subscription.refresh_from_db()
         expected_share = calculate_investment_share(subscription.amount, self.project.funding_goal)
@@ -45,7 +45,7 @@ class SubscriptionSerializerValidDataTests(BaseAPITestCase):
         data = self.get_subscription_data(self.investor1, self.project, 333.33)
         serializer = self.serializer_with_user(data, self.investor1.user)
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        subscription = serializer.save()
+        subscription = serializer.save(project=self.project, investor=self.investor1)
         expected_share = (Decimal("333.33") / self.project.funding_goal * 100).quantize(Decimal("0.01"),
                                                                                         rounding=ROUND_DOWN)
         self.assertEqual(subscription.investment_share, expected_share)
@@ -57,7 +57,7 @@ class SubscriptionSerializerValidDataTests(BaseAPITestCase):
         data = self.get_subscription_data(self.investor1, self.project, 0.01)
         serializer = self.serializer_with_user(data, self.investor1.user)
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        subscription = serializer.save()
+        subscription = serializer.save(project=self.project, investor=self.investor1)
         expected_share = (Decimal("0.01") / self.project.funding_goal * 100).quantize(Decimal("0.01"))
         self.assertEqual(subscription.investment_share, expected_share)
 
@@ -83,7 +83,7 @@ class SubscriptionSerializerValidDataTests(BaseAPITestCase):
             data = self.get_subscription_data(investor, self.project, amount)
             serializer = self.serializer_with_user(data, investor.user)
             self.assertTrue(serializer.is_valid(), serializer.errors)
-            subscription = serializer.save()
+            subscription = serializer.save(project=self.project, investor=self.investor1)
             subscriptions.append(subscription)
         recalculate_investment_shares(self.project)
         total_share = Decimal("0.00")
