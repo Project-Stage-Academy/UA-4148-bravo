@@ -115,6 +115,32 @@ class UserNotificationPreferenceSerializer(serializers.ModelSerializer):
         return instance
 
 
+class UpdateTypePreferenceSerializer(serializers.Serializer):
+    """Serializer to validate and apply per-type preference updates.
+
+    Expects context['pref'] with the user's UserNotificationPreference instance.
+    On save(), updates and returns the matching UserNotificationTypePreference.
+    """
+    notification_type_id = serializers.IntegerField()
+    frequency = NotificationFrequencyField()
+
+    def validate(self, attrs):
+        pref = self.context.get('pref')
+        if pref is None:
+            raise serializers.ValidationError('Preference context is required')
+        nt_id = attrs.get('notification_type_id')
+        type_pref = pref.type_preferences.filter(notification_type_id=nt_id).first()
+        if not type_pref:
+            raise serializers.ValidationError('Notification type preference not found', code='not_found')
+        attrs['type_pref'] = type_pref
+        return attrs
+
+    def save(self, **kwargs):
+        type_pref = self.validated_data['type_pref']
+        type_pref.frequency = self.validated_data['frequency']
+        type_pref.save()
+        return type_pref
+
 class NotificationSerializer(serializers.ModelSerializer):
     """Serializer for notifications."""
     notification_type = NotificationTypeSerializer(read_only=True)
