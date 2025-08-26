@@ -55,9 +55,9 @@ class ResendEmailTests(APITestCase):
 
         return response
 
-    @patch('users.views.ResendEmailView.throttle_classes', [])
-    @patch('users.views.send_mail')
-    @patch('users.views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
+    @patch('users.views.email_views.ResendEmailView.throttle_classes', [])
+    @patch('users.views.email_views.send_mail')
+    @patch('users.views.email_views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
     def test_resend_email_scenarios(self, mock_make_token, mock_send_mail):
         scenarios = [
             ("happy_path", None, True),
@@ -98,7 +98,7 @@ class ResendEmailTests(APITestCase):
 
                 mock_send_mail.reset_mock()
 
-    @patch('users.views.ResendEmailView.throttle_classes', [])
+    @patch('users.views.email_views.ResendEmailView.throttle_classes', [])
     def test_bad_input_invalid_emails(self):
         invalid_emails = [
             "plainaddress",
@@ -129,8 +129,8 @@ class ResendEmailTests(APITestCase):
                 if DEBUG_LOGS:
                     logger.info("Invalid email '%s' correctly rejected", email)
 
-    @patch('users.views.send_mail')
-    @patch('users.views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
+    @patch('users.views.email_views.send_mail')
+    @patch('users.views.email_views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
     def test_throttling_with_limit(self, mock_make_token, mock_send_mail):
         url = reverse('resend-email')
         data = {'user_id': self.user.user_id}
@@ -150,8 +150,8 @@ class ResendEmailTests(APITestCase):
         if DEBUG_LOGS:
             logger.info("Throttling limit reached as expected after %d requests", ALLOWED_THROTTLE_REQUESTS)
 
-    @patch('users.views.ResendEmailView.throttle_classes', [])
-    @patch('users.views.send_mail')
+    @patch('users.views.email_views.ResendEmailView.throttle_classes', [])
+    @patch('users.views.email_views.send_mail')
     def test_already_verified_user(self, mock_send_mail):
         active_user = self._create_test_user(
             email=f"active_{uuid.uuid4().hex[:10]}@example.com",

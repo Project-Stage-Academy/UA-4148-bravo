@@ -14,6 +14,7 @@ class Stage(TextChoices):
     """
     IDEA = 'idea', 'Idea'
     MVP = 'mvp', 'MVP'
+    SEED = 'seed', 'Seed'
     LAUNCH = 'launch', 'Launch'
     SCALE = 'scale', 'Scale'
     EXIT = 'exit', 'Exit'

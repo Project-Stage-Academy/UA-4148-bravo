@@ -15,12 +15,12 @@ from .healthcheck import elasticsearch_healthcheck
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-
     # Versioned API
     path('api/v1/auth/', include('users.urls')),
     path('api/v1/projects/', include('projects.urls')),
     path('api/v1/startups/', include('startups.urls')),
     path('api/v1/investors/', include('investors.urls')),
+    path('api/v1/investments/', include(('investments.urls', 'investments'), namespace='investments')),
     path('api/v1/communications/', include('communications.urls')),
 
     # Health & allauth

@@ -138,8 +138,8 @@ class Notification(TimeStampedModel):
         blank=True
     )
 
-    related_startup_id = models.PositiveIntegerField(null=True, blank=True)
-    related_project_id = models.PositiveIntegerField(null=True, blank=True)
+    related_startup_id = models.CharField(max_length=64, null=True, blank=True)
+    related_message_id = models.CharField(max_length=64, null=True, blank=True)
     related_message_id = models.PositiveIntegerField(null=True, blank=True)
 
     priority = models.CharField(
@@ -149,12 +149,6 @@ class Notification(TimeStampedModel):
     )
     is_read = models.BooleanField(default=False)
     expires_at = models.DateTimeField(null=True, blank=True)
-    action_link = models.URLField(
-        max_length=500,
-        blank=True,
-        null=True,
-        help_text=_('Optional URL for client action (e.g., deep link or page URL)')
-    )
 
     class Meta:
         ordering = ['-created_at']

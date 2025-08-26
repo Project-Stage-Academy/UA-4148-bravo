@@ -3,7 +3,7 @@ from mongoengine import CASCADE
 from mongoengine import Document, StringField, ListField, ReferenceField, DateTimeField, BooleanField, ValidationError
 from datetime import datetime, timezone
 import re
-from core.settings import FORBIDDEN_WORDS_SET
+from core.settings.constants import FORBIDDEN_WORDS_SET
 
 MAX_PARTICIPANTS = int(os.getenv("MAX_PARTICIPANTS", 50))
 MIN_MESSAGE_LENGTH = int(os.getenv("MIN_MESSAGE_LENGTH", 1))

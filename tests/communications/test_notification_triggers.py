@@ -78,7 +78,7 @@ class NotificationTriggersTests(TransactionTestCase):
         notif = Notification.objects.first()
         self.assertEqual(notif.user, self.startup_user)
         self.assertEqual(notif.notification_type.code, "startup_followed")
-        self.assertEqual(notif.related_startup_id, self.startup.id)
+        self.assertEqual(int(notif.related_startup_id), int(self.startup.id))
         self.assertIn("followed your startup", notif.message.lower())
     def test_duplicate_follow_does_not_create_duplicate_notification(self):
         SavedStartup.objects.create(investor=self.investor, startup=self.startup)
@@ -86,7 +86,12 @@ class NotificationTriggersTests(TransactionTestCase):
             connection.commit()
         except Exception:
             pass
+
         self.assertEqual(Notification.objects.count(), 1)
+        self.assertEqual(
+            SavedStartup.objects.filter(investor=self.investor, startup=self.startup).count(),
+            1,
+        )
 
         try:
             SavedStartup.objects.create(investor=self.investor, startup=self.startup)
