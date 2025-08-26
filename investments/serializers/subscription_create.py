@@ -39,7 +39,10 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         project = self.context.get("project")
         if not project:
             raise serializers.ValidationError({"project": "Project is required."})
-        investor = self.context["request"].user.investor
+        request = self.context.get("request")
+        if not request or not hasattr(request, "user") or not hasattr(request.user, "investor"):
+            raise serializers.ValidationError({"investor": "Authenticated investor required."})
+        investor = request.user.investor
         amount = data.get("amount")
 
         startup = getattr(project, 'startup', None)
