@@ -33,7 +33,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ["id", "investor", 'project', "amount"]
-        read_only_fields = ["id", "investor", "project"]
+        read_only_fields = ["id", "investor"]
 
     def validate(self, data):
         project = self.context.get("project")
