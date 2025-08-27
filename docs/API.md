@@ -341,4 +341,113 @@ These URLs are used by the frontend to receive authorization codes or tokens.
       ```
 
 4. **ExchangeCode for Token**:
-  -Send the authorization code to your backend API `/users/oauth/login/` to exchange it for an access token.
+   -Send the authorization code to your backend API `/users/oauth/login/` to exchange it for an access token.
+
+## Notifications API (Communications)
+
+All endpoints require authentication and are available under the base path: `/api/v1/communications/`.
+
+### Endpoints
+
+- `GET /notifications/` — List current user's notifications.
+- `GET /notifications/unread_count/` — Get unread notifications count.
+- `POST /notifications/{notification_id}/mark_as_read/` — Mark notification as read.
+- `POST /notifications/{notification_id}/mark_as_unread/` — Mark notification as unread.
+- `POST /notifications/mark_all_as_read/` — Mark all notifications as read.
+- `POST /notifications/mark_all_as_unread/` — Mark all notifications as unread.
+- `GET /notifications/{notification_id}/resolve/` — Get only redirect payload for a notification.
+- `DELETE /notifications/{notification_id}/` — Delete a notification.
+
+Creation of notifications via public API is disabled.
+
+### Query Parameters (GET /notifications/)
+
+- `is_read` — true | false (filter by read state: true = read, false = unread)
+- `type` — notification type code (slug)
+- `priority` — low | medium | high
+- `created_after` — ISO datetime (e.g., 2025-08-05T00:00:00Z)
+- `created_before` — ISO datetime
+
+### Response Example (GET /notifications/)
+
+```json
+{
+  "count": 1,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "notification_id": "b6b9e6f4-8f5a-4e58-9e7f-2d3b1f7ac111",
+      "notification_type": {
+        "id": 3,
+        "code": "message_new",
+        "name": "New Message",
+        "description": "A new message was received",
+        "is_active": true
+      },
+      "title": "You have a new message",
+      "message": "Investor John Doe sent you a message",
+      "is_read": false,
+      "priority": "medium",
+      "priority_display": "Medium",
+      "actor": {
+        "type": "investor",
+        "user_id": 42,
+        "investor_id": 7,
+        "display_name": "Acme Ventures"
+      },
+      "redirect": {
+        "kind": "message",
+        "id": 99,
+        "url": "/messages/99"
+      },
+      "created_at": "2025-08-05T12:34:56Z",
+      "updated_at": "2025-08-05T12:34:56Z",
+      "expires_at": null
+    }
+  ]
+}
+```
+
+### Actions Responses
+
+- `POST /notifications/{id}/mark_as_read/` → `{ "status": "notification marked as read" }`
+- `POST /notifications/{id}/mark_as_unread/` → `{ "status": "notification marked as unread" }`
+- `POST /notifications/mark_all_as_read/` → `{ "status": "marked <n> notifications as read" }`
+- `POST /notifications/mark_all_as_unread/` → `{ "status": "marked <n> notifications as unread" }`
+- `GET /notifications/{id}/resolve/` → `{ "redirect": { ... } }`
+
+# Company Binding API
+
+## Overview
+
+The Company Binding API allows authenticated users to associate themselves with a company (startup or investor) after
+registration. Users can either bind to an existing company or create a new one.
+
+## Endpoint
+
+**POST** `/api/v1/auth/bind-company/`
+
+## Authentication
+
+- Requires authentication via JWT token
+- Add `Authorization: Bearer <token>` to request headers
+
+## Request Body
+
+```json
+{
+  "company_name": "Tech Innovations Inc.",
+  "company_type": "startup"
+}
+```
+
+## Example Response
+
+```json 
+{
+  "message": "Successfully bound to existing startup: Tech Innovations Inc.",
+  "company_type": "startup",
+  "company_id": 1
+}
+```
