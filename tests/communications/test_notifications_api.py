@@ -6,8 +6,7 @@ from rest_framework.authtoken.models import Token
 from django.utils import timezone
 
 from communications.models import Notification, NotificationPriority
-from communications.models import NotificationType
-from tests.elasticsearch.factories import UserFactory
+from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 
 
