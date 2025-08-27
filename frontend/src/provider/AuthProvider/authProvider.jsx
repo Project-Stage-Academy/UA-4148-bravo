@@ -250,35 +250,6 @@ function AuthProvider({ children }) {
             });
     }, []);
 
-    /**
-     * Refresh
-     * URL: /api/v1/auth/jwt/refresh/
-     * Req: {  }
-     * Res: 200 {  }
-     */
-    const refreshToken = useCallback(async () => {
-        try {
-            await api.post('/api/v1/auth/jwt/refresh/');
-            /*
-             * TODO
-             * await loadUser();
-             */
-        } catch (err) {
-            if (err.response) {
-                console.log(
-                    'Refresh token missing or invalid:',
-                    err.response.status
-                );
-            } else {
-                console.error(err);
-            }
-
-            if (err.response?.status === 401) {
-                await logout();
-            }
-        }
-    }, [logout]);
-
     return (
         <AuthCtx.Provider
             value={useMemo(

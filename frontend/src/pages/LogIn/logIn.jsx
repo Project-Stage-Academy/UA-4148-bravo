@@ -26,6 +26,9 @@ function LogInPage() {
     const [attempts, setAttempts] = useState(0);
     const [isLocked, setIsLocked] = useState(false);
 
+    // Visualisation of valid data
+    const [valid, isValid] = useState(false);
+
     // Hook to navigate programmatically
     const navigate = useNavigate();
 
@@ -64,7 +67,9 @@ function LogInPage() {
         );
         setErrors(validationErrors);
 
-        if (Object.values(validationErrors).every(value => value === null)) {
+        isValid(Object.values(validationErrors).every(value => value === null));
+
+        if (valid) {
             login(formData.email, formData.password)
                 .then(() => navigate('/'))
                 .catch((error) => bruteForce(error, {
@@ -80,12 +85,14 @@ function LogInPage() {
 
     // Function to handle input changes
     const handleChange = (e) => {
-        return Validator.handleChange(
+        const res = Validator.handleChange(
             e,
             formData,
             setFormData,
             setErrors
         );
+        isValid(res);
+        return res;
     };
 
     return (
@@ -182,7 +189,7 @@ function LogInPage() {
                 <PanelNavigation>
                     <Button
                         onClick={handleSubmit}
-                        disabled={isLocked}
+                        disabled={(!valid) || isLocked}
                         className={'button__padding panel--button'}
                         type="submit"
                     >
