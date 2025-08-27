@@ -67,8 +67,10 @@ class SubscriptionSerializerConcurrencyTests(DisableSignalsMixin, TestDataMixin,
 
         t1 = threading.Thread(target=subscribe, args=(self.investor2, amount1, 0))
         t2 = threading.Thread(target=subscribe, args=(self.investor3, amount2, 0.05))
-        t1.start(); t2.start()
-        t1.join(); t2.join()
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
 
         for conn in connections.all():
             conn.close()
@@ -82,10 +84,6 @@ class SubscriptionSerializerConcurrencyTests(DisableSignalsMixin, TestDataMixin,
             for e in (err.values() if isinstance(err, dict) else [err])
         ]
         self.assertTrue(
-            any("exceeds funding goal" in msg for msg in error_messages)
+            any("exceeds funding goal" in msg for msg in error_messages),
+            f"Expected funding goal exceeded error, got: {error_messages}"
         )
-
-
-
-
-

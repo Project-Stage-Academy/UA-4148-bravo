@@ -8,7 +8,7 @@ from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
 from elasticsearch.exceptions import ConnectionError, TransportError
 from rest_framework import status
 from rest_framework.response import Response
-
+from rest_framework.permissions import IsAuthenticated
 from startups.documents import StartupDocument
 from startups.serializers.startup_elasticsearch import StartupDocumentSerializer
 
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class StartupDocumentView(DocumentViewSet):
+    permission_classes = [IsAuthenticated]
     document = StartupDocument
     serializer_class = StartupDocumentSerializer
     lookup_field = 'id'

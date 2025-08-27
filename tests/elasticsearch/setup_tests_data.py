@@ -4,7 +4,7 @@ from elasticsearch_dsl.connections import connections
 from rest_framework.test import APIClient
 
 from common.enums import Stage
-from tests.elasticsearch.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, \
+from tests.factories import UserFactory, IndustryFactory, LocationFactory, StartupFactory, \
     CategoryFactory, ProjectFactory
 
 

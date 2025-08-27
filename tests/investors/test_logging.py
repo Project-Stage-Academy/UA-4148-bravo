@@ -122,11 +122,13 @@ class SavedStartupLoggingTests(BaseInvestorTestCase):
             role=role_user,
         )
         self.client.force_authenticate(user=plain_user)
-        with self.assertLogs("investors.views", level="WARNING") as cap:
+        with self.assertLogs("users.permissions", level="WARNING") as cap:
             res = self.client.get(self.list_url)
+
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
         msgs = "\n".join(r.getMessage() for r in cap.records)
-        self.assertIn("list denied", msgs.lower())
+        self.assertIn("Permission denied", msgs)
+        self.assertIn("Not an investor", msgs)
 
     def test_update_logs_validation_error(self):
         obj = SavedStartup.objects.create(investor=self.investor, startup=self.startup, status="watching")

@@ -1,37 +1,120 @@
 # Forum Project Stage CC WebAPI Documentation
 
-This document describes the available endpoints, request formats, response structures, and validation rules for the **Forum Project Stage CC WebAPI**.  
-It is organized by module to allow each developer to maintain and extend their respective sections.
+This document describes the available endpoints, request formats, response structures, and validation rules for the **Forum Project Stage CC WebAPI**. It is organized by module.
 
 ---
 
 ## Authentication
 
-All endpoints require JWT authentication.  
-Include the token in the `Authorization` header using the following format:
+All endpoints require JWT authentication unless explicitly stated otherwise.
 
-Authorization: Bearer <your_access_token>
+Include the token in the `Authorization` header:
+
+```
+Authorization: Bearer <access_token>
+```
+
+CSRF protection is required for state‑changing requests (POST/PUT/PATCH/DELETE). See **Auth API → CSRF Init**.
 
 ---
 
-### 🔐 JWT Logout
+## Auth API
 
-The `POST /api/users/auth/jwt/logout/` endpoint logs out a user by **blacklisting the refresh token**.
+### Endpoints
 
-### ✅ Requirements
+#### 1) CSRF Init
 
-- The **refresh token must be included** in the request body.
-- The **client must delete both access and refresh tokens** from local storage (or other storage) after a successful logout.
+* **GET** `/api/v1/auth/csrf/` — initializes CSRF protection by setting a CSRF cookie. The frontend should call this before any state‑changing requests.
 
-### 📤 Example Request
+**Response example**
 
-```http
-POST /api/users/auth/jwt/logout/
+```json
+{ "detail": "CSRF cookie set" }
+```
+
+#### 2) JWT Create (Login)
+
+* **POST** `/api/v1/auth/jwt/create/` — authenticates a user. Returns an access token in the response body and stores the refresh token in an **HttpOnly, Secure** cookie.
+
+**Headers**
+
+```
 Content-Type: application/json
+X-CSRFToken: <csrf_token>
+```
 
+**Request body**
+
+```json
 {
-  "refresh": "<your_refresh_token>"
+  "email": "user@example.com",
+  "password": "strong_password"
 }
+```
+
+**Response**
+
+```json
+{ "access": "<access_token>" }
+```
+
+*(The `refresh_token` is stored in an HttpOnly cookie.)*
+
+#### 3) JWT Refresh
+
+* **POST** `/api/v1/auth/jwt/refresh/` — generates a new access token using the refresh token stored in the HttpOnly cookie.
+
+**Headers**
+
+```
+Content-Type: application/json
+X-CSRFToken: <csrf_token>
+```
+
+**Response**
+
+```json
+{ "access": "<new_access_token>" }
+```
+
+#### 4) JWT Logout
+
+* **POST** `/api/v1/auth/jwt/logout/` — invalidates the refresh token and clears the auth cookie.
+
+**Headers**
+
+```
+Content-Type: application/json
+X-CSRFToken: <csrf_token>
+```
+
+**Response**
+
+```json
+{ "detail": "Successfully logged out" }
+```
+
+#### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Backend
+    participant Cookie as "HttpOnly Cookie"
+
+    Browser->>Backend: GET /api/v1/auth/csrf/
+    Backend-->>Browser: Set CSRF cookie
+
+    Browser->>Backend: POST /api/v1/auth/jwt/create/ (email, password, CSRF)
+    Backend-->>Browser: access token (JSON)
+    Backend-->>Cookie: refresh_token (HttpOnly, Secure)
+
+    Browser->>Backend: POST /api/v1/auth/jwt/refresh/ (CSRF + refresh cookie)
+    Backend-->>Browser: new access token (JSON)
+
+    Browser->>Backend: POST /api/v1/auth/jwt/logout/ (CSRF)
+    Backend-->>Cookie: delete refresh_token
+    Backend-->>Browser: logout success
 ```
 
 ---
@@ -40,30 +123,30 @@ Content-Type: application/json
 
 ### Endpoints
 
-- `GET /api/v1/startups/` — Retrieve a list of all startup profiles (investor only)
-- `GET /api/v1/startups/{id}/` — Retrieve details of a specific startup profile (investor only)
-- `GET /api/v1/startups/search/?q=<keyword>` — Search startup profiles by keyword (investor only)
+* **GET** `/api/v1/startups/` — list all startup profiles *(investor only)*
+* **GET** `/api/v1/startups/{id}/` — details of a specific startup profile *(investor only)*
+* **GET** `/api/v1/startups/search/?q=<keyword>` — search startup profiles by keyword *(investor only)*
 
 ### Filtering
 
-You can filter startup profiles using query parameters:
+Query parameters:
 
-- `industry` — Filter by industry (e.g., `industry=Fintech`)
-- `min_team_size` — Minimum team size (e.g., `min_team_size=10`)
-- `funding_needed__lte` — Maximum funding needed (e.g., `funding_needed__lte=500000`)
+* `industry` — filter by industry (e.g., `industry=Fintech`)
+* `min_team_size` — minimum team size (e.g., `min_team_size=10`)
+* `funding_needed__lte` — maximum funding required (e.g., `funding_needed__lte=500000`)
 
 ### Permissions
 
-- Only authenticated users with the **investor role** can access these endpoints.
+* Only authenticated users with the **investor** role can access these endpoints.
 
-### Example Request: List Startups
+### Example — List Startups
 
 ```http
 GET /api/v1/startups/?industry=Fintech&funding_needed__lte=500000
 Authorization: Bearer <access_token>
 ```
 
-### Example Response: List Startups (200 OK)
+**Response 200**
 
 ```json
 [
@@ -92,35 +175,10 @@ Authorization: Bearer <access_token>
 
 ### Endpoints
 
-- `GET /api/profiles/investors/` — Retrieve a list of all investors
-- `POST /api/profiles/investors/` — Create a new investor  
-  ...
+* **GET** `/api/v1/profiles/investors/` — list all investors
+* **POST** `/api/v1/profiles/investors/` — create a new investor
 
-### Request Example: Create Startup Profile
-
-```json
-{
-  "company_name": "GreenTech",
-  "description": "Eco-friendly solutions",
-  "website": "https://greentech.ua",
-  "startup_logo": null
-}
-```
-
-### Response Example: Created Startup Profile (201 Created)
-
-```json
-{
-  "id": 1,
-  "company_name": "GreenTech",
-  "description": "Eco-friendly solutions",
-  "website": "https://greentech.ua",
-  "startup_logo": null,
-  "projects": [],
-  "created_at": "2025-08-05T00:00:00Z",
-  "updated_at": "2025-08-05T00:00:00Z"
-}
-```
+*(Further fields/filters can be extended in this section as the model evolves.)*
 
 ---
 
@@ -128,15 +186,15 @@ Authorization: Bearer <access_token>
 
 ### Endpoints
 
-- `GET /api/projects/` — Retrieve a list of all projects
-- `POST /api/projects/` — Create a new project
-- `GET /api/projects/{id}/` — Retrieve details of a specific project
-- `PATCH /api/projects/{id}/` — Update an existing project
-- `DELETE /api/projects/{id}/` — Delete a project
+* **GET** `/api/v1/projects/` — list all projects
+* **POST** `/api/v1/projects/` — create a project
+* **GET** `/api/v1/projects/{id}/` — get project details
+* **PATCH** `/api/v1/projects/{id}/` — update a project
+* **DELETE** `/api/v1/projects/{id}/` — delete a project
 
----
+### Example — Create Project
 
-### Request Example: Create Project
+**Request**
 
 ```json
 {
@@ -155,7 +213,7 @@ Authorization: Bearer <access_token>
 }
 ```
 
-### Response Example: Created Project (201 Created)
+**Response 201**
 
 ```json
 {
@@ -183,118 +241,218 @@ Authorization: Bearer <access_token>
 
 ### Startup Profile
 
-- name: required, unique
-- industry: required
-- stage: required
-- funding_needed: required, numeric
-- team_size: required, integer
+* `name`: required, unique
+* `industry`: required
+* `stage`: required
+* `funding_needed`: required, numeric
+* `team_size`: required, integer
 
 ### Project
 
-- startup: required (must reference existing profile)
-- title: required
-- funding_goal: required if is_participant is true
-- current_funding: must not exceed funding_goal
-- business_plan: required if status is completed
-- email: required, must be valid
+* `startup`: required (must reference existing profile)
+* `title`: required
+* `funding_goal`: required if `is_participant` is `true`
+* `current_funding`: must not exceed `funding_goal`
+* `business_plan`: required if `status` is `completed`
+* `email`: required, valid email
 
 ---
-
-## Token Refresh
-
-Use `/api/token/refresh/` to obtain a new access token.
-
-### Response Example
-
-```json
-{
-  "refresh": "<your_refresh_token>",
-  "access": "<your_new_access_token>"
-}
-```
 
 # OAuth Authentication API Documentation
 
-## Part 1
-## Overview
-This document describes the OAuth authentication endpoints for Google and GitHub integration.
+## Part 1 — Overview
+
+OAuth authentication endpoints for Google and GitHub integration.
+
+### Endpoint
+
+* **POST** `/api/v1/auth/oauth/login/`
+
+**Description**: Exchanges provider tokens/codes for application JWT tokens and returns user info.
+
+**Headers**
+
+```
+Content-Type: application/json
+```
+
+**Request body**
+
+```json
+{
+  "provider": "google" | "github",
+  "token": "<OAuth token or authorization code>"
+}
+```
+
+**Response**
+
+```json
+{
+  "access": "jwt_access_token",
+  "user": {
+    "id": "user_123",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_phone": "",
+    "title": "",
+    "role": "user"
+  }
+}
+```
+
+**Status codes**
+
+| Status          | Description                                  |
+| --------------- | -------------------------------------------- |
+| 400 Bad Request | Invalid request parameters or malformed data |
+| 403 Forbidden   | Authenticated but insufficient permissions   |
+
+## Part 2 — Callback URLs
+
+OAuth callback URLs handle redirects after successful authentication with the provider.
+
+* **Production**: *TBD*
+* **Development**: `http://127.0.0.1:8000/oauth/callback/`
+
+### Usage Instructions
+
+1. **Initiate OAuth Flow**
+
+   * Redirect users to the provider's authorization endpoint (e.g., `https://provider.com/oauth/authorize`).
+   * Include a `redirect_uri` that matches one of the configured callback URLs.
+
+2. **Handle Callback**
+
+   * The provider redirects to your callback with an authorization **code** or **token** in the query string (e.g., `...?code=abc123`).
+
+3. **Extract Query Parameters**
+
+   ```javascript
+   const urlParams = new URLSearchParams(window.location.search);
+   const code = urlParams.get('code');
+   const state = urlParams.get('state');
+   const error = urlParams.get('error');
+   ```
+
+4. **Exchange Code for Token**
+
+   * Send the authorization code to your backend API **`/api/v1/auth/oauth/login/`** to exchange it for an access token.
 
 ---
 
-## POST /users/oauth/login/
+## Notifications API (Communications)
 
-### Description
-Authenticate users using Google or GitHub OAuth providers. The endpoint exchanges OAuth provider tokens for application JWT tokens and returns user information.
+**Base path**: `/api/v1/communications/` (authentication required)
 
-## Request
+### Endpoints
 
-- **Headers:**  
-  `Content-Type: application/json`
+* **GET** `/notifications/` — list current user's notifications
+* **GET** `/notifications/unread_count/` — get unread notifications count
+* **POST** `/notifications/{notification_id}/mark_as_read/` — mark as read
+* **POST** `/notifications/{notification_id}/mark_as_unread/` — mark as unread
+* **POST** `/notifications/mark_all_as_read/` — mark all as read
+* **POST** `/notifications/mark_all_as_unread/` — mark all as unread
+* **GET** `/notifications/{notification_id}/resolve/` — get redirect payload only
+* **DELETE** `/notifications/{notification_id}/` — delete a notification
 
-- **Body:**
-  ```json
-  {
-    "provider": "google" | "github",
-    "token": "<OAuth token>"
-  }
-  ```
-  - **Response**
-  ```json
-  {
-    "refresh": "jwt_refresh_token",
-    "access": "jwt_access_token",
-    "user": {
-      "id": "user_123",
-      "email": "user@example.com",
-      "username": "username123",
-      "first_name": "John",
-      "last_name": "Doe",
-      "user_phone": "+1234567890",
-      "title": "Software Developer",
-      "role": "user"
+> Creation of notifications via public API is disabled.
+
+### Query Parameters (`GET /notifications/`)
+
+* `is_read` — `true` | `false`
+* `type` — notification type code (slug)
+* `priority` — `low` | `medium` | `high`
+* `created_after` — ISO datetime (e.g., `2025-08-05T00:00:00Z`)
+* `created_before` — ISO datetime
+
+### Response example (`GET /notifications/`)
+
+```json
+{
+  "count": 1,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "notification_id": "b6b9e6f4-8f5a-4e58-9e7f-2d3b1f7ac111",
+      "notification_type": {
+        "id": 3,
+        "code": "message_new",
+        "name": "New Message",
+        "description": "A new message was received",
+        "is_active": true
+      },
+      "title": "You have a new message",
+      "message": "Investor John Doe sent you a message",
+      "is_read": false,
+      "priority": "medium",
+      "priority_display": "Medium",
+      "actor": {
+        "type": "investor",
+        "user_id": 42,
+        "investor_id": 7,
+        "display_name": "Acme Ventures"
+      },
+      "redirect": {
+        "kind": "message",
+        "id": 99,
+        "url": "/messages/99"
+      },
+      "created_at": "2025-08-05T12:34:56Z",
+      "updated_at": "2025-08-05T12:34:56Z",
+      "expires_at": null
     }
-  }
-  ```
+  ]
+}
+```
 
-**Status codes:**
+### Action Responses
 
-| Status Code | Description |
-|-------------|-------------|
-| `400 Bad Request` | Invalid request parameters or malformed data |
-| `401 Unauthorized` | Authentication failed or invalid credentials |
-| `403 Forbidden` | Authenticated but insufficient permissions |
-| `404 Not Found` | Requested resource doesn't exist |
-| `408 Request Timeout` | Provider API timeout |
-| `429 Too Many Requests` | Rate limit exceeded |
-| `500 Internal Server Error` | Unexpected server error |
-| `502 Bad Gateway` | Provider API communication failed |
+* `POST /notifications/{id}/mark_as_read/` → `{ "status": "notification marked as read" }`
+* `POST /notifications/{id}/mark_as_unread/` → `{ "status": "notification marked as unread" }`
+* `POST /notifications/mark_all_as_read/` → `{ "status": "marked <n> notifications as read" }`
+* `POST /notifications/mark_all_as_unread/` → `{ "status": "marked <n> notifications as unread" }`
+* `GET /notifications/{id}/resolve/` → `{ "redirect": { ... } }`
 
+---
 
-## Part 2
-## Callback URLs
-The OAuth callback URLs are configured to handle redirects after successful authentication with the OAuth provider. These URLs are used by the frontend to receive authorization codes or tokens.
+# Company Binding API
 
-### Configured Callback URLs
-- **Production**: ----
-- **Development**: `http://127.0.0.1:8000/oauth/callback/`
+Allows authenticated users to associate themselves with a company (startup or investor) after registration.
 
-## Usage Instructions
-1. **Initiate OAuth Flow**:
-   - Redirect users to the OAuth provider's authorization endpoint (e.g., `https://provider.com/oauth/authorize`).
-   - Include the appropriate `redirect_uri` parameter matching one of the configured callback URLs
+### Endpoint
 
-2. **Handle Callback**:
-   - After authentication, the OAuth provider will redirect the user to the specified callback URL with an authorization code or token in the query parameters (e.g., `https://yourapp.com/auth/callback?code=abc123`).
-   - The frontend should extract the `code` from the URL query parameters using `URLSearchParams`.
+* **POST** `/api/v1/auth/bind-company/`
 
-3. **Extracting Query Parameters**:
-   - Example of JavaScript to extract parameters from the callback URL:
-     ```javascript
-     const urlParams = new URLSearchParams(window.location.search);
-     const code = urlParams.get('code');
-     const state = urlParams.get('state');
-     const error = urlParams.get('error');
-     ```
+### Authentication
 
-4. **ExchangeCode for Token**:
-  -Send the authorization code to your backend API `/users/oauth/login/` to exchange it for an access token.
+* Requires JWT: `Authorization: Bearer <access_token>`
+
+### Request body
+
+```json
+{
+  "company_name": "Tech Innovations Inc.",
+  "company_type": "startup"
+}
+```
+
+### Response example
+
+```json
+{
+  "message": "Successfully bound to existing startup: Tech Innovations Inc.",
+  "company_type": "startup",
+  "company_id": 1
+}
+```
+
+---
+
+## Notes
+
+* Endpoint versions and base paths have been normalized to `/api/v1/...`.
+* Refresh tokens are handled **exclusively** via HttpOnly cookies; therefore the separate legacy `/api/token/refresh/` section has been removed in favor of `POST /api/v1/auth/jwt/refresh/`.
+* Update the *Production* OAuth callback URL once available.

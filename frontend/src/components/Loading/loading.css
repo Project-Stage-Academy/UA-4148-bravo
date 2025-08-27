@@ -1,0 +1,25 @@
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    flex-flow: row nowrap;
+}
+
+.loading-dot {
+    height: 6px;
+    width: 32px;
+    min-height: 6px;
+    min-width: 32px;
+    max-height: 6px;
+    max-width: 32px;
+    border-radius: 2px;
+    transition: all var(--animation-normal) ease;
+    transform: scale(1);
+    background-color: var(--loading-dot-inactive-color);
+}
+
+.loading-dot__active {
+    background-color: var(--loading-dot-active-color);
+    transform: scale(1.1);
+}

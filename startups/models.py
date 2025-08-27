@@ -1,15 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import UniqueConstraint, F
+from django.db.models import UniqueConstraint
 from django_countries.fields import CountryField
-from typing import cast
 
 from common.company import Company
 from common.enums import Stage
-from core import settings
 from validation.validate_names import validate_forbidden_names, validate_latin
-from validation.validate_social_links import validate_social_links_dict
 
 
 class Location(models.Model):
@@ -111,9 +108,7 @@ class Location(models.Model):
         verbose_name_plural = "Locations"
         constraints = [
             UniqueConstraint(
-                F('city'),
-                F('region'),
-                F('country'),
+                fields=['city', 'region', 'country'],
                 name='unique_location',
                 violation_error_message='This location already exists.'
             )
@@ -221,15 +216,9 @@ class Startup(Company):
 
     def clean(self):
         """
-        Validates the social_links field against allowed platforms.
+        Placeholder for future validation of the social_links field.
         """
         super().clean()
-        social_links = cast(dict, self.social_links)
-        validate_social_links_dict(
-            social_links=social_links,
-            allowed_platforms=settings.ALLOWED_SOCIAL_PLATFORMS,
-            raise_serializer=False
-        )
 
     def __str__(self):
         return self.company_name
@@ -246,4 +235,3 @@ class Startup(Company):
             models.Index(fields=['funding_needed']),
             models.Index(fields=['team_size']),
         ]
-

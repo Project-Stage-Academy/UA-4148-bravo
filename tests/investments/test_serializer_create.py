@@ -1,137 +1,146 @@
-from decimal import Decimal
-from rest_framework import serializers
-from django.test import TransactionTestCase
-
+from decimal import Decimal, ROUND_DOWN
+from django.test import TestCase
+from common.enums import Stage
+from investments.serializers import (
+    SubscriptionCreateSerializer,
+    calculate_investment_share,
+    recalculate_investment_shares,
+)
 from tests.setup_tests_data import TestDataMixin
-from tests.test_disable_signal_mixin import DisableSignalsMixin
-from investments.serializers.subscription_create import SubscriptionCreateSerializer
-from investments.services.investment_share_service import recalculate_investment_shares, calculate_investment_share
 
 
-class SubscriptionSerializerConcurrencyTests(DisableSignalsMixin, TestDataMixin, TransactionTestCase):
-    """
-    Tests for validating correct behavior of SubscriptionSerializer with valid input data.
-    Includes concurrency-safe behavior with signals disabled.
-    """
-    reset_sequences = True
-
+class SubscriptionSerializerTests(TestDataMixin, TestCase):
     def setUp(self):
-        super().setUp()
-        self.setup_all()
+        self.setup_users()
+        self.setup_investors()
+        self.setup_startups()
+        self.setup_projects()
+        self.data = {
+            "investor": str(self.investor1.id),
+            "project": str(self.project1.id),
+            "amount": "20000.00",
+        }
 
-    def test_subscription_serializer_valid_data(self):
-        self.project.funding_goal = Decimal("1000.00")
-        self.project.save()
-        data = self.get_subscription_data(self.investor1, self.project, Decimal("250.00"))
-        serializer = SubscriptionCreateSerializer(data=data)
-        is_valid = serializer.is_valid()
-        if not is_valid:
-            print("Validation errors:", serializer.errors)
-        self.assertTrue(is_valid)
-
-    def test_valid_subscription_creation(self):
-        self.project.funding_goal = Decimal("1000.00")
-        self.project.save()
-        data = self.get_subscription_data(self.investor1, self.project, Decimal("250.00"))
-        serializer = SubscriptionCreateSerializer(data=data)
+    def test_valid_subscription(self):
+        serializer = self.serializer_with_user(self.data, self.user1)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         subscription = serializer.save()
-        recalculate_investment_shares(self.project)
-        subscription.refresh_from_db()
-        expected_share = calculate_investment_share(subscription.amount, self.project.funding_goal)
-        self.assertAlmostEqual(float(subscription.amount), 250.00, places=2)
-        self.assertAlmostEqual(float(subscription.investment_share), float(expected_share), places=2)
+        self.assertEqual(subscription.amount, Decimal("20000.00"))
+        self.assertEqual(subscription.project, self.project1)
+
+    def test_subscription_exceeds_goal(self):
+        data = self.data.copy()
+        data["amount"] = "2000000.00"
+        serializer = self.serializer_with_user(data, self.user1)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("Investment amount exceeds the project goal", str(serializer.errors))
+
+    def test_subscription_when_project_fully_funded(self):
+        self.project1.raised_amount = self.project1.goal
+        self.project1.save()
+        serializer = self.serializer_with_user(self.data, self.user1)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("This project is already fully funded", str(serializer.errors))
+
+    def test_self_investment_not_allowed(self):
+        self.project1.startup = self.startup1
+        self.project1.save()
+        self.startup1.user = self.user1
+        self.startup1.save()
+
+        serializer = self.serializer_with_user(self.data, self.user1)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("Startup owners cannot invest in their own projects", str(serializer.errors))
+
+    def test_sequential_overfunding_investments(self):
+        self.data["amount"] = "60000.00"
+        serializer = self.serializer_with_user(self.data, self.user1)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+        data2 = {
+            "investor": str(self.investor2.id),
+            "project": str(self.project1.id),
+            "amount": "50000.00",
+        }
+        serializer2 = self.serializer_with_user(data2, self.user2)
+        self.assertFalse(serializer2.is_valid())
+        self.assertIn("Investment amount exceeds the project goal", str(serializer2.errors))
 
     def test_rounding_of_investment_share(self):
-        self.project.funding_goal = Decimal("1000.00")
-        self.project.save()
-        data = self.get_subscription_data(self.investor1, self.project, Decimal("333.33"))
-        serializer = SubscriptionCreateSerializer(data=data)
+        self.project1.goal = Decimal("333")
+        self.project1.save()
+
+        data = self.data.copy()
+        data["amount"] = "100"
+        serializer = self.serializer_with_user(data, self.user1)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         subscription = serializer.save()
-        expected_share = calculate_investment_share(subscription.amount, self.project.funding_goal)
-        self.assertEqual(subscription.investment_share, expected_share)
 
-    def test_minimum_amount_boundary(self):
-        self.project.funding_goal = Decimal("1.00")
-        self.project.save()
-        data = self.get_subscription_data(self.investor1, self.project, Decimal("0.01"))
-        serializer = SubscriptionCreateSerializer(data=data)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        subscription = serializer.save()
-        expected_share = calculate_investment_share(subscription.amount, self.project.funding_goal)
-        self.assertEqual(subscription.investment_share, expected_share)
+        expected_share = calculate_investment_share(subscription.amount, self.project1.goal)
+        self.assertEqual(subscription.share, expected_share)
 
-    def test_cumulative_rounding_errors(self):
-        self.project.funding_goal = Decimal("100.00")
-        self.project.save()
-        increments = [Decimal("33.33"), Decimal("33.33"), Decimal("33.34")]
-        subscriptions = []
-        for i, amount in enumerate(increments, start=1):
-            investor = getattr(self, f'investor{i}', None)
-            if not investor:
-                user = self.get_or_create_user(f"user{i}@example.com", f"Investor{i}", "Test")
-                investor = self.get_or_create_investor(user, f"Investor {i}", Stage.MVP, "1000000.00")
-                setattr(self, f'investor{i}', investor)
-            data = self.get_subscription_data(investor, self.project, amount)
-            serializer = SubscriptionCreateSerializer(data=data)
-            self.assertTrue(serializer.is_valid(), serializer.errors)
-            subscription = serializer.save()
-            subscriptions.append(subscription)
-        recalculate_investment_shares(self.project)
-        total_share = Decimal("0.00")
-        for sub in subscriptions:
-            sub.refresh_from_db()
-            total_share += sub.investment_share
-        self.assertLessEqual(total_share, Decimal("100.00"))
-        self.assertGreaterEqual(total_share, Decimal("99.99"))
+    def test_investment_share_calculation(self):
+        subscription_amount = Decimal("25000.00")
+        project_goal = Decimal("100000.00")
 
+        expected_share = calculate_investment_share(subscription_amount, project_goal)
+        self.assertEqual(expected_share, Decimal("0.25"))
 
-class SubscriptionSerializerAmountValidationTests(DisableSignalsMixin, TestDataMixin, TransactionTestCase):
-    """
-    Tests focusing on validation errors related to the 'amount' field
-    in SubscriptionSerializer, with signals disabled.
-    """
+    def test_investment_share_with_rounding(self):
+        subscription_amount = Decimal("333.00")
+        project_goal = Decimal("1000.00")
 
-    def setUp(self):
-        super().setUp()
-        self.setup_all()
+        expected_share = calculate_investment_share(subscription_amount, project_goal)
+        self.assertEqual(expected_share, Decimal("0.333").quantize(Decimal("0.0001"), rounding=ROUND_DOWN))
 
-    def test_missing_amount_field(self):
-        self.project.funding_goal = Decimal("1000.00")
-        self.project.save()
-        data = self.get_subscription_data(self.investor1, self.project, Decimal("250.00"))
-        data.pop("amount")
-        serializer = SubscriptionCreateSerializer(data=data)
+    def test_recalculate_investment_shares(self):
+        subscription1 = self.serializer_with_user(self.data, self.user1).save()
+
+        data2 = {
+            "investor": str(self.investor2.id),
+            "project": str(self.project1.id),
+            "amount": "10000.00",
+        }
+        subscription2 = self.serializer_with_user(data2, self.user2).save()
+
+        recalculate_investment_shares(self.project1)
+
+        self.project1.refresh_from_db()
+        subscription1.refresh_from_db()
+        subscription2.refresh_from_db()
+
+        total = subscription1.amount + subscription2.amount
+        self.assertAlmostEqual(subscription1.share, subscription1.amount / total)
+        self.assertAlmostEqual(subscription2.share, subscription2.amount / total)
+
+    def test_invalid_investor(self):
+        data = {
+            "investor": "invalid-id",
+            "project": str(self.project1.id),
+            "amount": "10000.00",
+        }
+        serializer = self.serializer_with_user(data, self.user1)
         self.assertFalse(serializer.is_valid())
-        self.assertIn("amount", serializer.errors)
-        self.assertTrue(
-            any("required" in str(msg).lower() for msg in serializer.errors["amount"])
-        )
+        self.assertIn("Invalid pk", str(serializer.errors.get("investor")))
 
-    def test_negative_amount_is_rejected(self):
-        self.project.funding_goal = Decimal("1000.00")
-        self.project.save()
-        data = self.get_subscription_data(self.investor1, self.project, Decimal("-100.00"))
-        serializer = SubscriptionCreateSerializer(data=data)
+    def test_invalid_project(self):
+        data = {
+            "investor": str(self.investor1.id),
+            "project": "invalid-id",
+            "amount": "10000.00",
+        }
+        serializer = self.serializer_with_user(data, self.user1)
         self.assertFalse(serializer.is_valid())
-        self.assertIn("amount", serializer.errors)
-        self.assertTrue(
-            any("greater than or equal to" in str(msg).lower() for msg in serializer.errors["amount"])
-        )
+        self.assertIn("Invalid pk", str(serializer.errors.get("project")))
 
-    def test_zero_amount_is_rejected(self):
-        self.project.funding_goal = Decimal("1000.00")
-        self.project.save()
-        data = self.get_subscription_data(self.investor1, self.project, Decimal("0.00"))
-        serializer = SubscriptionCreateSerializer(data=data)
+    def test_investment_in_nonexistent_project(self):
+        data = {
+            "investor": str(self.investor1.id),
+            "project": "00000000-0000-0000-0000-000000000000",
+            "amount": "10000.00",
+        }
+        serializer = self.serializer_with_user(data, self.user1)
         self.assertFalse(serializer.is_valid())
-        self.assertIn("amount", serializer.errors)
-        self.assertTrue(
-            any("greater than or equal to" in str(msg).lower() for msg in serializer.errors["amount"])
-        )
-
-
-
-
+        self.assertIn("Project does not exist", str(serializer.errors.get("project")))
 

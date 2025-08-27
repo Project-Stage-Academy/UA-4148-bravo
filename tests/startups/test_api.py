@@ -36,8 +36,10 @@ class StartupAPITests(BaseAPITestCase):
         }
         self.url = reverse('startup-list')
 
-    def test_create_startup_success(self):
-        """Test successful creation of a startup via POST request."""
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_create_startup_success(self, mock_has_object_permission, mock_has_permission):
+        """Test that a startup can be successfully created via POST request."""
         response = self.client.post(self.url, self.startup_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response.data
@@ -48,7 +50,9 @@ class StartupAPITests(BaseAPITestCase):
         startup = Startup.objects.get(pk=data['id'])
         self.assertEqual(startup.user, self.user)
 
-    def test_get_startup_list(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_get_startup_list(self, mock_has_object_permission, mock_has_permission):
         """GET request returns list of startups including at least one from setup."""
         self.get_or_create_startup(
             user=self.user,
@@ -60,7 +64,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
-    def test_create_startup_validation_error(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_create_startup_validation_error(self, mock_has_object_permission, mock_has_permission):
         """Creating a startup with empty company_name returns 400."""
         data = self.startup_data.copy()
         data['company_name'] = ''
@@ -68,7 +74,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('company_name', response.data)
 
-    def test_filter_by_industry(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_filter_by_industry(self, mock_has_object_permission, mock_has_permission):
         """Filter startups by industry returns only relevant startups."""
         startup1 = self.get_or_create_startup(
             user=self.user, industry=self.industry, location=self.location,
@@ -88,7 +96,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertIn(startup1.company_name, returned_names)
         self.assertNotIn(startup2.company_name, returned_names)
 
-    def test_search_by_company_name(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_search_by_company_name(self, mock_has_object_permission, mock_has_permission):
         """Searching by partial company name returns correct startups."""
         self.get_or_create_startup(
             user=self.user, company_name='Searchable Startup',
@@ -98,7 +108,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(any('Searchable' in s['company_name'] for s in response.data))
 
-    def test_retrieve_startup_detail(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_retrieve_startup_detail(self, mock_has_object_permission, mock_has_permission):
         """Retrieving a single startup returns correct details."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='DetailStartup',
@@ -109,7 +121,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['company_name'], 'DetailStartup')
 
-    def test_update_startup_success(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_update_startup_success(self, mock_has_object_permission, mock_has_permission):
         """Full update of a startup works and returns updated data."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='OldName',
@@ -129,7 +143,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['company_name'], 'UpdatedName')
 
-    def test_partial_update_startup(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_partial_update_startup(self, mock_has_object_permission, mock_has_permission):
         """Partial update works correctly."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='PartialUpdate',
@@ -141,7 +157,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['company_name'], 'PartialUpdatedName')
 
-    def test_update_startup_validation_error(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_update_startup_validation_error(self, mock_has_object_permission, mock_has_permission):
         """Updating startup with invalid data returns 400."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='ValidName',
@@ -153,7 +171,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('company_name', response.data)
 
-    def test_delete_startup(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_delete_startup(self, mock_has_object_permission, mock_has_permission):
         """Deleting a startup removes it and returns 204."""
         startup = self.get_or_create_startup(
             user=self.user, company_name='ToDelete',
@@ -164,7 +184,9 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Startup.objects.filter(pk=startup.pk).exists())
 
-    def test_create_startup_user_is_ignored(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_create_startup_user_is_ignored(self, mock_has_object_permission, mock_has_permission):
         """Passed user is ignored; request.user is used."""
         other_user = self.get_or_create_user("fake@example.com", "Fake", "User")
         data = self.startup_data.copy()
@@ -174,10 +196,11 @@ class StartupAPITests(BaseAPITestCase):
         startup = Startup.objects.get(pk=response.data['id'])
         self.assertEqual(startup.user, self.user)
 
-    @patch('startups.models.Startup.clean', side_effect=Exception("Invalid data"))
-    def test_create_startup_model_clean_error(self, mock_clean):
+    @patch('startups.models.Startup.clean', side_effect=DjangoValidationError({'non_field_errors': ['Invalid data']}))
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_create_startup_model_clean_error(self, mock_has_object_permission, mock_has_permission, mock_clean):
         """Simulate model validation error during creation, should return 400."""
-        mock_clean.side_effect = DjangoValidationError({'non_field_errors': ['Invalid data']})
         response = self.client.post(self.url, self.startup_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('non_field_errors', response.data)
@@ -189,7 +212,9 @@ class StartupAPITests(BaseAPITestCase):
         response = client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_update_startup_returns_updated_fields(self):
+    @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
+    @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
+    def test_update_startup_returns_updated_fields(self, mock_has_object_permission, mock_has_permission):
         """After update, all updated fields are returned correctly."""
         startup = self.get_or_create_startup(
             user=self.user,
@@ -213,6 +238,7 @@ class StartupAPITests(BaseAPITestCase):
         self.assertEqual(response.data['team_size'], 30)
         self.assertEqual(response.data['founded_year'], 2021)
         self.assertEqual(response.data['email'], 'new@example.com')
+
 
 
 

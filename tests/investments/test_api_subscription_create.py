@@ -78,7 +78,7 @@ class TestSubscriptionCreateAPI(BaseAPITestCase):
     def test_create_subscription_success(self):
         """Test successful creation of a subscription by an investor."""
         self.authenticate(self.investor_user)
-        url = reverse("subscription-create")
+        url = reverse("investments:subscription-create")
         payload = {
             "investor": self.investor.id,
             "project": self.project.id,
@@ -99,7 +99,7 @@ class TestSubscriptionCreateAPI(BaseAPITestCase):
         self.project.save()
         self.authenticate(self.investor_user)
 
-        url = reverse("subscription-create")
+        url = reverse("investments:subscription-create")
         payload = {
             "investor": self.investor.id,
             "project": self.project.id,
@@ -115,7 +115,7 @@ class TestSubscriptionCreateAPI(BaseAPITestCase):
     def test_create_subscription_exceeds_goal_fails(self):
         """Test that an investment exceeding the goal is blocked."""
         self.authenticate(self.investor_user)
-        url = reverse("subscription-create")
+        url = reverse("investments:subscription-create")
         payload = {
             "investor": self.investor.id,
             "project": self.project.id,
@@ -129,7 +129,7 @@ class TestSubscriptionCreateAPI(BaseAPITestCase):
 
     def test_unauthenticated_user_cannot_subscribe(self):
         """Test that an unauthenticated user cannot invest."""
-        url = reverse("subscription-create")
+        url = reverse("investments:subscription-create")
         payload = {
             "investor": self.investor.id,
             "project": self.project.id,
@@ -143,7 +143,7 @@ class TestSubscriptionCreateAPI(BaseAPITestCase):
     def test_non_investor_cannot_subscribe(self):
         """Test that a non-investor user cannot create a subscription."""
         self.authenticate(self.startup_user)
-        url = reverse("subscription-create")
+        url = reverse("investments:subscription-create")
         payload = {
             "investor": self.investor.id,
             "project": self.project.id,
@@ -177,7 +177,7 @@ class TestSubscriptionCreateAPI(BaseAPITestCase):
         self.project.startup.save()
 
         self.authenticate(owner_investor_user)
-        url = reverse("subscription-create")
+        url = reverse("investments:subscription-create")
         payload = {
             "investor": owner_investor.id,
             "project": self.project.id,
@@ -195,7 +195,7 @@ class TestSubscriptionCreateAPI(BaseAPITestCase):
         self.project.save()
 
         self.authenticate(self.investor_user)
-        url = reverse("subscription-create")
+        url = reverse("investments:subscription-create")
         payload = {
             "investor": self.investor.id,
             "project": self.project.id,
@@ -210,7 +210,7 @@ class TestSubscriptionCreateAPI(BaseAPITestCase):
     def test_invest_with_invalid_amount_fails(self):
         """Test that zero or negative investment amounts are blocked."""
         self.authenticate(self.investor_user)
-        url = reverse("subscription-create")
+        url = reverse("investments:subscription-create")
 
         payload_zero = {"project": self.project.id, "amount": 0}
         response_zero = self.client.post(url, payload_zero, format="json")
@@ -225,7 +225,7 @@ class TestSubscriptionCreateAPI(BaseAPITestCase):
     def test_invest_in_nonexistent_project_fails(self):
         """Test that investing in a non-existent project returns a 400 error."""
         self.authenticate(self.investor_user)
-        url = reverse("subscription-create")
+        url = reverse("investments:subscription-create")
         payload = {
             "investor": self.investor.id,
             "project": 9999,
