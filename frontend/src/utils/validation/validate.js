@@ -71,6 +71,7 @@ export class Validator {
     static serverSideErrorMessages = {
         emailAlreadyExist: "Ця електронна пошта вже зареєстрована",
         companyAlreadyExist: "Компанія з такою назвою вже зареєстрована",
+        noUserFoundByProvidedData: "Облікового запис за вказаними обліковими даними не знайдено",
         unexpected: "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз пізніше"
     }
 

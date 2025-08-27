@@ -1,4 +1,6 @@
 import axios from "axios";
+import Cookies from "js-cookie";
+import { CSRF_COOKIE_NAME } from './csrfService';
 
 /**
  * Access token is used to keep user session active
@@ -67,7 +69,18 @@ function createApiClient() {
 
     // Response interceptor
     instance.interceptors.response.use(
-        r => r,
+        (config) => {
+            const method = config.method?.toUpperCase();
+            if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+                const csrfToken = Cookies.get(CSRF_COOKIE_NAME);
+                if (csrfToken) {
+                    config.headers["X-CSRFToken"] = csrfToken;
+                }
+            }
+
+            config.withCredentials = true;
+            return config;
+        },
         async (err) => {
             const original = err.config;
 
