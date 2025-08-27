@@ -9,6 +9,7 @@ from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
 from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
+from users.cookie_jwt import CookieJWTAuthentication
 
 from users.permissions import IsInvestor, CanCreateCompanyPermission
 
@@ -20,6 +21,7 @@ class InvestorViewSet(viewsets.ModelViewSet):
     ViewSet for managing Investor instances.
     Optimized with select_related to avoid N+1 queries when fetching related user, industry, and location.
     """
+    authentication_classes = [CookieJWTAuthentication]
     queryset = Investor.objects.select_related("user", "industry", "location")
     serializer_class = InvestorSerializer
     
@@ -44,6 +46,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
     ViewSet for managing SavedStartup instances.
     Only authenticated investors who own the SavedStartup can modify/delete it.
     """
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsInvestor, IsSavedStartupOwner]
     serializer_class = SavedStartupSerializer
 

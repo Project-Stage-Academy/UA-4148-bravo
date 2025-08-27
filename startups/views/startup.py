@@ -9,12 +9,8 @@ from startups.models import Startup
 from startups.serializers.startup_full import StartupSerializer
 from startups.serializers.startup_create import StartupCreateSerializer
 from startups.views.startup_base import BaseValidatedModelViewSet
+from users.cookie_jwt import CookieJWTAuthentication
 from users.permissions import IsStartupUser, CanCreateCompanyPermission
-from communications.models import (
-    UserNotificationPreference,
-    NotificationType,
-    UserNotificationTypePreference,
-)
 from communications.serializers import (
     UserNotificationPreferenceSerializer,
     UserNotificationTypePreferenceSerializer,
@@ -23,6 +19,7 @@ from communications.serializers import (
 from communications.services import get_or_create_user_pref
 
 class StartupViewSet(BaseValidatedModelViewSet):
+    authentication_classes = [CookieJWTAuthentication]
     queryset = Startup.objects.select_related('user', 'industry', 'location') \
         .prefetch_related('projects')
     

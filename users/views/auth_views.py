@@ -6,7 +6,6 @@ from urllib.parse import urljoin
 # Django imports
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -15,13 +14,13 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse
 # Third-party imports
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 # Local application imports
 from users.serializers.user_serializers import CurrentUserSerializer
 from users.serializers.user_serializers import CustomUserCreateSerializer
+from users.views.base_protected_view import CookieJWTProtectedView
 
 logger = logging.getLogger(__name__)
 
@@ -150,9 +149,8 @@ User = get_user_model()
     },
     tags=["Auth"],
 )
-class MeView(APIView):
+class MeView(CookieJWTProtectedView):
     """Returns profile info of the currently authenticated user."""
-    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = CurrentUserSerializer(request.user)

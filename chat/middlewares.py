@@ -1,8 +1,11 @@
-from urllib.parse import parse_qs
+import logging
+from http.cookies import SimpleCookie
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
-from rest_framework_simplejwt.tokens import AccessToken, TokenError
+from validation.validate_token import safe_decode
 from users.models import User
+
+logger = logging.getLogger(__name__)
 
 
 @database_sync_to_async
@@ -18,22 +21,19 @@ def get_user(user_id):
                               otherwise returns an AnonymousUser.
     """
     try:
-        return User.objects.get(id=user_id)
+        return User.objects.get(id=user_id, is_active=True)
     except User.DoesNotExist:
         return AnonymousUser()
 
 
 class WebSocketJWTAuthMiddleware:
     """
-    Custom ASGI middleware for authenticating WebSocket connections using JWT.
+    ASGI middleware for authenticating WebSocket connections using JWT
+    stored in an HttpOnly cookie.
 
-    This middleware extracts a JWT access token from the query string,
-    verifies it using Django REST Framework SimpleJWT, and attaches
-    the corresponding User object to the ASGI `scope`. If the token
-    is invalid or missing, the user is set as AnonymousUser.
-
-    Attributes:
-        app (ASGI app): The downstream ASGI application to call.
+    The middleware parses the 'access_token' cookie, validates the JWT using
+    safe_decode, and sets scope["user"] to the authenticated user. If the
+    token is missing or invalid, the WebSocket connection is closed with code 1008.
     """
 
     def __init__(self, app):
@@ -49,42 +49,39 @@ class WebSocketJWTAuthMiddleware:
         """
         ASGI middleware entry point for WebSocket connections.
 
-        This method authenticates a WebSocket connection using a JWT access token
-        passed in the query string. If the token is valid, the corresponding user
-        is attached to `scope["user"]` for downstream consumers. If the token is
-        missing or invalid, the WebSocket connection is immediately closed with
-        code 1008 (policy violation).
-
-        Steps:
-        1. Parse the query string for the `token` parameter.
-        2. Decode and validate the JWT token.
-        3. Retrieve the associated user asynchronously from the database.
-        4. Attach the user to `scope["user"]` for downstream consumers.
-        5. Close the WebSocket if the token is missing or invalid.
-        6. Forward the connection to the downstream ASGI application if authenticated.
+        Authenticates the WebSocket connection using a JWT access token stored
+        in an HttpOnly cookie. If valid, attaches the authenticated user to
+        `scope["user"]`. If the token is missing or invalid, closes the connection
+        with code 1008 (policy violation).
 
         Args:
-            scope (dict): ASGI connection scope.
+            scope (dict): ASGI connection scope containing headers and other metadata.
             receive (Callable): Coroutine to receive ASGI events.
             send (Callable): Coroutine to send ASGI events.
 
         Returns:
-            Awaitable: Invokes the downstream ASGI application if the token is valid,
-            otherwise closes the WebSocket connection with code 1008.
+            Awaitable: Forwards the connection to the downstream ASGI app if
+            authentication succeeds, otherwise closes the connection.
         """
-        parsed_query_string = parse_qs(scope["query_string"].decode("utf-8"))
-        token_values = parsed_query_string.get("token")
+        cookie_header = dict(scope["headers"]).get(b"cookie", b"").decode()
+        cookies = SimpleCookie()
+        cookies.load(cookie_header)
 
-        if not token_values:
+        token_cookie = cookies.get("access_token")
+        if not token_cookie:
+            logger.warning("WS connection rejected: no access_token cookie")
             await send({'type': 'websocket.close', 'code': 1008})
             return
-
-        token = token_values[0]
+        token = token_cookie.value
 
         try:
-            access_token = AccessToken(token)
-            scope["user"] = await get_user(access_token["user_id"])
-        except TokenError:
+            payload = safe_decode(token)
+            user_id = payload.get("user_id")
+            if not user_id:
+                raise ValueError("Token payload missing user_id")
+            scope["user"] = await get_user(user_id)
+        except Exception as e:
+            logger.warning(f"WS connection rejected: invalid token. Error: {e}")
             await send({'type': 'websocket.close', 'code': 1008})
             return
 

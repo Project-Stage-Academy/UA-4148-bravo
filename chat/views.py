@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from chat.documents import Room, Message
+from users.cookie_jwt import CookieJWTAuthentication
+from users.views.base_protected_view import CookieJWTProtectedView
 from .serializers import RoomSerializer, MessageSerializer
 from rest_framework.pagination import LimitOffsetPagination
 
@@ -31,11 +33,12 @@ class ConversationCreateView(generics.CreateAPIView):
             "participants": ["user1", "user2", "user3"]
         }
     """
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = RoomSerializer
 
 
-class SendMessageView(APIView):
+class SendMessageView(CookieJWTProtectedView):
     """
     Send a new message within a conversation and broadcast it via WebSocket.
 
@@ -59,7 +62,6 @@ class SendMessageView(APIView):
             "is_read": false
         }
     """
-    permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         serializer = MessageSerializer(data=request.data)
@@ -111,6 +113,7 @@ class ConversationMessagesView(generics.ListAPIView):
             }
         ]
     """
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = MessageSerializer
     pagination_class = LimitOffsetPagination

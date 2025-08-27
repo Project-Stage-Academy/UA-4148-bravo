@@ -15,7 +15,8 @@ MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", 1000))
 
 class Room(Document):
     """
-    Represents a chat room in MongoDB storing only user IDs (from PostgreSQL).
+    Represents a chat room in MongoDB storing user emails as participants
+    (bridge key to PostgreSQL users).
     """
 
     NAME_REGEX = r'^[a-zA-Z0-9_-]+$'
@@ -28,7 +29,7 @@ class Room(Document):
         unique=True
     )
     is_group = BooleanField(default=False)
-    participants = ListField(StringField())
+    participants = ListField(StringField())  # <-- emails
     created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
     updated_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
 
@@ -37,7 +38,7 @@ class Room(Document):
     def clean(self):
         """
         Validate room data before saving:
-        - Remove duplicate participants.
+        - Remove duplicate emails.
         - Limit participants to MAX_PARTICIPANTS.
         """
         self.participants = list(dict.fromkeys(self.participants))
@@ -46,29 +47,17 @@ class Room(Document):
             raise ValidationError(f"Room cannot have more than {MAX_PARTICIPANTS} participants")
 
     def save(self, *args, **kwargs):
-        """
-        Update the 'updated_at' timestamp before saving.
-        """
+        """ Update the 'updated_at' timestamp before saving. """
         self.updated_at = datetime.now(timezone.utc)
         self.clean()
         return super().save(*args, **kwargs)
 
 
 class Message(Document):
-    """
-    Represents a chat message stored in MongoDB.
-
-    Attributes:
-        room (Room): Reference to the chat room where the message was sent.
-        sender_id (str): ID of the user who sent the message (from PostgreSQL).
-        receiver_id (str, optional): ID of the recipient in private chats. None for group messages.
-        text (str): The content of the message, between 1 and 1000 characters.
-        timestamp (datetime): The time when the message was created (UTC).
-        is_read (bool): Indicates whether the message has been read by the recipient(s).
-    """
+    """ Represents a chat message stored in MongoDB using sender and receiver emails. """
     room = ReferenceField(Room, required=True, reverse_delete_rule=CASCADE)
-    sender_id = StringField(required=True)
-    receiver_id = StringField(required=False)
+    sender_email = StringField(required=True)
+    receiver_email = StringField(required=False)
     text = StringField(required=True, min_length=1, max_length=1000)
     timestamp = DateTimeField(default=lambda: datetime.now(timezone.utc))
     is_read = BooleanField(default=False)
@@ -84,16 +73,16 @@ class Message(Document):
         if not self.room or not self.room.id:
             raise ValidationError("Message must belong to a persisted room.")
 
-        if self.sender_id not in self.room.participants:
+        if self.sender_email not in self.room.participants:
             raise ValidationError("Sender must be a participant of the room.")
 
-        if self.room.is_group and self.receiver_id is not None:
-            if self.receiver_id not in self.room.participants:
+        if self.room.is_group and self.receiver_email is not None:
+            if self.receiver_email not in self.room.participants:
                 raise ValidationError("Receiver must be a participant of the group.")
         else:
             if len(self.room.participants) != 2:
                 raise ValidationError("Private room must have exactly 2 participants.")
-            if not self.receiver_id:
+            if not self.receiver_email:
                 raise ValidationError("Receiver is required in private messages.")
 
         if not self.text.strip():

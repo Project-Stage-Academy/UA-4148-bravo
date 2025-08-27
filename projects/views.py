@@ -13,6 +13,8 @@ from django_elasticsearch_dsl_drf.filter_backends import (
     OrderingFilterBackend,
     SearchFilterBackend,
 )
+
+from users.cookie_jwt import CookieJWTAuthentication
 from .documents import ProjectDocument
 from .permissions import IsOwnerOrReadOnly
 from .serializers import ProjectDocumentSerializer, ProjectReadSerializer, ProjectWriteSerializer
@@ -42,6 +44,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         - Authenticated users can view all projects.
         - Only the owner can modify or delete their projects.
     """
+    authentication_classes = [CookieJWTAuthentication]
     queryset = Project.objects.select_related('startup', 'category').all()
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
@@ -81,9 +84,10 @@ class ProjectDocumentView(DocumentViewSet):
     Elasticsearch-backed viewset for Project documents.
     Supports filtering, ordering, and full-text search with robust error handling.
     """
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated]
     document = ProjectDocument
     serializer_class = ProjectDocumentSerializer
-    permission_classes = [IsAuthenticated]
 
     filter_backends = [
         FilteringFilterBackend,

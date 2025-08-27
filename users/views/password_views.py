@@ -6,6 +6,8 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import (
     ValidationError as DjangoValidationError,
 )
+from rest_framework.permissions import AllowAny
+
 # Third-party imports
 from djoser.email import PasswordResetEmail
 from drf_spectacular.utils import extend_schema, OpenApiResponse
@@ -47,6 +49,7 @@ class CustomPasswordResetView(APIView):
     Returns:
         Response: DRF Response with success message or error details.
     """
+    permission_classes = [AllowAny]
     serializer_class = PasswordResetSerializer
 
     def post(self, request, *args, **kwargs):
@@ -105,6 +108,7 @@ class CustomPasswordResetConfirmView(APIView):
             - 200 OK if password changed successfully.
             - 400 Bad Request for missing fields, invalid token, invalid UID, or invalid password.
     """
+    permission_classes = [AllowAny]
     serializer_class = PasswordResetConfirmSerializer
 
     def post(self, request, *args, **kwargs):

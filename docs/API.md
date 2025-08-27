@@ -58,8 +58,9 @@ Authorization: Bearer <your_access_token>
 
 ```json
 {
+  "detail": "Login successful",
   "email": "user@example.com",
-  "user_id": "42"
+  "user_id": 42
 }
 ```
 The access_token and refresh_token are stored in HttpOnly cookies and are not returned in the response body.
@@ -81,19 +82,19 @@ The access_token and refresh_token are stored in HttpOnly cookies and are not re
 
 ```json
 {
-  "detail": "Access token refreshed"
+  "detail": "Token refreshed"
 }
 ```
 The new access token is available only in the HttpOnly cookie.
 
 #### 4. JWT Logout
 
-- `POST /api/v1/auth/jwt/logout/`
+- `POST /api/v1/auth/logout/`
   Blacklists the refresh token (if blacklisting is enabled) and clears both access_token and refresh_token cookies.
 
 ### Request Example
 
-- POST /api/v1/auth/jwt/logout/
+- POST /api/v1/auth/logout/
     Headers:
     - Content-Type: application/json
     - X-CSRFToken: <csrf_token>
@@ -102,7 +103,7 @@ The new access token is available only in the HttpOnly cookie.
 
 ```json
 {
-  "detail": "Logout successful"
+  "detail": "Logged out successfully"
 }
 ```
 
@@ -118,17 +119,17 @@ sequenceDiagram
     Backend-->>Browser: { csrfToken } + Set CSRF cookie
 
     Browser->>Backend: POST /jwt/create/ (email, password, CSRF token)
-    Backend-->>Browser: { email, user_id }
+    Backend-->>Browser: { detail, email, user_id }
     Backend-->>Cookie: access_token (HttpOnly, Secure, SameSite=None)
     Backend-->>Cookie: refresh_token (HttpOnly, Secure, SameSite=None)
 
     Browser->>Backend: POST /jwt/refresh/ (CSRF token + refresh_token in cookie)
-    Backend-->>Browser: { detail: "Access token refreshed" }
+    Backend-->>Browser: { detail: "Token refreshed" }
     Backend-->>Cookie: new access_token (HttpOnly)
 
     Browser->>Backend: POST /jwt/logout/ (CSRF token)
     Backend-->>Cookie: Delete access_token + refresh_token
-    Backend-->>Browser: { detail: "Logout successful" }
+    Backend-->>Browser: { detail: "Logged out successfully" }
 ```
 
 ## Startup API

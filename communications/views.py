@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
+from users.cookie_jwt import CookieJWTAuthentication
 from .models import (
     Notification,
     UserNotificationPreference,
@@ -36,6 +37,7 @@ class NotificationViewSet(
     """
     ViewSet for managing user notifications.
     """
+    authentication_classes = [CookieJWTAuthentication]
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'notification_id'
@@ -194,6 +196,7 @@ class NotificationTypeViewSet(viewsets.ReadOnlyModelViewSet):
     API endpoint that allows notification types to be viewed.
     Requires authentication.
     """
+    authentication_classes = [CookieJWTAuthentication]
     queryset = NotificationType.objects.filter(is_active=True)
     serializer_class = NotificationTypeSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -204,6 +207,7 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows users to view and update their notification preferences.
     """
+    authentication_classes = [CookieJWTAuthentication]
     serializer_class = UserNotificationPreferenceSerializer
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ['get', 'patch', 'head', 'options']

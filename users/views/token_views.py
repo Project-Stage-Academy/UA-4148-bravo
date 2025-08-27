@@ -10,11 +10,12 @@ from users.serializers.token_serializer import CustomTokenObtainPairSerializer
 from rest_framework import status, serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_protect
+from utils.cookies import set_auth_cookies, clear_auth_cookies
 from validation.validate_token import safe_decode
 
 logger = logging.getLogger(__name__)
@@ -66,7 +67,10 @@ class CSRFTokenView(APIView):
             description="Tokens missing or bad request",
             response=inline_serializer(name="LoginErrorResponse", fields={"detail": serializers.CharField()}),
         ),
-        401: OpenApiResponse(description="Invalid credentials"),
+        401: OpenApiResponse(
+            description="Invalid credentials",
+            response=inline_serializer(name="LoginUnauthorizedResponse", fields={"detail": serializers.CharField()})
+        )
     },
 )
 @method_decorator(csrf_protect, name="post")
@@ -75,6 +79,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     Issues access & refresh tokens (in HttpOnly cookies) upon successful authentication.
     Response body contains minimal user info only (no tokens in body).
     """
+    permission_classes = [AllowAny]
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
@@ -86,30 +91,19 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         """
         response = super().post(request, *args, **kwargs)
 
-        if "refresh" not in response.data or "access" not in response.data:
+        if "access" not in response.data or "refresh" not in response.data:
             return Response({"detail": "Tokens missing."}, status=status.HTTP_400_BAD_REQUEST)
 
-        response.set_cookie(
-            key="refresh_token",
-            value=response.data["refresh"],
-            httponly=True,
-            secure=True,
-            samesite=None,
-            max_age=60 * 60 * 24 * 7,
-        )
+        set_auth_cookies(response, response.data["access"], response.data["refresh"])
 
-        response.set_cookie(
-            key="access_token",
-            value=response.data["access"],
-            httponly=True,
-            secure=True,
-            samesite=None,
-            max_age=60 * 15,
-        )
+        serializer = self.get_serializer(data=request.data)
+        user = getattr(serializer, "user", request.user)
 
-        user = request.user
-        response.data = {"email": getattr(user, "email", None), "user_id": getattr(user, "id", None)}
-
+        response.data = {
+            "detail": "Login successful",
+            "email": getattr(user, "email", None),
+            "user_id": getattr(user, "id", None)
+        }
         return response
 
 
@@ -137,11 +131,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     },
 )
 @method_decorator(csrf_protect, name="post")
-class CookieTokenRefreshView(TokenRefreshView):
+class CustomTokenRefreshView(TokenRefreshView):
     """
     Refreshes the access token using the refresh token from HttpOnly cookie.
     Sets new access token in cookie. Does not return tokens in response body.
     """
+    authentication_classes = []
+    permission_classes = []
 
     def post(self, request, *args, **kwargs):
         """
@@ -159,26 +155,15 @@ class CookieTokenRefreshView(TokenRefreshView):
             safe_decode(refresh)
         except Exception as e:
             response = Response({"detail": str(e)}, status=status.HTTP_205_RESET_CONTENT)
-            response.delete_cookie("refresh_token")
-            response.delete_cookie("access_token")
+            clear_auth_cookies(response)
             return response
 
         serializer = self.get_serializer(data={"refresh": refresh})
         serializer.is_valid(raise_exception=True)
-
         access = serializer.validated_data.get("access")
-        if not access:
-            return Response({"detail": "Access token not generated."}, status=status.HTTP_400_BAD_REQUEST)
 
-        response = Response({"detail": "Access token refreshed"}, status=status.HTTP_200_OK)
-        response.set_cookie(
-            key="access_token",
-            value=access,
-            httponly=True,
-            secure=True,
-            samesite=None,
-            max_age=60 * 15,
-        )
+        response = Response({"detail": "Token refreshed"}, status=status.HTTP_200_OK)
+        set_auth_cookies(response, access)
         return response
 
 
@@ -186,11 +171,11 @@ class CookieTokenRefreshView(TokenRefreshView):
     tags=["Auth"],
     summary="Logout (blacklist refresh token)",
     description=(
-            "Attempts to blacklist the refresh token (if blacklist app enabled) "
-            "and deletes both `refresh_token` and `access_token` cookies."
+        "Attempts to blacklist the refresh token (if blacklist app enabled) "
+        "and deletes both `refresh_token` and `access_token` cookies."
     ),
     responses={
-        205: OpenApiResponse(
+        200: OpenApiResponse(
             description="Logout successful",
             response=inline_serializer(
                 name="LogoutResponse",
@@ -200,12 +185,12 @@ class CookieTokenRefreshView(TokenRefreshView):
     },
 )
 @method_decorator(csrf_protect, name="post")
-class JWTLogoutView(APIView):
+class LogoutView(APIView):
     """
     Logs out the user by invalidating the refresh token (best-effort) and clearing cookies.
     Requires authentication (access token).
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         """
@@ -219,11 +204,10 @@ class JWTLogoutView(APIView):
         if refresh_token:
             try:
                 token = RefreshToken(refresh_token)
-                token.blacklist()  # requires simplejwt blacklist app
+                token.blacklist()
             except Exception as e:
                 logger.warning(f"Failed to blacklist refresh token: {str(e)}")
 
-        response = Response({"detail": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
-        response.delete_cookie("refresh_token")
-        response.delete_cookie("access_token")
+        response = Response({"detail": "Logged out successfully"}, status=status.HTTP_200_OK)
+        clear_auth_cookies(response)
         return response

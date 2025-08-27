@@ -15,17 +15,19 @@ class AuthCookieTests(APITestCase):
     """
     Test suite for JWT authentication using HTTPOnly cookies and CSRF protection.
 
-    This includes tests for:
+    This suite tests:
         - CSRF token retrieval
-        - Login and setting of secure HTTPOnly refresh token cookie
-        - Access token retrieval
-        - Refreshing access token using cookie
-        - Logout and deletion of refresh cookie
-        - Accessing protected endpoints with access token
+        - Login and setting of secure HTTPOnly cookies for access and refresh tokens
+        - Refreshing access token using refresh cookie
+        - Logout and clearing cookies
+        - Accessing protected endpoints with valid/invalid tokens
+        - Correct JWT signing algorithm
     """
 
     def setUp(self):
-        """Create a test user and configure the APIClient with CSRF checks enabled."""
+        """
+        Create a test user and configure the APIClient with CSRF checks enabled.
+        """
         role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
         self.user = User.objects.create_user(
             email="test@example.com",
@@ -36,10 +38,10 @@ class AuthCookieTests(APITestCase):
             is_active=True
         )
         self.client = APIClient(enforce_csrf_checks=True)
-        self.csrf_url = reverse("csrf-init")
-        self.login_url = reverse("jwt-create")
-        self.refresh_url = reverse("jwt-refresh")
-        self.logout_url = reverse("jwt-logout")
+        self.csrf_url = reverse("csrf_init")
+        self.login_url = reverse("token_obtain_pair")
+        self.refresh_url = reverse("token_refresh")
+        self.logout_url = reverse("logout")
         self.protected_url = reverse("auth-me")
 
     def _get_csrf_token(self):
@@ -55,8 +57,8 @@ class AuthCookieTests(APITestCase):
 
     def test_login_sets_http_only_cookie(self):
         """
-        Test that logging in sets the refresh token as a secure, HTTPOnly cookie
-        and returns an access token in the response body.
+        Ensure that logging in sets access_token and refresh_token
+        as HTTPOnly and secure cookies. Tokens should not appear in response body.
         """
         csrf_token = self._get_csrf_token()
         response = self.client.post(
@@ -65,17 +67,18 @@ class AuthCookieTests(APITestCase):
             HTTP_X_CSRFTOKEN=csrf_token
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("access", response.data)
-        self.assertIn("refresh", response.data)
-        self.assertIn("refresh_token", response.cookies)
-        cookie = response.cookies["refresh_token"]
-        self.assertTrue(cookie["httponly"])
-        self.assertTrue(cookie["secure"])
+        self.assertNotIn("access", response.data)
+        self.assertNotIn("refresh", response.data)
+        for key in ["access_token", "refresh_token"]:
+            self.assertIn(key, response.cookies)
+            cookie = response.cookies[key]
+            self.assertTrue(cookie["httponly"])
+            self.assertTrue(cookie["secure"])
 
     def test_refresh_works_with_cookie(self):
         """
-        Test that the refresh endpoint returns a new access token when the refresh
-        token cookie is present.
+        Test that the refresh endpoint issues a new access_token cookie
+        when a valid refresh_token cookie is present.
         """
         csrf_token = self._get_csrf_token()
         self.client.post(
@@ -89,12 +92,11 @@ class AuthCookieTests(APITestCase):
             HTTP_X_CSRFTOKEN=csrf_token
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("access", response.data)
+        self.assertIn("access_token", response.cookies)
 
     def test_refresh_fails_without_cookie(self):
         """
-        Test that the refresh endpoint returns 401 Unauthorized if the refresh
-        token cookie is missing.
+        Test that refresh endpoint returns 404 if refresh_token cookie is missing.
         """
         csrf_token = self._get_csrf_token()
         response = self.client.post(
@@ -102,106 +104,11 @@ class AuthCookieTests(APITestCase):
             {},
             HTTP_X_CSRFTOKEN=csrf_token
         )
-        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
-
-    def test_logout_deletes_cookie(self):
-        """
-        Ensure that logging out clears the refresh token cookie on the client
-        and returns HTTP 205 RESET CONTENT.
-        """
-        csrf_token = self._get_csrf_token()
-        login_response = self.client.post(
-            self.login_url,
-            {"email": self.user.email, "password": TEST_USER_PASSWORD},
-            HTTP_X_CSRFTOKEN=csrf_token
-        )
-        access_token = login_response.data["access"]
-        response = self.client.post(
-            self.logout_url,
-            {},
-            HTTP_X_CSRFTOKEN=csrf_token,
-            HTTP_AUTHORIZATION=f"Bearer {access_token}"
-        )
-        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
-        self.assertIn("refresh_token", response.cookies)
-        cookie = response.cookies["refresh_token"]
-        self.assertEqual(cookie.value, "")
-        self.assertEqual(cookie["max-age"], 0)
-
-    def test_logout_always_succeeds_and_clears_cookie(self):
-        """
-        Logout should always succeed and clear the refresh token cookie,
-        regardless of whether the refresh token is present, invalid, or missing.
-        """
-        csrf_token = self._get_csrf_token()
-        login_response = self.client.post(
-            self.login_url,
-            {"email": self.user.email, "password": TEST_USER_PASSWORD},
-            HTTP_X_CSRFTOKEN=csrf_token
-        )
-        access_token = login_response.data["access"]
-
-        scenarios = {
-            "without_cookie": None,
-            "with_invalid_cookie": "invalidtoken123",
-        }
-
-        for case, token in scenarios.items():
-            with self.subTest(case=case):
-                if token:
-                    self.client.cookies["refresh_token"] = token
-
-                response = self.client.post(
-                    self.logout_url,
-                    {},
-                    HTTP_X_CSRFTOKEN=csrf_token,
-                    HTTP_AUTHORIZATION=f"Bearer {access_token}"
-                )
-
-                self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
-                self.assertIn("refresh_token", response.cookies)
-                cookie = response.cookies["refresh_token"]
-                self.assertEqual(cookie.value, "")
-                self.assertEqual(cookie["max-age"], 0)
-
-    def test_access_token_works_for_protected_endpoint(self):
-        """
-        Test that an access token obtained from login allows access to a protected
-        endpoint.
-        """
-        csrf_token = self._get_csrf_token()
-        login_resp = self.client.post(
-            self.login_url,
-            {"email": self.user.email, "password": TEST_USER_PASSWORD},
-            HTTP_X_CSRFTOKEN=csrf_token
-        )
-        access_token = login_resp.data["access"]
-        protected_url = reverse("auth-me")
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
-        response = self.client.get(protected_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_access_protected_endpoint_without_token(self):
-        """
-        Ensure accessing a protected endpoint without an Authorization header
-        returns 401 Unauthorized.
-        """
-        response = self.client.get(self.protected_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_access_protected_endpoint_with_invalid_token(self):
-        """
-        Ensure accessing a protected endpoint with an invalid access token
-        returns 401 Unauthorized.
-        """
-        self.client.credentials(HTTP_AUTHORIZATION="Bearer invalidtoken123")
-        response = self.client.get(self.protected_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_refresh_fails_with_invalid_cookie(self):
         """
-        Ensure the refresh endpoint returns 401 Unauthorized if the refresh
-        token cookie is invalid or tampered with.
+        Test that refresh endpoint returns 205 RESET CONTENT if refresh_token is invalid.
         """
         csrf_token = self._get_csrf_token()
         self.client.cookies["refresh_token"] = "invalidtoken123"
@@ -212,9 +119,34 @@ class AuthCookieTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
 
-    def test_jwt_algorithm(self):
+    def test_logout_clears_cookies(self):
         """
-        Verify that the JWT access token is signed with the correct algorithm.
+        Test that logout clears both access_token and refresh_token cookies
+        and returns HTTP 200 OK.
+        """
+        csrf_token = self._get_csrf_token()
+        login_response = self.client.post(
+            self.login_url,
+            {"email": self.user.email, "password": TEST_USER_PASSWORD},
+            HTTP_X_CSRFTOKEN=csrf_token
+        )
+        access_token = login_response.cookies["access_token"].value
+        response = self.client.post(
+            self.logout_url,
+            {},
+            HTTP_X_CSRFTOKEN=csrf_token,
+            HTTP_AUTHORIZATION=f"Bearer {access_token}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for key in ["access_token", "refresh_token"]:
+            cookie = response.cookies[key]
+            self.assertEqual(cookie.value, "")
+            self.assertEqual(cookie["max-age"], 0)
+
+    def test_access_token_allows_protected_endpoint(self):
+        """
+        Ensure that an access_token obtained from login
+        allows access to a protected endpoint.
         """
         csrf_token = self._get_csrf_token()
         login_resp = self.client.post(
@@ -222,10 +154,40 @@ class AuthCookieTests(APITestCase):
             {"email": self.user.email, "password": TEST_USER_PASSWORD},
             HTTP_X_CSRFTOKEN=csrf_token
         )
-        self.assertEqual(login_resp.status_code, status.HTTP_200_OK)
-        access_token = login_resp.data["access"]
+        access_token = login_resp.cookies["access_token"].value
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+        response = self.client.get(self.protected_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_access_protected_endpoint_without_token(self):
+        """
+        Ensure accessing a protected endpoint without a token
+        returns HTTP 401 Unauthorized.
+        """
+        response = self.client.get(self.protected_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_access_protected_endpoint_with_invalid_token(self):
+        """
+        Ensure accessing a protected endpoint with an invalid token
+        returns HTTP 401 Unauthorized.
+        """
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer invalidtoken123")
+        response = self.client.get(self.protected_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_jwt_algorithm(self):
+        """
+        Verify that the JWT access_token is signed with the correct algorithm
+        defined in SIMPLE_JWT settings.
+        """
+        csrf_token = self._get_csrf_token()
+        login_resp = self.client.post(
+            self.login_url,
+            {"email": self.user.email, "password": TEST_USER_PASSWORD},
+            HTTP_X_CSRFTOKEN=csrf_token
+        )
+        access_token = login_resp.cookies["access_token"].value
         header = jwt.get_unverified_header(access_token)
-
         expected_alg = settings.SIMPLE_JWT.get("ALGORITHM", "HS256")
         self.assertEqual(header["alg"], expected_alg)

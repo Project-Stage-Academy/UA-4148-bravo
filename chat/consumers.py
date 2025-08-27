@@ -5,14 +5,11 @@ import re
 import time
 from collections import defaultdict
 from channels.generic.websocket import AsyncWebsocketConsumer
-from mongoengine import ValidationError
 from channels.db import database_sync_to_async
+from mongoengine import ValidationError, DoesNotExist
+from typing import Optional, Tuple
 from chat.documents import Room, Message
 from core.settings.constants import FORBIDDEN_WORDS_SET
-from django.contrib.auth import get_user_model
-from mongoengine import DoesNotExist
-from typing import Tuple, Optional
-
 from users.models import User
 
 logger = logging.getLogger(__name__)
@@ -27,168 +24,105 @@ user_message_times = defaultdict(list)
 
 class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
     """
-    WebSocket consumer for handling real-time messaging between investors and startups.
+    WebSocket consumer for real-time messaging between investors and startups.
 
-    This consumer enables:
-      - Joining specific messaging rooms (e.g., based on user pairs or startup profiles).
-      - Broadcasting messages to all members of a room.
-      - Sending/receiving messages via WebSocket in real-time.
+    Features:
+        - Authenticates users and validates roles (Investor/Startup).
+        - Creates or retrieves a chat room based on participants.
+        - Broadcasts messages in a room group.
+        - Validates messages for length, forbidden words, spam, and rate limits.
+        - Persists messages in MongoDB using MongoEngine.
 
     Attributes:
-        user (Optional[User]): Current user connected to the WebSocket.
+        user (Optional[User]): Current WebSocket user.
         other_user (Optional[User]): The other participant in the chat.
-        room (Optional[Room]): The database Room object for this chat.
-        room_name (Optional[str]): Identifier for the messaging room, extracted from the WebSocket URL.
-        room_group_name (Optional[str]): Group name used by Channels to broadcast messages.
+        room (Optional[Room]): MongoDB Room object for the chat.
+        room_group_name (Optional[str]): Channels group name for broadcasting messages.
     """
     user: Optional[User]
     other_user: Optional[User]
     room: Optional[Room]
-    room_name: Optional[str]
     room_group_name: Optional[str]
 
-    def __init__(self, *args, **kwargs):
-        """ Initialize the WebSocket consumer with default attributes. """
-        super().__init__(*args, **kwargs)
-        self.user: Optional[User] = None
-        self.other_user: Optional[User] = None
-        self.room: Optional[Room] = None
-        self.room_name: Optional[str] = None
-        self.room_group_name: Optional[str] = None
-
-    async def connect(self) -> None:
+    async def connect(self):
         """
-        Handles a new WebSocket connection between two users.
+        Handles WebSocket connection.
 
         Workflow:
-        1. Validates that the current user (`self.user`) is authenticated.
-        2. Retrieves the `other_user` from the URL and validates their existence.
-        3. Creates or retrieves a chat room object (MongoEngine-backed).
-        4. Sanitizes the `room_name` from the URL to allow only alphanumeric,
-           dash (-), and underscore (_), and truncates to 50 characters max.
-        5. Adds the WebSocket channel to the appropriate group.
-        6. Accepts the connection if all checks pass.
-
-        Custom WebSocket close codes used:
-        - 4401 → Unauthorized: the connecting user is not authenticated.
-        - 4404 → Not Found: the other user with the provided ID does not exist.
-        - 4000 → Invalid room name: the `room_name` contains only invalid characters.
-        - 1011 → Internal Error: failed to add channel to group (unexpected error).
+            1. Checks user authentication.
+            2. Retrieves the other user by email.
+            3. Creates or fetches a chat room (investor-startup).
+            4. Joins the Channels group and accepts the connection.
         """
-        self.user = self.scope.get('user', None)
-        other_user_id = self.scope['url_route']['kwargs'].get('other_user_id')
+        self.user = self.scope.get("user")
+        other_user_email = self.scope["url_route"]["kwargs"].get("other_user_email")
 
         if not self.user or not self.user.is_authenticated:
-            logger.warning("Unauthenticated user tried to connect")
+            logger.warning("[CONNECT] Unauthenticated user")
             await self.close(code=4401)
             return
 
-        self.other_user = await self.get_user_by_id(other_user_id)
+        self.other_user = await self.get_user_by_email(other_user_email)
         if not self.other_user:
-            logger.warning("Invalid other_user_id: %s", other_user_id)
+            logger.warning("[CONNECT] Other user not found: %s", other_user_email)
             await self.close(code=4404)
             return
 
-        room, created = await self.get_or_create_chat_room(self.user, self.other_user)
-        self.room = room
-
-        raw_room_name = self.scope["url_route"]["kwargs"]["room_name"]
-
-        safe_room_name = re.sub(r"[^a-zA-Z0-9_-]", "", raw_room_name)[:50]
-
-        if not safe_room_name:
-            logger.warning("Invalid room_name received: %s", raw_room_name)
-            await self.close(code=4000)
+        try:
+            self.room, created = await self.get_or_create_chat_room(self.user, self.other_user)
+            logger.info("[CONNECT] Room %s, created=%s", self.room.name, created)
+        except ValidationError as ve:
+            logger.error("[CONNECT] Failed to create/get room: %s", ve)
+            await self.close(code=1011)
             return
 
-        self.room_name = safe_room_name
-        self.room_group_name = f"chat_{self.room_name}"
+        self.room_group_name = f"chat_{self.room.id}"
 
         try:
             await self.channel_layer.group_add(self.room_group_name, self.channel_name)
             await self.accept()
-            logger.info("Client connected to room: %s", self.room_group_name)
+            logger.info("[CONNECT] Connected to room group: %s", self.room_group_name)
         except Exception as e:
-            logger.error("Error adding channel to group %s: %s", self.room_group_name, e)
+            logger.error("[CONNECT] Failed to add channel: %s", e)
             await self.close(code=1011)
 
-    @database_sync_to_async
-    def get_user_by_id(self, user_id: int) -> Optional[User]:
-        """ Sync ORM call wrapped to async. """
-        try:
-            return User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return None
-
-    @database_sync_to_async
-    def get_or_create_chat_room(self, user1, user2) -> Tuple[Room, bool]:
-        """
-        Creates or retrieves a chat room between two users (MongoEngine version).
-        Since MongoEngine has no get_or_create, we implement it manually.
-        """
-        if hasattr(user1, 'roles') and user1.roles.filter(name='Investor').exists():
-            investor = user1
-        else:
-            investor = user2
-        if hasattr(user1, 'roles') and user1.roles.filter(name='Startup').exists():
-            startup = user2
-        else:
-            startup = user1
-
-        try:
-            room = Room.objects.get(name=f"{investor.id}_{startup.id}")
-            created = False
-        except DoesNotExist:
-            room = Room(
-                name=f"{investor.id}_{startup.id}",
-                participants=[investor, startup]
-            )
-            room.save()
-            created = True
-
-        return room, created
-
-    async def disconnect(self, close_code: int) -> None:
+    async def disconnect(self, close_code):
         """
         Handles WebSocket disconnection.
-        Removes the connection from the room group.
+
+        Removes the channel from the room group.
         """
         try:
             await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-            logger.info("Client disconnected from room: %s", self.room_group_name)
+            logger.info("[DISCONNECT] Left room: %s", self.room_group_name)
         except Exception as e:
-            logger.error("Error removing channel from group %s: %s", self.room_group_name, e)
+            logger.error("[DISCONNECT] Failed to discard channel: %s", e)
 
     async def receive(self, text_data=None, bytes_data=None):
         """
-        Handles incoming messages from the WebSocket client.
-        Validates size, rate, and content before broadcasting.
+        Handles incoming WebSocket messages.
+
+        Validates message length, forbidden words, spam patterns, and rate limits.
+        Persists the message and broadcasts it to the room group.
+
+        Args:
+            text_data (str): JSON-formatted message data.
+            bytes_data (bytes): Not used.
         """
         try:
-            text_data_json = json.loads(text_data)
-            message = text_data_json.get("message")
-
-            if not message or not isinstance(message, str):
-                logger.warning("Invalid payload (missing/invalid 'message'): %s", text_data)
+            data = json.loads(text_data)
+            message = data.get("message", "").strip()
+            if not message:
                 return
-
-            message = message.strip()
-
             if len(message) < MIN_MESSAGE_LENGTH or len(message) > MAX_MESSAGE_LENGTH:
-                await self.send(text_data=json.dumps({
-                    "error": f"Message must be between {MIN_MESSAGE_LENGTH} and {MAX_MESSAGE_LENGTH} characters."
-                }))
+                await self.send(
+                    json.dumps({"error": f"Message length must be {MIN_MESSAGE_LENGTH}-{MAX_MESSAGE_LENGTH} chars"}))
                 return
-
-            lowered = message.lower()
-            if any(word in lowered for word in FORBIDDEN_WORDS_SET):
-                logger.warning("Blocked forbidden content: %s", message)
-                await self.send(text_data=json.dumps({"error": "Message contains forbidden content."}))
+            if any(word in message.lower() for word in FORBIDDEN_WORDS_SET):
+                await self.send(json.dumps({"error": "Message contains forbidden content"}))
                 return
-
             if re.match(r"(.)\1{10,}", message):
-                logger.warning("Blocked spammy message: %s", message)
-                await self.send(text_data=json.dumps({"error": "Message looks like spam."}))
+                await self.send(json.dumps({"error": "Message looks like spam"}))
                 return
 
             now = time.time()
@@ -196,108 +130,139 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             times = [t for t in times if now - t < RATE_LIMIT_WINDOW]
             times.append(now)
             user_message_times[self.channel_name] = times
-
             if len(times) > MESSAGE_RATE_LIMIT:
-                logger.warning("Rate limit exceeded by %s", self.channel_name)
-                await self.send(text_data=json.dumps({"error": "Too many messages, slow down."}))
+                await self.send(json.dumps({"error": "Rate limit exceeded"}))
                 return
 
-            await self.save_message(self.room_name, str(self.user.id), str(self.other_user.id), message)
-            logger.info("Message saved in room %s", self.room_name)
+            try:
+                msg = await self.save_message(message)
+                logger.info("[RECEIVE] Message saved from %s: %s", self.user.email, msg.text[:50])
+            except ValidationError as ve:
+                logger.error("[RECEIVE] Failed to save message: %s", ve)
+                await self.send(json.dumps({"error": "Failed to save message"}))
+                return
 
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    'type': 'receive_chat_message',
-                    'message': message,
-                    'sender': self.user.email,
+                    "type": "receive_chat_message",
+                    "message": message,
+                    "sender": self.user.email
                 }
             )
 
         except json.JSONDecodeError as e:
-            logger.error("Invalid JSON received: %s | Error: %s", text_data, e)
+            logger.error("Invalid JSON: %s | %s", text_data, e)
         except Exception as e:
-            logger.error("Error processing received message: %s", e)
+            logger.error("Error in receive: %s", e)
 
-    async def receive_chat_message(self, event: dict) -> None:
+    async def receive_chat_message(self, event):
         """
-        Handles messages received from the room group.
-        Sends the message to the WebSocket client.
+        Handles messages received from the room group and sends them to the WebSocket client.
+
+        This method is called by Channels when a message is broadcasted to the group.
+        Logs sending activity for monitoring real-time communication.
+
+        Args:
+            event (dict): Contains 'message' (str) and 'sender' (str) keys.
         """
+        message = event.get("message", "")
+        sender = event.get("sender", "")
+
         try:
-            message = event.get("message", "")
-            sender = event.get("sender", "")
-
-            if not isinstance(message, str) or not message.strip():
-                logger.warning("Received invalid or empty message in event: %s", event)
-                return
-
-            message = message.strip()
-
-            await self.send(text_data=json.dumps({
-                'message': message,
-                'sender': sender,
+            await self.send(json.dumps({
+                "message": message,
+                "sender": sender
             }))
-
+            logger.info("[SEND_MESSAGE] Sent message to %s in room %s: %s",
+                        self.user.email if self.user else "UNKNOWN",
+                        self.room_group_name,
+                        message[:50] + ("..." if len(message) > 50 else ""))
         except Exception as e:
-            logger.error("Error sending message to WebSocket client: %s", e)
+            logger.error("[receive_chat_message] Failed to send message: %s", e)
 
     @database_sync_to_async
-    def save_message(
-            self, room_name: str, sender_id: str, receiver_id: Optional[str], message: str
-    ) -> Message:
+    def get_user_by_email(self, email: str) -> Optional[User]:
         """
-        Save a chat message in MongoDB with proper room and participant handling.
+        Retrieves a User object by email.
 
-        Steps:
-        1. Rejects anonymous users and logs a warning.
-        2. Retrieves the Room by `room_name` or creates it if it doesn't exist.
-        3. Ensures the sender ID is a participant of the room.
-        4. Creates and saves a Message object linked to the room.
-        5. Logs actions for auditability, truncating long messages for readability.
+        Args:
+            email (str): Email of the user.
 
-        Notes:
-        - `receiver_id` can be None for group messages.
-        - Race conditions can occur if multiple requests create the same room; consider using upsert or transactions.
+        Returns:
+            Optional[User]: User instance or None if not found.
         """
-        user = self.scope["user"]
-        if not user:
-            logger.warning("Anonymous user attempted to send message: %s", message)
-            raise ValueError("Anonymous users cannot send messages")
+        try:
+            return User.objects.get(email=email)
+        except User.DoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def get_or_create_chat_room(self, user1, user2) -> Tuple[Room, bool]:
+        """
+        Creates or retrieves a chat room between an investor and a startup.
+
+        Args:
+            user1 (User): One participant.
+            user2 (User): Another participant.
+
+        Returns:
+            Tuple[Room, bool]: The Room instance and a boolean indicating if it was created.
+        """
+        investor = user1 if hasattr(user1, 'roles') and user1.roles.filter(name='Investor').exists() else user2
+        startup = user1 if hasattr(user1, 'roles') and user1.roles.filter(name='Startup').exists() else user2
+
+        room_name = f"{investor.email}_{startup.email}"
 
         try:
             room = Room.objects.get(name=room_name)
             created = False
         except DoesNotExist:
-            room = Room(name=room_name, participants=[str(sender_id)])
-            room.save()
-            created = True
+            room = Room(name=room_name, participants=[investor.email, startup.email])
+            try:
+                room.save()
+                created = True
+            except ValidationError as ve:
+                logger.error("[get_or_create_chat_room] Failed to save room: %s", ve)
+                raise ve
 
-        if not created:
-            if str(sender_id) not in room.participants:
-                room.participants.append(str(sender_id))
-                try:
-                    room.save()
-                    logger.info("Added user %s to existing room '%s'", sender_id, room_name)
-                except ValidationError as ve:
-                    logger.error("Adding user to room failed: %s", ve)
-                    raise ve
+        return room, created
 
-        msg = Message(
-            room=room,
-            sender_id=str(sender_id),
-            receiver_id = str(receiver_id) if receiver_id is not None else None,
-            text=message
-        )
+    @database_sync_to_async
+    def save_message(self, message_text: str) -> Message:
+        """
+        Saves a message to the Room in MongoDB.
+
+        Adds missing participants to the room if necessary.
+
+        Args:
+            message_text (str): The text of the message.
+
+        Returns:
+            Message: The saved Message instance.
+        """
+        sender_email = self.user.email
+        receiver_email = self.other_user.email if self.other_user else None
+
+        updated = False
+        for email in [sender_email, receiver_email]:
+            if email and email not in self.room.participants:
+                self.room.participants.append(email)
+                updated = True
+        if updated:
+            try:
+                self.room.save()
+                logger.info("[SAVE_MESSAGE] Updated participants for room: %s", self.room.name)
+            except ValidationError as ve:
+                logger.error("[SAVE_MESSAGE] Failed to update room participants: %s", ve)
+                raise ve
+
+        msg = Message(room=self.room, sender_email=sender_email, receiver_email=receiver_email, text=message_text)
         try:
             msg.save()
-            logger.info(
-                "Saved message in room '%s' from user %s to user %s: %s",
-                room_name, sender_id, receiver_id or "ALL",
-                                      message[:50] + ("..." if len(message) > 50 else "")
-            )
+            logger.info("[SAVE_MESSAGE] Saved message in room '%s'", self.room.name)
         except ValidationError as ve:
-            logger.warning("Failed to save message: %s", ve)
+            logger.error("[SAVE_MESSAGE] Failed to save message: %s", ve)
             raise ve
 
         return msg

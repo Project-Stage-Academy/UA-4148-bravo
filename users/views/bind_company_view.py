@@ -1,6 +1,6 @@
 import traceback
 from rest_framework import status
-from rest_framework.views import APIView
+from users.views.base_protected_view import CookieJWTProtectedView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
@@ -93,7 +93,7 @@ logger = logging.getLogger(__name__)
     tags=["Authentication"],
     auth=[{'Bearer': []}]
 )
-class CompanyBindingView(APIView):
+class CompanyBindingView(CookieJWTProtectedView):
     """
     API endpoint for binding users to companies after registration.
 
