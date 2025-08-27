@@ -14,7 +14,15 @@ import Policy from '../../pages/Policy/policy';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
 import RegistrationPage from '../../pages/Registration/registration';
-import RequireAuth from '../RequireAuth/requireAuth';
+import AuthorizationWrapper from '../../pages/AuthorizationWrapper/authorizationWrapper';
+import RegistrationConfirmation from '../../pages/RegistrationConfirmation/registrationConfirmation';
+import RegistrationReconfirmation from '../../pages/RegistrationReconfirmation/registrationReconfirmation';
+import RegistrationError from '../../pages/RegistrationError/registrationError';
+import RegistrationUserConfirmed from '../../pages/RegistrationUserConfirmed/registrationUserConfirmed';
+import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/emailConfirmationHandler';
+import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
+import RegistrationUserRepresent from '../../pages/RegistrationUserRepresent/registrationUserRepresent';
+import RegistrationCompleted from '../../pages/RegistrationCompleted/registrationCompleted';
 
 /**
  * Main application component that sets up routing and provider providers.
@@ -23,16 +31,9 @@ import RequireAuth from '../RequireAuth/requireAuth';
  * The main layout is defined in the Layout component, which includes
  * the header, sidebar, and footer.
  * The Routes define the various pages of the application, including:
- * - Home page
- * - Company list
- * - Feedback form
- * - Policy page
- * - Who we are page
- * - Log in page
- * - Registration page
- * - Password management (forgot and restore)
- * - User and company profile pages with editing capabilities
- * - A catch-all route for 404 Not Found
+ *
+ * @component
+ *
  * @returns {JSX.Element} The main application component.
  */
 function App() {
@@ -59,7 +60,7 @@ function App() {
                         {/* Who we are */}
                         <Route path="who-we-are" element={<WhoWeAre />} />
 
-                        <Route path="auth" element={<RequireAuth />}>
+                        <Route path={"auth"} element={<AuthorizationWrapper />}>
 
                             {/* Log in */}
                             <Route path="login" element={<LogInPage />} />
@@ -67,11 +68,19 @@ function App() {
                             {/* Registration */}
                             <Route path="register" element={<RegistrationPage />} />
 
+                            <Route path="register/confirm" element={<RegistrationConfirmation />} />
+                            <Route path="register/re-confirm" element={<RegistrationReconfirmation />} />
+                            <Route path="register/error" element={<RegistrationError />} />
+                            <Route path="register/user-confirmed" element={<RegistrationUserConfirmed />} />
+                            <Route path="register/user-represent" element={<RegistrationUserRepresent />} />
+                            <Route path="register/completed" element={<RegistrationCompleted />} />
+
                             {/* Forgot password */}
                             <Route path="forgot" element={<ForgotPassword />} />
 
                             {/* Restore password */}
-                            <Route path="reset/:uid/:token" element={<RestorePassword />} />
+                            <Route path="restore-password" element={<RestorePassword />} />
+                            <Route path="restore-password/done" element={<RestorePasswordDone />} />
                         </Route>
 
                         {/* Profile */}
@@ -84,6 +93,9 @@ function App() {
                                 <Route path="edit" element={<ProfileEditing />} />
                             </Route>
                         </Route>
+
+                        {/* Email verificator */}
+                        <Route path="api/v1/auth/verify-email/:user_id/:token" element={<EmailConfirmationHandler />} />
 
                         {/* Page not found */}
                         <Route path="*" element={<NotFound />} />

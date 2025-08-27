@@ -1,11 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { api, setAccessToken } from "../../api/client";
+import {createContext, useCallback, useContext, useMemo, useState} from 'react';
+import { api, getAccessToken, setAccessToken } from '../../api/client';
 import PropTypes from 'prop-types';
+import useProactiveRefresh from '../../hooks/useProactiveRefresh/useProactiveRefresh';
 
 /**
  * @typedef {Object} User - Represents a user in the application
  * @property {number} id - Unique identifier for the user
- * @property {string} name - Name of the user
+ * @property {string} first_name - First name of the user
+ * @property {string} last_name - Last name of the user
+ * @property {string} email - Email of the user
  * @property {string | null} role - Role of the user (e.g., 'admin', 'user')
  */
 
@@ -16,6 +19,8 @@ import PropTypes from 'prop-types';
  * @property {(email: string, first_name: string | null, last_name: string | null, password: string, confirmPassword: string)
  * => Promise<void>} register
  * @property {(email: string, userId: number) => Promise<void>} resendRegisterEmail
+ @property {(user_id: number, token: string) => Promise<void>} confirmEmail
+ * @property {(company_name:string,company_type:'startup'|'investor') => Promise<void>} bindCompanyToUser
  * @property {() => void} logout
  * @property {(email: string) => Promise<void>} requestReset
  * @property {(uid: string, token: string, newPassword: string) => Promise<void>} confirmReset
@@ -51,18 +56,23 @@ function AuthProvider({ children }) {
      * @param {string} password
      * @param {string} confirmPassword
      */
-    async function register(email, first_name, last_name, password, confirmPassword) {
-        await api.post('/api/v1/auth/register/', {
-            email,
-            first_name,
-            last_name,
-            password,
-            password2: confirmPassword,
-        }).catch((err) => {
-            console.error(err);
-            throw err;
-        });
-    }
+    const register = useCallback(
+        async (email, first_name, last_name, password, confirmPassword) => {
+            try {
+                return await api.post('/api/v1/auth/register/', {
+                    email,
+                    first_name,
+                    last_name,
+                    password,
+                    password2: confirmPassword,
+                });
+            } catch (err) {
+                console.error(err);
+                throw err;
+            }
+        },
+        []
+    );
 
     /**
      * Resend register email
@@ -73,15 +83,56 @@ function AuthProvider({ children }) {
      * @param {string} email
      * @param {number} userId
      */
-    async function resendRegisterEmail(email, userId) {
-        await api.post('/api/v1/auth/register/resend/', {
-            email: email,
-            user_id: userId,
-        }).catch((err) => {
+    const resendRegisterEmail = useCallback(async (email, userId) => {
+        await api
+            .post('/api/v1/auth/resend-email/', {
+                email: email,
+                user_id: userId,
+            })
+            .catch((err) => {
+                console.error(err);
+                throw err;
+            });
+    }, []);
+
+    /**
+     * Confirm register email
+     * URL: /api/v1/auth/verify-email/<int:user_id>/<string:token>/
+     * Req: { user_id, token }
+     * Res: 200
+     *
+     * @param {number} user_id
+     * @param {string} token
+     */
+    const confirmEmail = useCallback(async (user_id, token) => {
+        try {
+            await api.get(`/api/v1/auth/verify-email/${user_id}/${token}/`);
+        } catch (err) {
             console.error(err);
             throw err;
-        });
-    }
+        }
+    }, []);
+
+    /**
+     * Enable newly registered users to bind themselves to an existing or new company
+     * URL: /api/v1/auth/bind-company/
+     * Req: { company_name, company_type }
+     * Res: 200
+     *
+     * @param {string} company_name
+     * @param {'startup'|'investor'} company_type
+     */
+    const bindCompanyToUser = useCallback(async (company_name, company_type) => {
+        try {
+            await api.post(`/api/v1/auth/bind-company/`, {
+                company_name,
+                company_type
+            });
+        } catch (err) {
+            console.error(err);
+            throw err;
+        }
+    }, []);
 
     /**
      * Create
@@ -93,14 +144,16 @@ function AuthProvider({ children }) {
      * @param {string} password
      * @returns {Promise<void>}
      */
-    async function login(email, password) {
-        const { data } = await api.post('/api/v1/auth/jwt/create/', {
-            email,
-            password,
-        }).catch((err) => {
-            console.error(err);
-            throw err;
-        });
+    const login = useCallback(async (email, password) => {
+        const { data } = await api
+            .post('/api/v1/auth/jwt/create/', {
+                email,
+                password,
+            })
+            .catch((err) => {
+                console.error(err);
+                throw err;
+            });
 
         if (data.access) {
             console.log('data.access is missing or null');
@@ -108,10 +161,10 @@ function AuthProvider({ children }) {
 
         setAccessToken(data.access);
         /*
-        TODO
-        await loadUser();
-        */
-    }
+            TODO
+            await loadUser();
+            */
+    }, []);
 
     /**
      * Me
@@ -121,32 +174,35 @@ function AuthProvider({ children }) {
      *
      * @returns {Promise<void>}
      */
-    async function loadUser() {
+    // eslint-disable-next-line
+    const loadUser = useCallback(async () => {
         try {
-            const { data } = await api.get("/api/v1/auth/me/")
-                .catch((err) => {
-                    console.error(err);
-                });
+            const { data } = await api.get('/api/v1/auth/me/').catch((err) => {
+                console.error(err);
+            });
             setUser(data);
-        } catch {
-            console.log('User not found');
-            setUser(null);
+        } catch (err) {
+            if (err.response?.status === 404) {
+                setUser(null);
+            } else {
+                throw err;
+            }
         }
-    }
+    }, []);
 
     /**
-     * Blacklist
-     * URL: /api/v1/auth/jwt/blacklist/
+     * Logout
+     * URL: /api/v1/auth/jwt/logout/
      * Req: { refresh }
      * Res: 205
      */
-    async function logout() {
-        await api.post("/api/v1/auth/jwt/blacklist/").catch(() => {
-            console.log('User not found');
+    const logout = useCallback(async () => {
+        await api.post('/api/v1/auth/jwt/logout/').catch(() => {
+            console.log('Logout');
         });
         setAccessToken(null);
         setUser(null);
-    }
+    }, []);
 
     /**
      * Password reset
@@ -157,11 +213,13 @@ function AuthProvider({ children }) {
      * @param {string} email
      * @returns {Promise<void>}
      */
-    async function requestReset(email) {
-        await api.post("/api/v1/auth/password/reset/", { email }).catch((err) => {
-            console.error(err);
-        });
-    }
+    const requestReset = useCallback(async (email) => {
+        await api
+            .post('/api/v1/auth/password/reset/', { email })
+            .catch((err) => {
+                console.error(err);
+            });
+    }, []);
 
     /**
      * Password reset confirm
@@ -174,11 +232,17 @@ function AuthProvider({ children }) {
      * @param {string} new_password
      * @returns {Promise<void>}
      */
-    async function confirmReset(uid, token, new_password) {
-        await api.post("/api/v1/auth/password/reset/confirm/", { uid, token, new_password }).catch((err) => {
-            console.error(err);
-        });
-    }
+    const confirmReset = useCallback(async (uid, token, new_password) => {
+        await api
+            .post('/api/v1/auth/password/reset/confirm/', {
+                uid,
+                token,
+                new_password,
+            })
+            .catch((err) => {
+                console.error(err);
+            });
+    }, []);
 
     /**
      * Refresh
@@ -186,58 +250,59 @@ function AuthProvider({ children }) {
      * Req: { refresh }
      * Res: 200 { access }
      */
-    async function refreshToken(isMounted) {
+    const refreshToken = useCallback(async () => {
         try {
-            const { data } = await api.post("/api/v1/auth/jwt/refresh/").catch((err) => {
-                console.error(err);
-            });
-            if (!isMounted) return;
-
+            const { data } = await api.post('/api/v1/auth/jwt/refresh/');
             setAccessToken(data.access || null);
+            return data.access;
             /*
-            * TODO
-            * await loadUser();
-            */
-        } catch {
-            await logout();
+             * TODO
+             * await loadUser();
+             */
+        } catch (err) {
+            if (err.response) {
+                console.log(
+                    'Refresh token missing or invalid:',
+                    err.response.status
+                );
+            } else {
+                console.error(err);
+            }
+
+            if (err.response?.status === 401) {
+                await logout();
+            }
         }
-    }
+    }, [logout]);
 
-    /**
-     * Try to restore session on mount
-     */
-    useEffect(() => {
-        let isMounted = true;
-
-        (async () => {
-            await refreshToken(isMounted);
-        })();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
+    useProactiveRefresh(getAccessToken(), refreshToken);
 
     return (
         <AuthCtx.Provider
             value={useMemo(
                 () => ({
                     user,
+                    setUser,
                     login,
                     register,
                     resendRegisterEmail,
+                    confirmEmail,
+                    bindCompanyToUser,
                     logout,
                     requestReset,
-                    confirmReset
+                    confirmReset,
                 }),
                 [
                     user,
+                    setUser,
                     login,
                     register,
                     resendRegisterEmail,
+                    confirmEmail,
+                    bindCompanyToUser,
                     logout,
                     requestReset,
-                    confirmReset
+                    confirmReset,
                 ]
             )}
         >
