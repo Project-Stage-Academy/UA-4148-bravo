@@ -47,37 +47,45 @@ class WebSocketJWTAuthMiddleware:
 
     async def __call__(self, scope, receive, send):
         """
-        Called for each incoming WebSocket connection.
+        ASGI middleware entry point for WebSocket connections.
+
+        This method authenticates a WebSocket connection using a JWT access token
+        passed in the query string. If the token is valid, the corresponding user
+        is attached to `scope["user"]` for downstream consumers. If the token is
+        missing or invalid, the WebSocket connection is immediately closed with
+        code 1008 (policy violation).
 
         Steps:
         1. Parse the query string for the `token` parameter.
-        2. Decode the JWT token and validate it.
-        3. Retrieve the corresponding User from the database asynchronously.
+        2. Decode and validate the JWT token.
+        3. Retrieve the associated user asynchronously from the database.
         4. Attach the user to `scope["user"]` for downstream consumers.
-        5. If token is invalid or user not found, assign AnonymousUser.
-        6. Call the downstream ASGI application.
+        5. Close the WebSocket if the token is missing or invalid.
+        6. Forward the connection to the downstream ASGI application if authenticated.
 
         Args:
-            scope (dict): The ASGI connection scope.
-            receive (callable): Coroutine to receive ASGI events.
-            send (callable): Coroutine to send ASGI events.
+            scope (dict): ASGI connection scope.
+            receive (Callable): Coroutine to receive ASGI events.
+            send (Callable): Coroutine to send ASGI events.
 
         Returns:
-            Awaitable: Calls the downstream ASGI application.
+            Awaitable: Invokes the downstream ASGI application if the token is valid,
+            otherwise closes the WebSocket connection with code 1008.
         """
-        parsed_query_string = parse_qs(scope["query_string"])
-        token_values = parsed_query_string.get(b"token")
+        parsed_query_string = parse_qs(scope["query_string"].decode("utf-8"))
+        token_values = parsed_query_string.get("token")
 
         if not token_values:
-            scope["user"] = AnonymousUser()
-            return await self.app(scope, receive, send)
+            await send({'type': 'websocket.close', 'code': 1008})
+            return
 
-        token = token_values[0].decode("utf-8")
+        token = token_values[0]
 
         try:
             access_token = AccessToken(token)
             scope["user"] = await get_user(access_token["user_id"])
         except TokenError:
-            scope["user"] = AnonymousUser()
+            await send({'type': 'websocket.close', 'code': 1008})
+            return
 
-        return await self.app(scope, receive, send)
+        await self.app(scope, receive, send)

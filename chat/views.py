@@ -1,8 +1,6 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.conf import settings
-from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -65,8 +63,11 @@ class SendMessageView(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = MessageSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        message = serializer.save()
+        try:
+            serializer.is_valid(raise_exception=True)
+            message = serializer.save()
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         channel_layer = get_channel_layer()
         room_name = message.room.name
@@ -116,9 +117,5 @@ class ConversationMessagesView(generics.ListAPIView):
 
     def get_queryset(self):
         room_name = self.kwargs["room_name"]
-        try:
-            room = Room.objects.get(name=room_name)
-        except Room.DoesNotExist:
-            return Message.objects.none()
-
+        room = get_object_or_404(Room, name=room_name)
         return Message.objects.filter(room=room).order_by("timestamp")

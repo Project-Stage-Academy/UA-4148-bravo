@@ -40,7 +40,7 @@ class Room(Document):
         - Remove duplicate participants.
         - Limit participants to MAX_PARTICIPANTS.
         """
-        self.participants = list(set(self.participants))
+        self.participants = list(dict.fromkeys(self.participants))
 
         if len(self.participants) > MAX_PARTICIPANTS:
             raise ValidationError(f"Room cannot have more than {MAX_PARTICIPANTS} participants")
@@ -81,22 +81,20 @@ class Message(Document):
         - If private chat: receiver must be set and also in participants.
         - In group chat: receiver can be None (message for everyone).
         """
-        if not self.room:
-            raise ValidationError("Message must belong to a valid room.")
+        if not self.room or not self.room.id:
+            raise ValidationError("Message must belong to a persisted room.")
 
         if self.sender_id not in self.room.participants:
             raise ValidationError("Sender must be a participant of the room.")
 
-        if self.room.is_group:
-            if self.receiver_id and self.receiver_id not in self.room.participants:
+        if self.room.is_group and self.receiver_id is not None:
+            if self.receiver_id not in self.room.participants:
                 raise ValidationError("Receiver must be a participant of the group.")
         else:
             if len(self.room.participants) != 2:
                 raise ValidationError("Private room must have exactly 2 participants.")
             if not self.receiver_id:
                 raise ValidationError("Receiver is required in private messages.")
-            if self.receiver_id not in self.room.participants:
-                raise ValidationError("Receiver must be a participant of the room.")
 
         if not self.text.strip():
             raise ValidationError("Message text cannot be empty.")

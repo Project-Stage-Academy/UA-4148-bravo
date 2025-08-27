@@ -4,6 +4,7 @@ from django.utils.timezone import now
 from rest_framework import serializers
 from chat.documents import Room, Message
 from core.settings.constants import FORBIDDEN_WORDS_SET
+from collections import OrderedDict
 
 MAX_PARTICIPANTS = int(os.getenv("MAX_PARTICIPANTS", 50))
 MIN_MESSAGE_LENGTH = int(os.getenv("MIN_MESSAGE_LENGTH", 1))
@@ -45,7 +46,7 @@ class RoomSerializer(serializers.Serializer):
         """
         Ensure participants list contains unique IDs and does not exceed the maximum limit.
         """
-        unique_ids = list(set(value))
+        unique_ids = list(OrderedDict.fromkeys(value))
         if len(unique_ids) > MAX_PARTICIPANTS:
             raise serializers.ValidationError(
                 f"Room cannot have more than {MAX_PARTICIPANTS} participants."
@@ -134,7 +135,9 @@ class MessageSerializer(serializers.Serializer):
         Cross-field validation for message consistency with the room.
         """
         try:
-            room = Room.objects.get(name=data['room'])
+            room = data.get('room')
+            if not room:
+                raise serializers.ValidationError("Room name is required.")
         except Room.DoesNotExist:
             raise serializers.ValidationError("Room does not exist.")
 

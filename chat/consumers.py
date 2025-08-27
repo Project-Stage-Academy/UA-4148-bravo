@@ -13,6 +13,8 @@ from django.contrib.auth import get_user_model
 from mongoengine import DoesNotExist
 from typing import Tuple, Optional
 
+from users.models import User
+
 logger = logging.getLogger(__name__)
 
 MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", 1000))
@@ -21,7 +23,6 @@ MESSAGE_RATE_LIMIT = int(os.getenv("MESSAGE_RATE_LIMIT", 5))
 RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", 10))
 
 user_message_times = defaultdict(list)
-User = get_user_model()
 
 
 class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
@@ -74,7 +75,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
         - 4000 → Invalid room name: the `room_name` contains only invalid characters.
         - 1011 → Internal Error: failed to add channel to group (unexpected error).
         """
-        self.user = self.scope['user']
+        self.user = self.scope.get('user', None)
         other_user_id = self.scope['url_route']['kwargs'].get('other_user_id')
 
         if not self.user or not self.user.is_authenticated:
@@ -125,8 +126,14 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
         Creates or retrieves a chat room between two users (MongoEngine version).
         Since MongoEngine has no get_or_create, we implement it manually.
         """
-        investor = user1 if user1.roles.filter(name='Investor').exists() else user2
-        startup = user2 if user2.roles.filter(name='Startup').exists() else user1
+        if hasattr(user1, 'roles') and user1.roles.filter(name='Investor').exists():
+            investor = user1
+        else:
+            investor = user2
+        if hasattr(user1, 'roles') and user1.roles.filter(name='Startup').exists():
+            startup = user2
+        else:
+            startup = user1
 
         try:
             room = Room.objects.get(name=f"{investor.id}_{startup.id}")
@@ -279,7 +286,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
         msg = Message(
             room=room,
             sender_id=str(sender_id),
-            receiver_id=str(receiver_id) if receiver_id else None,
+            receiver_id = str(receiver_id) if receiver_id is not None else None,
             text=message
         )
         try:
