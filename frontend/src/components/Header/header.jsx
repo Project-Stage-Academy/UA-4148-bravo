@@ -52,11 +52,11 @@ function Header({ show, hide, toggle, visible }) {
                     </div>
                 ) : (
                     <div className={'nav-panel--set'}>
-                        <Link to={'/login'} className={'link__underline nav-panel--link'}>
+                        <Link to={'/auth/login'} className={'link__underline nav-panel--link'}>
                             <p>Увійти</p>
                         </Link>
                         <Button className={"button__padding"}
-                                onClick={() => navigate('/register')}>
+                                onClick={() => navigate('/auth/register')}>
                             Зареєструватися
                         </Button>
                     </div>

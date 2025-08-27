@@ -38,14 +38,32 @@
     --link-btn-text-color-inactive: #A1A1A1;
 
     /* background colors */
+    --primary-bcg-color: #F9F5EC;
+    --secondary-bcg-color: #fff;
     --green-bcg-color: #B4D27A;
+
+    /* input colors */
+    --input-border-color-active: #AAAAAA;
+    --input-border-color-red: #F15831;
+
+    /* checkbox colors */
+    --checkbox-border-color-unmatched: #ADB3B9;
+    --checkbox-border-color-red: #F15831;
+    --checkbox-border-color-matched: #000;
+
+    /* hr colors */
+    --light-gray-hr-color: #EDEDED;
+    --panel-hr-color: #F0F0F0;
+
+    /* header */
     --yellow-bcg-color: #F9F5EC;
     --white-bcg-color: #FFF;
     --header-bcg-color: #fff;
     --footer-bcg-color: #232424;
 
-    /* hr colors */
-    --light-gray-hr-color: #EDEDED;
+    /* loading */
+    --loading-dot-active-color: rgba(180, 210, 122, 0.75);
+    --loading-dot-inactive-color: rgba(180, 210, 122, 0.3);
 
     /* home page */
     --benefits-panel-color: #F9F5EC;
