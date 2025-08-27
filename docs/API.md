@@ -22,27 +22,30 @@ Authorization: Bearer <your_access_token>
 #### 1. CSRF Init
 
 - `GET /api/v1/auth/csrf/`
-  Initializes CSRF protection by setting a CSRF cookie.
-  This endpoint must be called by the frontend before sending any POST/PUT/PATCH/DELETE requests.
+  Returns a CSRF token in JSON and sets the CSRF cookie.  
+  This must be called by the frontend before sending any POST/PUT/PATCH/DELETE requests that require CSRF protection.
 
-### Request Example
+### Example Response
 
 ```json
 {
-  "detail": "CSRF cookie set"
+  "csrfToken": "<csrf_token>"
 }
 ```
 
 #### 2. JWT Create (Login)
 
 - `POST /api/v1/auth/jwt/create/`
-  Authenticates a user. Returns an access token in the response body and stores the refresh token in an HttpOnly cookie.
+  Authenticates a user and issues JWT tokens.
+  - Sets both access_token and refresh_token in secure HttpOnly cookies.
+  - Returns only minimal user info in response body (no tokens).
 
 ### Request Example
 
 - POST /api/v1/auth/jwt/create/
-- Content-Type: application/json
-- X-CSRFToken: <csrf_token>
+    Headers:
+    - Content-Type: application/json
+    - X-CSRFToken: <csrf_token>
 
 ```json
 {
@@ -55,47 +58,51 @@ Authorization: Bearer <your_access_token>
 
 ```json
 {
-  "access": "<your_access_token>"
+  "email": "user@example.com",
+  "user_id": "42"
 }
 ```
-
-(the refresh token is stored in the refresh_token HttpOnly cookie)
+The access_token and refresh_token are stored in HttpOnly cookies and are not returned in the response body.
 
 #### 3. JWT Refresh
 
 - `POST /api/v1/auth/jwt/refresh/`
-  Generates a new access token using the refresh token stored in the HttpOnly cookie.
+  Issues a new access token using the refresh token stored in the secure HttpOnly cookie.
+  If the refresh token is invalid or expired, the cookie will be cleared.
 
 ### Request Example
 
 - POST /api/v1/auth/jwt/refresh/
-- Content-Type: application/json
-- X-CSRFToken: <csrf_token>
+    Headers:    
+    - Content-Type: application/json    
+    - X-CSRFToken: <csrf_token>
 
 ### Example Response
 
 ```json
 {
-  "access": "<your_new_access_token>"
+  "detail": "Access token refreshed"
 }
 ```
+The new access token is available only in the HttpOnly cookie.
 
 #### 4. JWT Logout
 
 - `POST /api/v1/auth/jwt/logout/`
-  Invalidates the refresh token and clears the authentication cookie.
+  Blacklists the refresh token (if blacklisting is enabled) and clears both access_token and refresh_token cookies.
 
 ### Request Example
 
 - POST /api/v1/auth/jwt/logout/
-- Content-Type: application/json
-- X-CSRFToken: <csrf_token>
+    Headers:
+    - Content-Type: application/json
+    - X-CSRFToken: <csrf_token>
 
 ### Example Response
 
 ```json
 {
-  "detail": "Successfully logged out"
+  "detail": "Logout successful"
 }
 ```
 
@@ -108,18 +115,20 @@ sequenceDiagram
     participant Cookie as "HttpOnly Cookie"
 
     Browser->>Backend: GET /csrf/
-    Backend-->>Browser: Set CSRF cookie
+    Backend-->>Browser: { csrfToken } + Set CSRF cookie
 
     Browser->>Backend: POST /jwt/create/ (email, password, CSRF token)
-    Backend-->>Browser: access token (JSON)
-    Backend-->>Cookie: refresh_token (HttpOnly, Secure)
+    Backend-->>Browser: { email, user_id }
+    Backend-->>Cookie: access_token (HttpOnly, Secure, SameSite=None)
+    Backend-->>Cookie: refresh_token (HttpOnly, Secure, SameSite=None)
 
-    Browser->>Backend: POST /jwt/refresh/ (CSRF token + refresh_token in Cookie)
-    Backend-->>Browser: new access token (JSON)
+    Browser->>Backend: POST /jwt/refresh/ (CSRF token + refresh_token in cookie)
+    Backend-->>Browser: { detail: "Access token refreshed" }
+    Backend-->>Cookie: new access_token (HttpOnly)
 
     Browser->>Backend: POST /jwt/logout/ (CSRF token)
-    Backend-->>Cookie: Delete refresh_token
-    Backend-->>Browser: Logout success
+    Backend-->>Cookie: Delete access_token + refresh_token
+    Backend-->>Browser: { detail: "Logout successful" }
 ```
 
 ## Startup API

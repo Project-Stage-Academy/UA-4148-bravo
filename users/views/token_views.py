@@ -1,9 +1,13 @@
 import logging
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiResponse,
+    inline_serializer,
+)
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.views import APIView
 from users.serializers.token_serializer import CustomTokenObtainPairSerializer
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -19,11 +23,17 @@ logger = logging.getLogger(__name__)
 @extend_schema(
     tags=["Auth"],
     summary="Get CSRF token",
-    description="Returns a CSRF token in JSON. Used for subsequent requests that require CSRF protection.",
+    description=(
+            "Returns a CSRF token in JSON and sets the CSRF cookie. "
+            "Call this before any POST/PUT/PATCH/DELETE requests."
+    ),
     responses={
         200: OpenApiResponse(
             description="CSRF token retrieved successfully",
-            response= {"csrfToken": str}
+            response=inline_serializer(
+                name="CsrfTokenResponse",
+                fields={"csrfToken": serializers.CharField()},
+            ),
         )
     },
 )
@@ -32,153 +42,188 @@ class CSRFTokenView(APIView):
 
     @method_decorator(ensure_csrf_cookie)
     def get(self, request, *args, **kwargs):
+        """
+        Returns a CSRF token in JSON and sets the `csrftoken` cookie.
+        """
         token = get_token(request)
         return Response({"csrfToken": token})
 
 
 @extend_schema(
     tags=["Auth"],
-    summary="Obtain JWT access/refresh tokens",
+    summary="Obtain JWT (sets cookies)",
+    description="Authenticates user, stores access/refresh tokens in HttpOnly cookies (access ~15m, refresh ~7d), returns minimal user info only.",
     request=CustomTokenObtainPairSerializer,
     responses={
-        200: CustomTokenObtainPairSerializer,
+        200: OpenApiResponse(
+            description="Authenticated successfully",
+            response=inline_serializer(
+                name="LoginResponse",
+                fields={"email": serializers.EmailField(), "user_id": serializers.IntegerField()},
+            ),
+        ),
+        400: OpenApiResponse(
+            description="Tokens missing or bad request",
+            response=inline_serializer(name="LoginErrorResponse", fields={"detail": serializers.CharField()}),
+        ),
         401: OpenApiResponse(description="Invalid credentials"),
     },
 )
 @method_decorator(csrf_protect, name="post")
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-    Custom view for obtaining JWT tokens.
-    Uses CustomTokenObtainPairSerializer for token generation.
+    Issues access & refresh tokens (in HttpOnly cookies) upon successful authentication.
+    Response body contains minimal user info only (no tokens in body).
     """
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
         """
-        Handle POST requests to obtain JWT tokens.
-
-        Steps performed:
-        1. Validate user credentials using CustomTokenObtainPairSerializer.
-        2. Generate a refresh token and access token for the authenticated user.
-        3. Return the access token in the response body.
-        4. Set the refresh token as an HTTPOnly cookie.
-
-        Args:
-            request: DRF Request object containing user credentials.
-
-        Returns:
-            Response: DRF Response containing the access token and
-                      the refresh token set in an HTTPOnly cookie.
+        Steps:
+        1) Validate credentials via serializer (SimpleJWT).
+        2) On success, set `refresh_token` & `access_token` cookies.
+        3) Return user info in JSON (no tokens in body).
         """
         response = super().post(request, *args, **kwargs)
 
-        if "refresh" not in response.data:
-            return Response(
-                {"detail": "Refresh token missing."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        if "refresh" not in response.data or "access" not in response.data:
+            return Response({"detail": "Tokens missing."}, status=status.HTTP_400_BAD_REQUEST)
 
         response.set_cookie(
             key="refresh_token",
             value=response.data["refresh"],
             httponly=True,
             secure=True,
-            samesite="Lax",
+            samesite=None,
             max_age=60 * 60 * 24 * 7,
         )
+
+        response.set_cookie(
+            key="access_token",
+            value=response.data["access"],
+            httponly=True,
+            secure=True,
+            samesite=None,
+            max_age=60 * 15,
+        )
+
+        user = request.user
+        response.data = {"email": getattr(user, "email", None), "user_id": getattr(user, "id", None)}
 
         return response
 
 
 @extend_schema(
     tags=["Auth"],
-    summary="Refresh JWT access token",
+    summary="Refresh JWT access token (cookie-based)",
+    description="Reads refresh_token from HttpOnly cookie, validates it, issues new access token in cookie. Does not return tokens in body.",
+    responses={
+        200: OpenApiResponse(
+            description="Access token refreshed",
+            response=inline_serializer(name="RefreshResponse", fields={"detail": serializers.CharField()}),
+        ),
+        404: OpenApiResponse(
+            description="Refresh token missing",
+            response=inline_serializer(name="RefreshMissingResponse", fields={"detail": serializers.CharField()}),
+        ),
+        205: OpenApiResponse(
+            description="Refresh token invalid/expired; cookies cleared",
+            response=inline_serializer(name="RefreshClearedResponse", fields={"detail": serializers.CharField()}),
+        ),
+        400: OpenApiResponse(
+            description="Access token not generated",
+            response=inline_serializer(name="RefreshBadResponse", fields={"detail": serializers.CharField()}),
+        ),
+    },
 )
 @method_decorator(csrf_protect, name="post")
 class CookieTokenRefreshView(TokenRefreshView):
     """
-    Custom view to refresh JWT access tokens using a refresh token stored in an HTTPOnly cookie.
-
-    This view overrides the default TokenRefreshView to:
-    1. Read the refresh token from the 'refresh_token' cookie instead of the request body.
-    2. Return a new access token (and optionally a new refresh token) in the response body.
-
-    Using cookies for refresh tokens improves security by preventing JavaScript
-    from accessing them directly (mitigating XSS risks).
+    Refreshes the access token using the refresh token from HttpOnly cookie.
+    Sets new access token in cookie. Does not return tokens in response body.
     """
 
     def post(self, request, *args, **kwargs):
         """
-        Handle POST requests to refresh JWT access tokens.
-
-        Steps performed:
-        1. Retrieve the refresh token from the 'refresh_token' HTTPOnly cookie.
-        2. Validate the refresh token using the standard SimpleJWT serializer.
-        3. Return a new access token (and optionally a new refresh token) in the response.
-
-        Args:
-            request: DRF Request object. The refresh token is expected to be in cookies.
-
-        Returns:
-            Response: DRF Response containing the new access token (and refresh token if rotation is enabled).
-                      Returns 401 if no refresh token cookie is found.
+        Steps:
+        1) Read `refresh_token` from cookies.
+        2) Validate/parse it. On error — clear cookies and return 205.
+        3) Issue new access token and set it in `access_token` cookie.
+        4) Return { "detail": "Access token refreshed" }.
         """
         refresh = request.COOKIES.get("refresh_token")
+        if not refresh:
+            return Response({"detail": "Refresh token missing."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             safe_decode(refresh)
         except Exception as e:
             response = Response({"detail": str(e)}, status=status.HTTP_205_RESET_CONTENT)
             response.delete_cookie("refresh_token")
+            response.delete_cookie("access_token")
             return response
 
         serializer = self.get_serializer(data={"refresh": refresh})
         serializer.is_valid(raise_exception=True)
 
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        access = serializer.validated_data.get("access")
+        if not access:
+            return Response({"detail": "Access token not generated."}, status=status.HTTP_400_BAD_REQUEST)
+
+        response = Response({"detail": "Access token refreshed"}, status=status.HTTP_200_OK)
+        response.set_cookie(
+            key="access_token",
+            value=access,
+            httponly=True,
+            secure=True,
+            samesite=None,
+            max_age=60 * 15,
+        )
+        return response
 
 
 @extend_schema(
     tags=["Auth"],
     summary="Logout (blacklist refresh token)",
+    description=(
+            "Attempts to blacklist the refresh token (if blacklist app enabled) "
+            "and deletes both `refresh_token` and `access_token` cookies."
+    ),
+    responses={
+        205: OpenApiResponse(
+            description="Logout successful",
+            response=inline_serializer(
+                name="LogoutResponse",
+                fields={"detail": serializers.CharField()},
+            ),
+        ),
+    },
 )
 @method_decorator(csrf_protect, name="post")
 class JWTLogoutView(APIView):
     """
-    Custom view to handle user logout and invalidate JWT refresh tokens stored in cookies.
-
-    This view performs the following actions:
-    1. Reads the refresh token from the 'refresh_token' HTTPOnly cookie.
-    2. Attempts to blacklist the refresh token to prevent further use (requires SimpleJWT blacklist app enabled).
-    3. Deletes the 'refresh_token' cookie from the client to complete logout.
+    Logs out the user by invalidating the refresh token (best-effort) and clearing cookies.
+    Requires authentication (access token).
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         """
-        Handle POST requests for logging out the user.
-
-        Steps performed:
-        1. Retrieve the refresh token from the 'refresh_token' cookie.
-        2. If present, attempt to blacklist the token to revoke it.
-        3. Return a success response and remove the cookie from the client.
-
-        Args:
-            request: DRF Request object. Expects the refresh token in cookies.
-
-        Returns:
-            Response: DRF Response confirming successful logout.
+        Steps:
+        1) Read `refresh_token` from cookies.
+        2) Try to blacklist it (if supported).
+        3) Clear both cookies and return 205.
         """
         refresh_token = request.COOKIES.get("refresh_token")
 
         if refresh_token:
             try:
                 token = RefreshToken(refresh_token)
-                token.blacklist()
+                token.blacklist()  # requires simplejwt blacklist app
             except Exception as e:
                 logger.warning(f"Failed to blacklist refresh token: {str(e)}")
-                pass
 
         response = Response({"detail": "Logout successful"}, status=status.HTTP_205_RESET_CONTENT)
         response.delete_cookie("refresh_token")
+        response.delete_cookie("access_token")
         return response
