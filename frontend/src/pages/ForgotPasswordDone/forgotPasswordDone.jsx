@@ -3,16 +3,22 @@ import Panel, { PanelBody, PanelNavigation, PanelTitle } from '../../components/
 import Button from '../../components/Button/button';
 import { useNavigate } from 'react-router-dom';
 
-function ForgotPassword() {
+function ForgotPasswordDone() {
     const navigate = useNavigate();
 
     return (
         <>
-            <Panel>
-                <PanelTitle>Відновлення паролю майже завершено</PanelTitle>
+            <Panel aria-labelledby="forgot-password-form-title">
+                <PanelTitle id="forgot-password-form-title"
+                            aria-describedby="forgot-password-help1"
+                >
+                    Відновлення паролю майже завершено
+                </PanelTitle>
                 <PanelBody>
                     <div>
-                        <p className={'panel--font-size'}>
+                        <p id="forgot-password-help1"
+                           className={'panel--font-size'}
+                        >
                             На вашу електронну адресу були надіслані інструкції для зміни паролю.
                         </p>
                     </div>
@@ -21,6 +27,7 @@ function ForgotPassword() {
                     <Button
                         onClick={() => navigate('/')}
                         className={'button__padding panel--button'}
+                        type="submit"
                     >
                         Повернутися до входу
                     </Button>
@@ -30,4 +37,4 @@ function ForgotPassword() {
     );
 }
 
-export default ForgotPassword;
+export default ForgotPasswordDone;

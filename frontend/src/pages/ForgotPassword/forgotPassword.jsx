@@ -5,13 +5,23 @@ import { Link, useNavigate } from 'react-router-dom';
 import TextInput from '../../components/TextInput/textInput';
 import { Validator } from '../../utils/validation/validate';
 import { useState } from 'react';
-import { forgotPassword } from '../../api';
+import { useAuthContext } from '../../provider/AuthProvider/authProvider';
+import bruteForce from '../../utils/bruteForce/bruteForce';
 
 /**
  * ForgotPassword component
  * @returns {JSX.Element}
  */
 function ForgotPassword() {
+    const { requestReset } = useAuthContext();
+
+    // Simple brute force protection
+    const [attempts, setAttempts] = useState(0);
+    const [isLocked, setIsLocked] = useState(false);
+
+    // Visualisation of valid data
+    const [valid, isValid] = useState(false);
+
     // Hook to navigate programmatically
     const navigate = useNavigate();
 
@@ -31,7 +41,7 @@ function ForgotPassword() {
 
     // Function to handle server-side errors
     const handleError = (error) => {
-        if (error.response && error.response.status === 409) {
+        if (error?.response && error?.response?.data?.email) {
             setErrors(prev => ({
                 ...prev,
                 email: Validator.serverSideErrorMessages.emailNotExists
@@ -46,13 +56,24 @@ function ForgotPassword() {
 
     // Function to handle form submission
     const handleSubmit = () => {
-        const validationErrors = Validator.validate(formData);
+        if (isLocked) return;
+
+        const validationErrors = Validator.validate(
+            formData
+        );
         setErrors(validationErrors);
 
-        if (Object.values(validationErrors).every(value => value === null)) {
-            forgotPassword(formData)
-                .then(() => navigate('/forgot-password/done'))
-                .catch(handleError);
+        isValid(Object.values(validationErrors).every(value => value === null));
+
+        if (valid) {
+            requestReset(formData.email)
+                .then(() => navigate('/auth/forgot/done'))
+                .catch((error) => bruteForce(error, {
+                    attempts,
+                    setAttempts,
+                    setIsLocked,
+                    handleError
+                }));
         } else {
             console.log("Errors:", validationErrors);
         }
@@ -60,7 +81,7 @@ function ForgotPassword() {
 
     // Function to handle input changes
     const handleChange = (e) => {
-        Validator.handleChange(
+        const res = Validator.handleChange(
             e,
             formData,
             setFormData,
@@ -68,23 +89,33 @@ function ForgotPassword() {
             Validator.errorZeroLengthMessages,
             errorValidationMessage,
         );
+        isValid(res);
+        return res;
     };
 
     return (
         <>
-            <Panel>
-                <PanelTitle>Забули пароль?</PanelTitle>
+            <Panel aria-labelledby="forgot-password-form-title">
+                <PanelTitle id="forgot-password-form-title"
+                            aria-describedby="forgot-password-help1 forgot-password-help2"
+                >
+                    Забули пароль?
+                </PanelTitle>
                 <PanelBody>
                     <div>
-                        <p className={'panel--font-size'}>
+                        <p id="forgot-password-help1"
+                           className={'panel--font-size'}
+                        >
                             Введіть електронну адресу вказану при реєстрації для відновлення паролю.
                         </p>
-                        <p className={'panel--font-size'}>
+                        <p id="forgot-password-help2"
+                           className={'panel--font-size'}
+                        >
                             На зазначену вами електронну пошту буде відправлено листа з посиланням для відновлення паролю.
                         </p>
                     </div>
                     <div>
-                        <PanelBodyTitle title={'Електронна пошта'} />
+                        <PanelBodyTitle title={'Електронна пошта'} required={false} />
                         <TextInput
                             name="email"
                             autoComplete="off"
@@ -94,16 +125,46 @@ function ForgotPassword() {
                             onChange={handleChange}
                             placeholder={'Введіть свою електронну пошту'}
                             className={errors['email'] && 'input__error-border-color'}
+                            aria-labelledby="email-label"
+                            aria-describedby={errors['email'] ? 'email-error' : undefined}
+                            aria-invalid={!!errors['email']}
+                            aria-required="true"
                         />
-                        {errors['email'] && <p className={'panel--danger-text'}>{ errors['email'] }</p>}
+                        {errors['email'] && (
+                            <p id="email-error"
+                               className={'panel--danger-text'}
+                               role="alert"
+                            >
+                                {errors['email']}
+                            </p>
+                        )}
                     </div>
-                    {errors['unexpected'] && <p className={'panel--danger-text'}>{ errors['unexpected'] }</p>}
+                    {!isLocked && attempts >= 3 - 1 && (
+                        <p className={'content--text'}
+                           role="alert"
+                        >
+                            Залишилося спроб: {5 - attempts}
+                        </p>
+                    )}
+                    {isLocked && (
+                        <p className={'panel--danger-text'}
+                           role="alert"
+                        >
+                            Повторіть спробу через 30 секунд
+                        </p>
+                    )}
+                    {errors['unexpected'] && (
+                        <p className={'panel--danger-text'}>
+                            {errors['unexpected']}
+                        </p>
+                    )}
                 </PanelBody>
                 <PanelNavigation>
                     <Button
                         onClick={handleSubmit}
                         className={'button__padding panel--button'}
-                        disabled={!formData.email || errors['email'] || errors['unexpected']}
+                        disabled={!valid||isLocked}
+                        type="submit"
                     >
                         Відновити пароль
                     </Button>
@@ -111,7 +172,7 @@ function ForgotPassword() {
             </Panel>
             <div className={"panel--under-panel"}>
                 <span>Я згадав свій пароль.</span>
-                <Link className={'text-underline text-bold'} to={'/'}>
+                <Link className={'text-underline text-bold'} to={'/auth/login'}>
                     Повернутися до входу
                 </Link>
             </div>
