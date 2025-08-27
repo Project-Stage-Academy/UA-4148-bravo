@@ -1,7 +1,13 @@
-import {createContext, useCallback, useContext, useMemo, useState} from 'react';
-import { api, getAccessToken, setAccessToken } from '../../api/client';
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useMemo,
+    useState,
+} from 'react';
+import { api } from '../../api/client';
 import PropTypes from 'prop-types';
-import useProactiveRefresh from '../../hooks/useProactiveRefresh/useProactiveRefresh';
+import Cookies from "js-cookie";
 
 /**
  * @typedef {Object} User - Represents a user in the application
@@ -15,15 +21,15 @@ import useProactiveRefresh from '../../hooks/useProactiveRefresh/useProactiveRef
 /**
  * @typedef {Object} Ctx
  * @property {User | null} user
- * @property {(e: string, p: string) => Promise<void>} login
- * @property {(email: string, first_name: string | null, last_name: string | null, password: string, confirmPassword: string)
- * => Promise<void>} register
- * @property {(email: string, userId: number) => Promise<void>} resendRegisterEmail
- @property {(user_id: number, token: string) => Promise<void>} confirmEmail
- * @property {(company_name:string,company_type:'startup'|'investor') => Promise<void>} bindCompanyToUser
- * @property {() => void} logout
- * @property {(email: string) => Promise<void>} requestReset
- * @property {(uid: string, token: string, newPassword: string) => Promise<void>} confirmReset
+ * @property {(function((User | null)): void)} setUser
+ * @property {function(string, string): Promise<AxiosResponse<any>>} login
+ * @property {function(string, (string | null), (string | null), string, string): Promise<AxiosResponse<any>>} register
+ * @property {function(string, number): Promise<void>} resendRegisterEmail
+ * @property {function(number, string): Promise<void>} confirmEmail
+ * @property {function(string, ("startup" | "investor")): Promise<void>} bindCompanyToUser
+ * @property {function(): Promise<void>} logout
+ * @property {function(string): Promise<void>} requestReset
+ * @property {function(string, string, string): Promise<void>} confirmReset
  */
 
 /** @type {import('react').Context<Ctx | null>} */
@@ -98,7 +104,7 @@ function AuthProvider({ children }) {
     /**
      * Confirm register email
      * URL: /api/v1/auth/verify-email/<int:user_id>/<string:token>/
-     * Req: { user_id, token }
+     * Req: {  }
      * Res: 200
      *
      * @param {number} user_id
@@ -142,34 +148,35 @@ function AuthProvider({ children }) {
      *
      * @param {string} email
      * @param {string} password
-     * @returns {Promise<void>}
+     * @returns {Promise<AxiosResponse<any>>}
      */
     const login = useCallback(async (email, password) => {
-        const { data } = await api
+        const csrfToken = Cookies.get("csrftoken");
+        const res = await api
             .post('/api/v1/auth/jwt/create/', {
                 email,
                 password,
+            }, {
+                headers: {
+                    "X-CSRFToken": csrfToken,
+                }
             })
             .catch((err) => {
                 console.error(err);
                 throw err;
             });
 
-        if (data.access) {
-            console.log('data.access is missing or null');
-        }
-
-        setAccessToken(data.access);
         /*
-            TODO
-            await loadUser();
-            */
+        TODO
+        await loadUser();
+        */
+        return res;
     }, []);
 
     /**
      * Me
      * URL: /api/v1/auth/me/
-     * Req: {}
+     * Req: {  }
      * Res: 200 { id, email, role, ... }
      *
      * @returns {Promise<void>}
@@ -193,14 +200,13 @@ function AuthProvider({ children }) {
     /**
      * Logout
      * URL: /api/v1/auth/jwt/logout/
-     * Req: { refresh }
+     * Req: {  }
      * Res: 205
      */
     const logout = useCallback(async () => {
         await api.post('/api/v1/auth/jwt/logout/').catch(() => {
             console.log('Logout');
         });
-        setAccessToken(null);
         setUser(null);
     }, []);
 
@@ -214,10 +220,11 @@ function AuthProvider({ children }) {
      * @returns {Promise<void>}
      */
     const requestReset = useCallback(async (email) => {
-        await api
+        return await api
             .post('/api/v1/auth/password/reset/', { email })
             .catch((err) => {
                 console.error(err);
+                // throw err;
             });
     }, []);
 
@@ -243,39 +250,6 @@ function AuthProvider({ children }) {
                 console.error(err);
             });
     }, []);
-
-    /**
-     * Refresh
-     * URL: /api/v1/auth/jwt/refresh/
-     * Req: { refresh }
-     * Res: 200 { access }
-     */
-    const refreshToken = useCallback(async () => {
-        try {
-            const { data } = await api.post('/api/v1/auth/jwt/refresh/');
-            setAccessToken(data.access || null);
-            return data.access;
-            /*
-             * TODO
-             * await loadUser();
-             */
-        } catch (err) {
-            if (err.response) {
-                console.log(
-                    'Refresh token missing or invalid:',
-                    err.response.status
-                );
-            } else {
-                console.error(err);
-            }
-
-            if (err.response?.status === 401) {
-                await logout();
-            }
-        }
-    }, [logout]);
-
-    useProactiveRefresh(getAccessToken(), refreshToken);
 
     return (
         <AuthCtx.Provider
