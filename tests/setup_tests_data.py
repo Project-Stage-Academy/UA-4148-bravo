@@ -198,3 +198,21 @@ class TestDataMixin:
         cls.setup_category()
         cls.setup_project()
         cls.setup_investors()
+
+    @classmethod
+    def get_or_create_subscription(cls, investor, project, amount=Decimal("100.00"), investment_share=None):
+        """
+        Create or get Subscription instance safely.
+        """
+        defaults = {"amount": amount}
+        if investment_share is not None:
+            defaults["investment_share"] = investment_share
+
+        subscription, _ = Subscription.objects.get_or_create(
+            investor=investor,
+            project=project,
+            defaults=defaults
+        )
+        return subscription
+
+

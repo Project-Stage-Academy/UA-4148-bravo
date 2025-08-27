@@ -89,3 +89,5 @@ class SubscriptionModelTests(TestDataMixin, TestCase):
             sub.full_clean()
         self.assertIn("Ensure this value is less than or equal to 100", str(ctx.exception))
 
+
+
