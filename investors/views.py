@@ -1,12 +1,11 @@
 import logging
 from django.db import IntegrityError
+from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets, status, permissions
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.shortcuts import get_object_or_404
 
 from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
@@ -207,7 +206,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
         super().perform_destroy(instance)
 
 class SaveStartupView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, startup_id: int):
         """
