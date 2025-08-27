@@ -292,12 +292,11 @@ Content-Type: application/json
 1. Validates access token with provider's API.
 2. Retrieves user profile information.
 3. Creates or updates local user record.
-4. Issues JWT tokens for authentication.
+4. Issues JWT tokens for authentication(Only for users with is_active=True).
 
 #### Response
 ```json
 {
-  "refresh": "jwt_refresh_token",
   "access": "jwt_access_token",
     "user": {
     "id": "user_123",
@@ -313,21 +312,14 @@ Content-Type: application/json
 ### JWT Token Issuance
 The system uses Django REST Framework Simple JWT for token management:
 - Access Token: Short-lived (default 5 minutes) for API authentication
-- Refresh Token: Longer-lived (default 24 hours) for obtaining new access tokens
-- Automatic User Creation: New users are automatically created with data from OAuth providers. is_active filed is set to True if email is verified and to False if not.
-
+- Refresh Token - set in HTTP-only cookie: Longer-lived (default 24 hours) for obtaining new access tokens.
+- Automatic User Creation: New users are automatically created with data from OAuth providers.
 ### Troubleshooting
 Common Errors
 |    Error Message                        |      HTTP Status    |                    Cause                   |                     Solution                          |
 |-----------------------------------------|---------------------|--------------------------------------------|-------------------------------------------------------|
-| "Invalid provider or access_token type" | 400 Bad Request     | Non-string values provided                 | Ensure both `provider` and `access_token` are strings.|
-| "Provider or Access_token is missing"   | 400 Bad Request     | Missing parameters                         | Include both `provider` and `access_token` in request.|
-| "Unsupported OAuth provider"            | 400 Bad Request     | Provider other than Google/GitHub          | Use only `"google"` or `"github"` as provider value.  |
-| "Invalid Google token"                  | 400 Bad Request     | Expired, malformed, or revoked token       | Re-authenticate with Google to get a fresh token.     |
-| "Email not provided by OAuth provider"  | 400 Bad Request     | Email scope not granted or privacy settings| Ensure email scope is requested during OAuth flow.    |
-| "Google API timeout"                    | 408 Request Timeout | Network latency to Google APIs             | Retry the request.                                    |
-| "Security verification failed"          | 502 Bad Gateway     | SSL/TLS issues                             | Check system time and SSL certificates.               |
-| "Connection failed"                     | 502 Bad Gateway     | Network connectivity issues                | Check internet connection and firewall settings.      |
+| "Invalid provider"                      | 400 Bad Request     | provider missing/invalid                   | Ensure both `provider` and `access_token` are strings.|
+| "access_token is missing"               | 400 Bad Request     | Missing token                              | Provide access_token                                  |
+| "Unsupported provider"                  | 400 Bad Request     | Provider other than Google/GitHub          | Use only `"google"` or `"github"` as provider value.  |
+| "OAuth authentication failed"           | 400 Bad Request     | Expired, malformed, or revoked token       | Re-authenticate with provider                         |
 | "No verified primary email found"       | 403 Forbidden       | GitHub account lacks verified email        | User must add/verify email in GitHub settings.        |
-| "GitHub API timeout"                    | 408 Request Timeout | Network latency to GitHub APIs             | Retry the request.                                    |
-| "Network error"                         | 502 Bad Gateway     | Cannot reach GitHub servers                | Check internet connection.                            |

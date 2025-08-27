@@ -62,9 +62,11 @@ ENTRYPOINT ["/entrypoint.sh"]
 # - Docker Compose loads the `.env` file via the `env_file` directive
 # - Django accesses variables using `python-decouple` (`config(...)`)
 #
-# 📌 Variables used in `settings.py`:
+# 📌 Variables used in `base_settings.py`:
 #   SECRET_KEY     - Django secret key
 #   DEBUG          - "True" for development, "False" for production
+#
+# 📌 Variables used in `third_party_settings.py`:
 #   DB_NAME        - PostgreSQL database name
 #   DB_USER        - PostgreSQL username
 #   DB_PASSWORD    - PostgreSQL password

@@ -6,7 +6,7 @@ from mongoengine import connect, disconnect, ValidationError
 from datetime import datetime, timezone
 from chat.documents import Room, Message
 from users.documents import UserDocument, UserRoleDocument, UserRoleEnum
-from core.settings import FORBIDDEN_WORDS_SET
+from core.settings.constants import FORBIDDEN_WORDS_SET
 import mongomock
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.chat.setup_test_env.'

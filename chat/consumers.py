@@ -8,7 +8,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from mongoengine import ValidationError
 from channels.db import database_sync_to_async
 from chat.documents import Room, Message
-from core.settings import FORBIDDEN_WORDS_SET
+from core.settings.constants import FORBIDDEN_WORDS_SET
 
 logger = logging.getLogger(__name__)
 

@@ -138,7 +138,6 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
 
         return data
 
-
 class ProjectDocumentSerializer(DocumentSerializer):
     """
     Serializer for the Elasticsearch ProjectDocument.

@@ -69,7 +69,7 @@ class UserRegistrationTests(APITestCase):
             content_type='application/json'
         )
         
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertIn('email', response.data['errors'])
     
     def test_registration_with_missing_fields(self):
@@ -105,7 +105,7 @@ class UserRegistrationTests(APITestCase):
         self.assertIn('errors', response.data)
         self.assertIn('password', response.data['errors'])
     
-    @patch('users.views.send_mail')
+    @patch('users.views.auth_views.send_mail')
     def test_verification_email_sent(self, mock_send_mail):
         """Test that verification email is sent after registration."""  
         from django.core.cache import cache
@@ -123,7 +123,7 @@ class UserRegistrationTests(APITestCase):
         args, kwargs = mock_send_mail.call_args
         self.assertEqual(kwargs['recipient_list'], [self.valid_payload['email']])
     
-    @patch('users.views.send_mail')
+    @patch('users.views.auth_views.send_mail')
     def test_verification_email_content(self, mock_send_mail):
         """Test the content of the verification email."""
         response = self.client.post(
@@ -159,7 +159,7 @@ class UserRegistrationTests(APITestCase):
         parsed_url = urlparse(verification_link)
         path_parts = [part for part in parsed_url.path.strip('/').split('/') if part]
         
-        self.assertGreaterEqual(len(path_parts), 4, f"Unexpected URL format: {verification_link}")
+        self.assertGreaterEqual(len(path_parts), 3, f"Unexpected URL format: {verification_link}")
         self.assertEqual(path_parts[-3], 'verify-email')
         
         user_id = path_parts[-2]

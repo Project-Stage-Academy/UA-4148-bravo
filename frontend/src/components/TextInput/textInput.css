@@ -1,0 +1,22 @@
+.input {
+    width: 100%;
+    border: 1px solid var(--input-border-color-active);
+    padding: calc(10px - 1px) 12px;
+    font-weight: 300;
+    font-size: 16px;
+    font-family: var(--text-font), sans-serif;
+    line-height: 20px;
+}
+
+.input-text {
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.input__width {
+    width: calc(100% - 12px * 2);
+}
+
+.input__error-border-color {
+    border-color: var(--input-border-color-red);
+}

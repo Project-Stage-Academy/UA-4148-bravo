@@ -3,9 +3,9 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
-from communications.models import NotificationType, UserNotificationPreference, UserNotificationTypePreference
+from communications.models import NotificationType, UserNotificationPreference
 import ddt
-from tests.elasticsearch.factories import UserFactory
+from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 
 import logging
