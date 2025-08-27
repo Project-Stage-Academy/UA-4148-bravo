@@ -252,6 +252,19 @@ sequenceDiagram
 
 ---
 
+## Token Refresh
+
+Use `/api/token/refresh/` to obtain a new access token.
+
+### Response Example
+
+```json
+{
+  "refresh": "<your_refresh_token>",
+  "access": "<your_new_access_token>"
+}
+```
+
 # OAuth Authentication API Documentation
 
 ## Part 1
@@ -262,7 +275,7 @@ This document describes the OAuth authentication endpoints for Google and GitHub
 
 ---
 
-## POST /users/oauth/login/
+## POST api/v1/auth/oauth/login/
 
 ### Description
 
@@ -284,16 +297,14 @@ JWT tokens and returns user information.
     - **Response**
   ```json
   {
-    "refresh": "jwt_refresh_token",
     "access": "jwt_access_token",
     "user": {
       "id": "user_123",
       "email": "user@example.com",
-      "username": "username123",
       "first_name": "John",
       "last_name": "Doe",
-      "user_phone": "+1234567890",
-      "title": "Software Developer",
+      "user_phone": "",
+      "title": "",
       "role": "user"
     }
   }
@@ -301,16 +312,10 @@ JWT tokens and returns user information.
 
 **Status codes:**
 
-| Status Code                 | Description                                  |
-|-----------------------------|----------------------------------------------|
-| `400 Bad Request`           | Invalid request parameters or malformed data |
-| `401 Unauthorized`          | Authentication failed or invalid credentials |
-| `403 Forbidden`             | Authenticated but insufficient permissions   |
-| `404 Not Found`             | Requested resource doesn't exist             |
-| `408 Request Timeout`       | Provider API timeout                         |
-| `429 Too Many Requests`     | Rate limit exceeded                          |
-| `500 Internal Server Error` | Unexpected server error                      |
-| `502 Bad Gateway`           | Provider API communication failed            |
+|    Status Code    |                 Description                  |
+|-------------------|----------------------------------------------|
+| `400 Bad Request` | Invalid request parameters or malformed data |
+| `403 Forbidden`   | Authenticated but insufficient permissions   |
 
 ## Part 2
 
