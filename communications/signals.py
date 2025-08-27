@@ -4,6 +4,8 @@ from django.db import transaction
 from django.db.models.signals import post_save, post_migrate
 from django.apps import apps
 from django.dispatch import receiver
+from datetime import timedelta
+from django.utils import timezone
 
 from .models import (
     UserNotificationPreference,
@@ -214,6 +216,10 @@ def _connect_saved_startup_signal():
         if not ntype:
             logger.debug("[SIGNAL] NotificationType 'startup_followed' not found, creating")
             ntype = _get_or_create_ntype("startup_followed", "Startup Followed")
+            
+        now = timezone.now()
+        second_start = now.replace(microsecond=0)
+        second_end = second_start + timedelta(seconds=1)
 
         # Deduplication
         base_qs = Notification.objects.filter(
@@ -221,27 +227,39 @@ def _connect_saved_startup_signal():
             notification_type=ntype,
             triggered_by_user=investor_user,
             related_startup_id=sid,
+            created_at__gte=second_start,
+            created_at__lt=second_end,
         )
         if base_qs.exists():
             logger.info(
-                "[SIGNAL] Duplicate detected: notification already exists",
+                "[SIGNAL] Duplicate",
                 extra={
                     "startup_user_id": startup_user.pk,
                     "investor_user_id": investor_user.pk,
                     "startup_id": sid,
+                    "second_start": second_start.isoformat(),
                 },
             )
             return
 
         def _create():
+            _now = timezone.now()
+            _second_start = _now.replace(microsecond=0)
+            _second_end = _second_start + timedelta(seconds=1)
+            
             # double-check inside transaction/on_commit
             if Notification.objects.filter(
                 user=startup_user,
                 notification_type=ntype,
                 triggered_by_user=investor_user,
                 related_startup_id=sid,
+                created_at__gte=_second_start,
+                created_at__lt=_second_end,
             ).exists():
-                logger.info("[SIGNAL] Duplicate detected on create() re-check. Skip.")
+                logger.info(
+                    "[SIGNAL] Duplicate within same second (re-check)",
+                    extra={"startup_id": sid, "second_start": _second_start.isoformat()},
+                )
                 return
 
             notif = Notification.objects.create(
