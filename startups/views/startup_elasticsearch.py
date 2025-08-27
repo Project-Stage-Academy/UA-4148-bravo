@@ -31,13 +31,17 @@ class StartupDocumentView(DocumentViewSet):
         'company_name': 'company_name.raw',
         'stage': 'stage',
         'location.country': 'location.country',
-        'industries.name': 'industries.name',
+        'industry.name': 'industry.name',
+        'funding_needed': 'funding_needed',
+        'team_size': 'team_size',
     }
 
     ordering_fields = {
         'company_name': 'company_name.raw',
         'stage': 'stage.raw',
         'location.country': 'location.country.raw',
+        'funding_needed': 'funding_needed',
+        'team_size': 'team_size',
     }
 
     ordering = ('-stage',)
@@ -45,6 +49,7 @@ class StartupDocumentView(DocumentViewSet):
     search_fields = (
         'company_name',
         'description',
+        'industry.name',
     )
 
     def list(self, request, *args, **kwargs):
@@ -55,3 +60,4 @@ class StartupDocumentView(DocumentViewSet):
                 {"detail": "Search service is temporarily unavailable. Please try again later."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
+

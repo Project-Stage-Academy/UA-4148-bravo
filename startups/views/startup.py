@@ -1,196 +1,57 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter
+from rest_framework import filters, status, viewsets
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.exceptions import ValidationError, NotFound
+
+# from common.notifications import send_notification
 from startups.models import Startup
+from startups.permissions import IsStartupOwnerOrReadOnly
 from startups.serializers.startup_full import StartupSerializer
 from startups.serializers.startup_create import StartupCreateSerializer
-from startups.views.startup_base import BaseValidatedModelViewSet
-from users.permissions import IsStartupUser, CanCreateCompanyPermission
-from communications.models import (
-    UserNotificationPreference,
-    NotificationType,
-    UserNotificationTypePreference,
-)
-from communications.serializers import (
-    UserNotificationPreferenceSerializer,
-    UserNotificationTypePreferenceSerializer,
-    UpdateTypePreferenceSerializer,
-)
-from communications.services import get_or_create_user_pref
-
-class StartupViewSet(BaseValidatedModelViewSet):
-    queryset = Startup.objects.select_related('user', 'industry', 'location') \
-        .prefetch_related('projects')
-    
-    serializer_class = StartupSerializer
-    permission_classes = [IsAuthenticated, IsStartupUser]
-    filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ['industry', 'stage', 'location__country']
-    search_fields = ['company_name', 'user__first_name', 'user__last_name', 'email']
-
-    def _get_or_create_user_pref(self, request):
-        """Fetch the current user's notification preferences, creating defaults if absent.
-        Delegates to communications.services.get_or_create_user_pref to avoid duplication and
-        to seed type preferences using each NotificationType.default_frequency.
-        """
-        return get_or_create_user_pref(request.user)
-
-    @action(detail=False, methods=['get', 'patch'], url_path='preferences', url_name='preferences')
-    def preferences(self, request):
-        """Get or update the current startup user's notification channel preferences."""
-        pref = self._get_or_create_user_pref(request)
-
-        if request.method.lower() == 'get':
-            serializer = UserNotificationPreferenceSerializer(pref, context={'request': request})
-            return Response(serializer.data)
-
-        # PATCH
-        serializer = UserNotificationPreferenceSerializer(
-            pref,
-            data=request.data,
-            partial=True,
-            context={'request': request},
-        )
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['patch'], url_path='preferences/update_type', url_name='preferences-update-type')
-    def update_type_preference(self, request):
-        """Update the frequency for a specific notification type for the current startup user."""
-        pref = self._get_or_create_user_pref(request)
-
-        notification_type_id = request.data.get('notification_type_id')
-        frequency = request.data.get('frequency')
-
-        if notification_type_id is None or frequency is None:
-            errors = {}
-            if notification_type_id is None:
-                errors['notification_type_id'] = ['This field is required.']
-            if frequency is None:
-                errors['frequency'] = ['This field is required.']
-            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            nt_id = int(notification_type_id)
-        except (TypeError, ValueError):
-            return Response({'notification_type_id': ['A valid integer is required.']}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = UpdateTypePreferenceSerializer(
-            data={'notification_type_id': nt_id, 'frequency': frequency},
-            context={'pref': pref},
-        )
-        try:
-            if not serializer.is_valid():
-                errors = serializer.errors
-                non_field = errors.get('non_field_errors') if isinstance(errors, dict) else None
-                if non_field:
-                    for err in non_field:
-                        code = getattr(err, 'code', None)
-                        if code == 'not_found' or str(err) == 'Notification type preference not found':
-                            return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
-                return Response(errors, status=status.HTTP_400_BAD_REQUEST)
-        except NotFound:
-            return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
-        except ValidationError as exc:
-            detail = getattr(exc, 'detail', None)
-            return Response(detail or serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        type_pref = serializer.save()
-        return Response(UserNotificationTypePreferenceSerializer(type_pref, context={'request': request}).data)
 
 
-    def _get_or_create_user_pref(self, request):
-        """Fetch the current user's notification preferences, creating defaults if absent.
-        Delegates to communications.services.get_or_create_user_pref to avoid duplication and
-        to seed type preferences using each NotificationType.default_frequency.
-        """
-        return get_or_create_user_pref(request.user)
 
-    @action(detail=False, methods=['get', 'patch'], url_path='preferences', url_name='preferences')
-    def preferences(self, request):
-        """Get or update the current startup user's notification channel preferences."""
-        pref = self._get_or_create_user_pref(request)
-
-        if request.method.lower() == 'get':
-            serializer = UserNotificationPreferenceSerializer(pref, context={'request': request})
-            return Response(serializer.data)
-
-        # PATCH
-        serializer = UserNotificationPreferenceSerializer(
-            pref,
-            data=request.data,
-            partial=True,
-            context={'request': request},
-        )
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['patch'], url_path='preferences/update_type', url_name='preferences-update-type')
-    def update_type_preference(self, request):
-        """Update the frequency for a specific notification type for the current startup user."""
-        pref = self._get_or_create_user_pref(request)
-
-        notification_type_id = request.data.get('notification_type_id')
-        frequency = request.data.get('frequency')
-
-        if notification_type_id is None or frequency is None:
-            errors = {}
-            if notification_type_id is None:
-                errors['notification_type_id'] = ['This field is required.']
-            if frequency is None:
-                errors['frequency'] = ['This field is required.']
-            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            nt_id = int(notification_type_id)
-        except (TypeError, ValueError):
-            return Response({'notification_type_id': ['A valid integer is required.']}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = UpdateTypePreferenceSerializer(
-            data={'notification_type_id': nt_id, 'frequency': frequency},
-            context={'pref': pref},
-        )
-        try:
-            if not serializer.is_valid():
-                errors = serializer.errors
-                non_field = errors.get('non_field_errors') if isinstance(errors, dict) else None
-                if non_field:
-                    for err in non_field:
-                        code = getattr(err, 'code', None)
-                        if code == 'not_found' or str(err) == 'Notification type preference not found':
-                            return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
-                return Response(errors, status=status.HTTP_400_BAD_REQUEST)
-        except NotFound:
-            return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
-        except ValidationError as exc:
-            detail = getattr(exc, 'detail', None)
-            return Response(detail or serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        type_pref = serializer.save()
-        return Response(UserNotificationTypePreferenceSerializer(type_pref, context={'request': request}).data)
-
+class StartupViewSet(viewsets.ModelViewSet):
+    """
+    API viewset for managing Startups.
+    Supports filtering, searching, and creation.
+    """
+    queryset = Startup.objects.all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ["stage", "industry"]
+    search_fields = ["company_name", "description"]
 
     def get_permissions(self):
         """
-        Instantiates and returns the list of permissions that this view requires.
+        Assign permissions based on action.
+        - 'create': IsAuthenticated
+        - others: IsAuthenticated + IsStartupOwnerOrReadOnly
         """
-        if self.action == 'create':
-            return [IsAuthenticated(), CanCreateCompanyPermission()]
-        return [IsAuthenticated(), IsStartupUser()]
+        if self.action == "create":
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticated, IsStartupOwnerOrReadOnly]
+        return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
         """
-        Return the appropriate serializer class based on the request action.
+        Return serializer class depending on action.
+        - 'create': StartupCreateSerializer
+        - others: StartupSerializer
         """
-        if self.action == 'create':
+        if self.action == "create":
             return StartupCreateSerializer
         return StartupSerializer
-        
+
+    def perform_create(self, serializer):
+        """
+        Save the startup instance and attach the current user.
+        """
+        startup = serializer.save(user=self.request.user)
+        # Uncomment to send notification when module is ready
+        # send_notification(
+        #     "startup_created",
+        #     f"Startup {startup.company_name} was created by {self.request.user.email}",
+        # )
+
+

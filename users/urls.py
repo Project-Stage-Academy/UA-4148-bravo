@@ -1,6 +1,6 @@
 from django.urls import path
 from users.views.auth_views import UserRegistrationView, MeView
-from users.views.bind_company_view import CompanyBindingView
+# from users.views.bind_company_view import CompanyBindingView
 from users.views.email_views import VerifyEmailView, ResendEmailView
 from users.views.oauth_view import OAuthTokenObtainPairView
 from users.views.password_views import CustomPasswordResetView, CustomPasswordResetConfirmView
@@ -39,6 +39,8 @@ urlpatterns = [
     # OAuth
     path('oauth/login/', OAuthTokenObtainPairView.as_view(), name='oauth_login'),
 
-    # Bind company
-    path('bind-company/', CompanyBindingView.as_view(), name='bind-company'),
+    # Bind company (temporarily disabled)
+    # path('bind-company/', CompanyBindingView.as_view(), name='bind-company'),
 ]
+
+

@@ -8,5 +8,9 @@ class StartupShortSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Startup
-        fields = ['id', 'company_name', 'industry', 'location', 'website', 'stage']
+        fields = [
+            'id', 'company_name', 'industry', 'location',
+            'website', 'stage', 'funding_needed', 'team_size'
+        ]
         read_only_fields = fields
+

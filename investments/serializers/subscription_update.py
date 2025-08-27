@@ -1,15 +1,17 @@
+from decimal import Decimal
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from projects.models import Project
 from ..models import Subscription
-from ..services.investment_share_service import calculate_investment_share
 from ..services.subscription_validation_service import validate_subscription_business_rules
+from ..services.investment_share_service import update_project_investment_shares_if_needed, calculate_investment_share
 
 
 class SubscriptionUpdateSerializer(serializers.ModelSerializer):
     """
-    Handles subscription updates, ensuring rules are respected.
+    Serializer for updating subscriptions.
+    Ensures business rules are respected and recalculates investment shares after updates.
     """
 
     class Meta:
@@ -18,6 +20,7 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['investment_share', 'created_at']
 
     def validate(self, data):
+        """Prevent changing project or investor for an existing subscription."""
         instance = getattr(self, 'instance', None)
 
         if instance:
@@ -30,6 +33,7 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
+        """Update subscription and recalculate investment shares."""
         new_amount = validated_data.get('amount', instance.amount)
 
         with transaction.atomic():
@@ -37,10 +41,19 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
             validate_subscription_business_rules(
                 instance.investor, project, new_amount, exclude_amount=instance.amount
             )
-            validated_data['investment_share'] = calculate_investment_share(new_amount, project.funding_goal)
 
+            # Update instance fields
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
 
-            instance.save()
+            # Recalculate investment share for this subscription
+            instance.investment_share = calculate_investment_share(instance.amount, project.funding_goal)
+            instance.save(update_fields=['amount', 'investment_share'])
+
+            # Recalculate all shares for other subscriptions
+            update_project_investment_shares_if_needed(project)
             return instance
+
+
+
+

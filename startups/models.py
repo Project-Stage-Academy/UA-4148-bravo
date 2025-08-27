@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import UniqueConstraint, F
+from django.db.models import UniqueConstraint
 from django_countries.fields import CountryField
 
 from common.company import Company
@@ -26,8 +27,8 @@ class Location(models.Model):
     )
     city = models.CharField(
         max_length=100,
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
         verbose_name="City",
         help_text="City of the location"
     )
@@ -50,14 +51,7 @@ class Location(models.Model):
 
     def clean(self):
         """
-        Validates the Location instance.
-
-        - Postal code must be at least 3 characters and contain only Latin characters.
-        - City, region, and address line must not be empty or contain only spaces and must be Latin characters only.
-        - Enforces logical dependencies: address_line requires city and region, city requires region.
-
-        Raises:
-            ValidationError: If any validation rules fail.
+        Validates field values for formatting and logical consistency.
         """
         errors = {}
 
@@ -97,6 +91,9 @@ class Location(models.Model):
             raise ValidationError(errors)
 
     def __str__(self):
+        """
+        Returns a human-readable string representation of the location.
+        """
         city_str = self.city if self.city else 'Unknown City'
         country_str = self.country if self.country else 'Unknown Country'
 
@@ -111,9 +108,7 @@ class Location(models.Model):
         verbose_name_plural = "Locations"
         constraints = [
             UniqueConstraint(
-                F('city'),
-                F('region'),
-                F('country'),
+                fields=['city', 'region', 'country'],
                 name='unique_location',
                 violation_error_message='This location already exists.'
             )
@@ -146,10 +141,7 @@ class Industry(models.Model):
 
     def clean(self):
         """
-        Validates the Industry name to ensure it does not contain forbidden terms.
-
-        Raises:
-            ValidationError: If forbidden names are detected.
+        Validates the industry name against forbidden terms.
         """
         super().clean()
         validate_forbidden_names(self.name, field_name="name")
@@ -170,7 +162,7 @@ class Industry(models.Model):
 class Startup(Company):
     """
     Represents a startup company linked to a user.
-    Includes stage of development and social links validation.
+    Includes stage of development, funding details, team size, industry, and social links.
     """
     user = models.OneToOneField(
         'users.User',
@@ -186,16 +178,45 @@ class Startup(Company):
         verbose_name="Development Stage",
         help_text="Current development stage of the startup"
     )
+    industry = models.ForeignKey(
+        Industry,
+        on_delete=models.PROTECT,
+        related_name="startups",
+        verbose_name="Industry",
+        help_text="Industry in which the startup operates"
+    )
+    funding_needed = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Funding Needed",
+        help_text="Amount of funding required by the startup"
+    )
+    team_size = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name="Team Size",
+        help_text="Number of team members in the startup"
+    )
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="startups",
+        verbose_name="Location",
+        help_text="Location of the startup"
+    )
+    social_links = models.JSONField(
+        blank=True,
+        default=dict,
+        verbose_name="Social Links",
+        help_text="Social media links as a JSON object"
+    )
 
     def clean(self):
         """
-        Validates the Startup instance.
-
-        - Ensures social_links only contain allowed platforms.
-        - Validates URLs for the platforms.
-
-        Raises:
-            ValidationError: If social_links are invalid.
+        Placeholder for future validation of the social_links field.
         """
         super().clean()
 
@@ -210,4 +231,7 @@ class Startup(Company):
         indexes = [
             models.Index(fields=['company_name']),
             models.Index(fields=['stage']),
+            models.Index(fields=['industry']),
+            models.Index(fields=['funding_needed']),
+            models.Index(fields=['team_size']),
         ]

@@ -19,7 +19,6 @@ ALLOWED_HOSTS = config(
 )
 
 # Application definition
-
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
 FRONTEND_ROUTES = {
@@ -28,8 +27,8 @@ FRONTEND_ROUTES = {
 }
 
 INSTALLED_APPS = [
-    'daphne',
-    'channels',
+    'daphne',  # ASGI server
+    'channels',  # Django Channels
     'chat',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -90,7 +89,6 @@ SOCIALACCOUNT_PROVIDERS = {
         },
         'FETCH_USERINFO': True,
     },
-
     'github': {
         'APP': {
             'client_id': config('GITHUB_CLIENT_ID'),
@@ -109,10 +107,22 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 AUTH_USER_MODEL = 'users.User'
 
 REST_FRAMEWORK = {
+    # Authentication
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',
     ),
+    # Permissions
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    # Filtering and searching
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    # Throttling
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.AnonRateThrottle',
@@ -121,15 +131,11 @@ REST_FRAMEWORK = {
         'user': '5/minute',
         'anon': '2/minute',
         'resend_email': '5/minute',
-
     },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
-# drf-spectacular: use AutoSchema for OpenAPI generation
-REST_FRAMEWORK.update({
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-})
-
+# Disable throttling in tests
 if 'test' in sys.argv:
     REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
 
@@ -205,6 +211,7 @@ DJOSER = {
     'USER_ID_FIELD': 'user_id',
 }
 
+# Email configuration
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Email Configuration (for development)
     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
@@ -260,9 +267,6 @@ DATABASES = {
     }
 }
 
-# if DEBUG:
-#    AUTH_PASSWORD_VALIDATORS = []
-# else:
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -283,8 +287,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
 TIME_ZONE = config('TIME_ZONE', default='UTC')
 USE_I18N = True

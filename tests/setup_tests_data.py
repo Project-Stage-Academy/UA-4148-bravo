@@ -14,21 +14,22 @@ TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
 
 
 class TestDataMixin:
-    """
-    Class for creating and cleaning test data:
-    users, investors, startups, projects, subscriptions.
-    """
+    """Create safe test data for users, startups, projects, subscriptions."""
 
     @classmethod
-    def get_or_create_user(cls, email, first_name, last_name):
+    def get_or_create_user(cls, email=None, first_name=None, last_name=None):
+        """Get or create a user with default USER role."""
+        if email is None:
+            email = f"user_{uuid.uuid4().hex[:8]}@example.com"
+
         user = User.objects.filter(email=email).first()
         if not user:
             role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
             user = User.objects.create_user(
                 email=email,
                 password=TEST_USER_PASSWORD,
-                first_name=first_name,
-                last_name=last_name,
+                first_name=first_name or "Test",
+                last_name=last_name or "User",
                 role=role_user,
                 is_active=True
             )
@@ -36,6 +37,7 @@ class TestDataMixin:
 
     @classmethod
     def setup_users(cls):
+        """Create standard users for tests."""
         cls.user = cls.get_or_create_user("user1@example.com", "Investor", "One")
         cls.user2 = cls.get_or_create_user("user2@example.com", "Investor", "Two")
         cls.investor_user = cls.get_or_create_user("maxinvestor@example.com", "Success", "Investor")
@@ -44,6 +46,7 @@ class TestDataMixin:
 
     @classmethod
     def get_or_create_industry(cls, name):
+        """Get or create Industry."""
         industry, _ = Industry.objects.get_or_create(name=name)
         return industry
 
@@ -53,6 +56,7 @@ class TestDataMixin:
 
     @classmethod
     def get_or_create_location(cls, country_code):
+        """Get or create Location."""
         location, _ = Location.objects.get_or_create(country=country_code)
         return location
 
@@ -62,38 +66,20 @@ class TestDataMixin:
         cls.startup_location = cls.get_or_create_location("US")
 
     @classmethod
-    def get_or_create_investor(cls, user, company_name, stage, fund_size):
-        email = f"investor_{uuid.uuid4().hex[:6]}@example.com"
-        investor, _ = Investor.objects.get_or_create(
-            user=user,
-            industry=cls.industry,
-            location=cls.location,
-            company_name=company_name,
-            email=email,
-            founded_year=2010,
-            team_size=5,
-            stage=stage,
-            fund_size=fund_size
-        )
-        return investor
-
-    @classmethod
-    def setup_investors(cls):
-        cls.investor1 = cls.get_or_create_investor(cls.investor_user, "Investor One", Stage.MVP, 1000000.00)
-        cls.investor2 = cls.get_or_create_investor(cls.investor_user2, "Investor Two", Stage.LAUNCH, 2000000.00)
-
-    @classmethod
     def get_or_create_startup(cls, user, industry, company_name, location):
-        email = f"startup_{uuid.uuid4().hex[:6]}@example.com"
-        startup, _ = Startup.objects.get_or_create(
+        """Create or update Startup with sane defaults."""
+        email = f"startup_{uuid.uuid4().hex[:8]}@example.com"
+        startup, _ = Startup.objects.update_or_create(
             user=user,
-            industry=industry,
-            company_name=company_name,
-            location=location,
-            email=email,
-            founded_year=2020,
-            team_size=15,
-            stage=Stage.MVP
+            defaults={
+                "industry": industry,
+                "company_name": company_name,
+                "location": location,
+                "email": email,
+                "founded_year": 2020,
+                "team_size": 15,
+                "stage": Stage.MVP
+            }
         )
         return startup
 
@@ -107,7 +93,10 @@ class TestDataMixin:
         )
 
     @classmethod
-    def get_or_create_category(cls, name="FinTech"):
+    def get_or_create_category(cls, name=None):
+        """Get or create Project Category."""
+        if name is None:
+            name = f"Category {uuid.uuid4().hex[:6]}"
         category, _ = Category.objects.get_or_create(name=name)
         return category
 
@@ -116,43 +105,28 @@ class TestDataMixin:
         cls.category = cls.get_or_create_category()
 
     @classmethod
-    def get_or_create_project(
-            cls,
-            title="Test Project",
-            email=None,
-            funding_goal=Decimal("1000000.00"),
-            current_funding=Decimal("0.00"),
-            startup=None,
-            category=None,
-            status=ProjectStatus.DRAFT,
-            **kwargs
-    ):
-        """
-        Create or get a project with optional custom fields.
-        Ensures startup and category are never None.
-        """
+    def get_or_create_project(cls, title=None, email=None, funding_goal=Decimal("1000000.00"),
+                              current_funding=Decimal("0.00"), startup=None, category=None,
+                              status=ProjectStatus.DRAFT, **kwargs):
+        """Create or update Project with sane defaults."""
         if startup is None:
             startup = getattr(cls, "startup", None)
             if startup is None:
                 cls.setup_industries()
                 cls.setup_locations()
                 cls.setup_users()
-                startup = cls.get_or_create_startup(
-                    cls.startup_user,
-                    cls.industry,
-                    "Auto Created Startup",
-                    cls.startup_location
-                )
-
+                startup = cls.get_or_create_startup(cls.startup_user, cls.industry,
+                                                   "Auto Created Startup", cls.startup_location)
         if category is None:
             category = getattr(cls, "category", None)
             if category is None:
                 category = cls.get_or_create_category()
-
         if email is None:
-            email = f"project_{uuid.uuid4().hex[:6]}@example.com"
+            email = f"project_{uuid.uuid4().hex[:8]}@example.com"
+        if title is None:
+            title = f"Test Project {uuid.uuid4().hex[:6]}"
 
-        project, _ = Project.objects.get_or_create(
+        project, _ = Project.objects.update_or_create(
             startup=startup,
             title=title,
             defaults={
@@ -169,61 +143,76 @@ class TestDataMixin:
         return project
 
     @classmethod
+    def get_or_create_investor(cls, user, company_name, stage, fund_size):
+        """Create or update Investor for user with sane defaults."""
+        if not hasattr(cls, "industry"):
+            cls.setup_industries()
+        if not hasattr(cls, "location"):
+            cls.setup_locations()
+
+        email = f"investor_{uuid.uuid4().hex[:8]}@example.com"
+        investor, _ = Investor.objects.update_or_create(
+            user=user,
+            defaults={
+                "industry": cls.industry,
+                "company_name": company_name,
+                "location": cls.location,
+                "email": email,
+                "founded_year": 2015,
+                "team_size": 10,
+                "stage": stage,
+                "fund_size": Decimal(str(fund_size)),
+            }
+        )
+        return investor
+
+    @classmethod
+    def setup_investors(cls):
+        """Prepare standard investors for tests."""
+        cls.investor1 = cls.get_or_create_investor(cls.investor_user, "Investor One", Stage.MVP, 1_000_000)
+        cls.investor2 = cls.get_or_create_investor(cls.investor_user2, "Investor Two", Stage.MVP, 2_000_000)
+        extra_user = cls.get_or_create_user("investor3@example.com", "Investor", "Three")
+        cls.investor3 = cls.get_or_create_investor(extra_user, "Investor Three", Stage.MVP, 500_000)
+
+    @classmethod
+    def get_subscription_data(cls, investor, project, amount: Decimal):
+        """Return subscription payload for serializer."""
+        return {
+            "investor": investor.id,
+            "project": project.id,
+            "amount": str(amount),
+        }
+
+    @classmethod
     def setup_project(cls):
         cls.setup_category()
         cls.project = cls.get_or_create_project()
 
     @classmethod
-    def get_or_create_subscription(cls, investor, project, amount, investment_share=None):
-        data = {
-            "investor": investor,
-            "project": project,
-            "amount": Decimal(amount),
-        }
-        if investment_share is not None:
-            data["investment_share"] = Decimal(investment_share)
-
-        subscription, _ = Subscription.objects.get_or_create(**data)
-        return subscription
-
-    @staticmethod
-    def get_subscription_data(investor, project, amount) -> dict:
-        """
-        Prepare a dictionary payload representing a subscription, useful for API testing.
-
-        Args:
-            investor (Investor or None): Investor instance or None.
-            project (Project or None): Project instance or None.
-            amount (float): Amount invested.
-
-        Returns:
-            dict: Dictionary containing subscription data with IDs for investor and project.
-        """
-        data = {
-            "amount": str(amount)
-        }
-        if investor is not None:
-            data["investor"] = investor.pk
-        if project is not None:
-            data["project"] = project.pk
-        return data
-
-    @classmethod
     def setup_all(cls):
+        """Setup all data needed for tests."""
         cls.setup_users()
         cls.setup_industries()
         cls.setup_locations()
-        cls.setup_investors()
         cls.setup_startup()
+        cls.setup_category()
         cls.setup_project()
+        cls.setup_investors()
 
     @classmethod
-    def tear_down(cls):
-        Subscription.objects.all().delete()
-        Project.objects.all().delete()
-        Category.objects.all().delete()
-        Startup.objects.all().delete()
-        Investor.objects.all().delete()
-        Industry.objects.all().delete()
-        Location.objects.all().delete()
-        User.objects.all().delete()
+    def get_or_create_subscription(cls, investor, project, amount=Decimal("100.00"), investment_share=None):
+        """
+        Create or get Subscription instance safely.
+        """
+        defaults = {"amount": amount}
+        if investment_share is not None:
+            defaults["investment_share"] = investment_share
+
+        subscription, _ = Subscription.objects.get_or_create(
+            investor=investor,
+            project=project,
+            defaults=defaults
+        )
+        return subscription
+
+

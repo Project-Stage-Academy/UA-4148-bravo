@@ -8,7 +8,13 @@ from validation.validate_self_investment import validate_self_investment
 
 def validate_subscription_business_rules(investor, project, amount, exclude_amount=Decimal('0.00')):
     """
-    Runs all business-level validation rules for a subscription.
+    Run all business-level validation rules for a subscription.
+
+    Rules:
+    - Project must exist.
+    - Investor must exist.
+    - Investor cannot invest in their own project.
+    - Project funding cannot exceed its limit.
     """
     if not project:
         raise DjangoValidationError({"project": _("Project is required.")})
@@ -18,3 +24,5 @@ def validate_subscription_business_rules(investor, project, amount, exclude_amou
 
     validate_self_investment(investor, project)
     validate_project_funding_limit(project, amount, current_subscription_amount=exclude_amount)
+
+

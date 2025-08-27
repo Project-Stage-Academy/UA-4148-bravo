@@ -1,22 +1,33 @@
 from startups.serializers.startup_full import StartupSerializer
 from tests.test_base_case import BaseAPITestCase
+from unittest.mock import patch
+from startups.documents import StartupDocument
 
 
 class StartupSerializerTests(BaseAPITestCase):
-    """
-    Tests for StartupSerializer to validate proper serialization and validation
+    """Tests for StartupSerializer to validate proper serialization and validation
     of Startup data, including required fields, field constraints, and nested data.
     """
 
+    @classmethod
+    def setUpClass(cls):
+        # Mock the update method of StartupDocument to prevent Elasticsearch calls
+        cls.update_patcher = patch.object(StartupDocument, 'update', lambda self, instance, **kwargs: None)
+        cls.update_patcher.start()
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.update_patcher.stop()
+        super().tearDownClass()
+
     def test_valid_startup_data(self):
-        """
-        Test that the serializer accepts valid startup data including nested social_links.
-        """
+        """Test that the serializer accepts valid startup data including nested social_links."""
         data = {
             'company_name': 'TechNova',
             'description': 'AI-powered analytics for startups and enterprises.',
-            'industry': self.industry.id,
-            'location': self.location.id,
+            'industry': self.industry.pk,
+            'location': self.location.pk,
             'website': 'https://technova.ai',
             'email': 'contact@technova.ai',
             'stage': 'idea',
@@ -32,9 +43,7 @@ class StartupSerializerTests(BaseAPITestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_empty_company_name_should_fail(self):
-        """
-        Test that the serializer rejects empty or whitespace-only company_name.
-        """
+        """Test that the serializer rejects empty or whitespace-only company_name."""
         data = {
             'company_name': '   ',
             'user': self.user.pk,
@@ -47,9 +56,7 @@ class StartupSerializerTests(BaseAPITestCase):
         self.assertIn('company_name', serializer.errors)
 
     def test_missing_email_should_fail(self):
-        """
-        Test that the serializer rejects empty or missing email field.
-        """
+        """Test that the serializer rejects empty or missing email field."""
         data = {
             'company_name': 'ValidName',
             'team_size': 5,
@@ -65,9 +72,7 @@ class StartupSerializerTests(BaseAPITestCase):
         self.assertIn('email', serializer.errors)
 
     def test_team_size_too_small_should_fail(self):
-        """
-        Test that the serializer rejects team_size values less than 1.
-        """
+        """Test that the serializer rejects team_size values less than 1."""
         data = {
             'company_name': 'ValidName',
             'team_size': 0,
@@ -81,9 +86,7 @@ class StartupSerializerTests(BaseAPITestCase):
         self.assertIn('team_size', serializer.errors)
 
     def test_invalid_social_links_should_fail(self):
-        """
-        Test that the serializer rejects social_links with unsupported platforms or invalid URLs.
-        """
+        """Test that the serializer rejects social_links with unsupported platforms or invalid URLs."""
         data = {
             'company_name': 'ValidName',
             'team_size': 5,
@@ -103,3 +106,23 @@ class StartupSerializerTests(BaseAPITestCase):
         errors = serializer.errors['social_links']
         self.assertIn("Invalid domain for platform 'linkedin'", errors.get('linkedin', ''))
         self.assertIn("Platform 'unknown' is not supported.", errors.get('unknown', ''))
+
+    def test_partial_data_valid(self):
+        """Serializer accepts partial valid data for update."""
+        startup = self.get_or_create_startup(
+            user=self.user,
+            company_name='PartialTech',
+            industry=self.industry,
+            location=self.location
+        )
+        data = {
+            'company_name': 'PartialTechUpdated'
+        }
+        serializer = StartupSerializer(instance=startup, data=data, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        updated = serializer.save()
+        self.assertEqual(updated.company_name, 'PartialTechUpdated')
+
+
+
+
