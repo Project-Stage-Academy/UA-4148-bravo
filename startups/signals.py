@@ -3,18 +3,20 @@ from django.dispatch import receiver
 from .models import Startup
 from .documents import StartupDocument
 
+
 @receiver(post_save, sender=Startup)
 def update_startup_document(sender, instance, **kwargs):
-    # Wrap in try-except to prevent errors if ES is down
     try:
         StartupDocument().update(instance)
     except Exception:
-        pass
+        pass  # Prevent ES errors during tests
+
 
 @receiver(post_delete, sender=Startup)
 def delete_startup_document(sender, instance, **kwargs):
     try:
         StartupDocument(meta={"id": instance.id}).delete()
     except Exception:
-        pass
+        pass  # Prevent ES errors during tests
+
 

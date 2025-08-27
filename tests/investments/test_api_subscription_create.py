@@ -9,9 +9,9 @@ from startups.models import Industry, Location, Startup
 from investors.models import Investor
 from projects.models import Project, Category
 from investments.models import Subscription
+from tests.test_base_case import BaseAPITestCase
 
-
-class TestSubscriptionCreateAPI(TestCase):
+class TestSubscriptionCreateAPI(BaseAPITestCase):
     """Integration tests for the subscription creation endpoint."""
 
     @classmethod

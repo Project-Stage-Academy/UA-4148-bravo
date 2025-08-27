@@ -1,10 +1,19 @@
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.test import TestCase
 from investments.models import Subscription
-from tests.test_base_case import BaseAPITestCase
+from tests.setup_tests_data import TestDataMixin
 
 
-class SubscriptionModelTests(BaseAPITestCase):
+class SubscriptionModelTests(TestDataMixin, TestCase):
+    """
+    Tests for the Subscription model.
+    Ensures proper creation, constraints, and validations.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.setup_all()  # setup investor1, project, etc.
 
     def test_create_subscription_success(self):
         """Test successful creation of a subscription."""
@@ -46,28 +55,23 @@ class SubscriptionModelTests(BaseAPITestCase):
 
     def test_investor_cannot_invest_in_own_project(self):
         """Test that an investor cannot invest in their own project."""
-
         own_startup = self.get_or_create_startup(
             user=self.investor1.user,
             industry=self.industry,
             company_name="Investor Startup",
             location=self.startup_location
         )
-
         own_project = self.get_or_create_project(
             title="Project Beta",
             startup=own_startup
         )
-
         sub = Subscription(
             investor=self.investor1,
             project=own_project,
             amount=100.00
         )
-
         with self.assertRaises(ValidationError) as ctx:
             sub.full_clean()
-
         self.assertIn(
             "Investors cannot invest in their own startup's project.",
             str(ctx.exception)
@@ -84,3 +88,4 @@ class SubscriptionModelTests(BaseAPITestCase):
         with self.assertRaises(ValidationError) as ctx:
             sub.full_clean()
         self.assertIn("Ensure this value is less than or equal to 100", str(ctx.exception))
+

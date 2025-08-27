@@ -1,7 +1,8 @@
 from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 from projects.models import Project
-
+from projects.models import Category
+from startups.models import Startup
 
 @registry.register_document
 class ProjectDocument(Document):
@@ -29,4 +30,29 @@ class ProjectDocument(Document):
             'description',
             'status',
         ]
-        related_models = ['startup', 'category']
+        # Related models must be actual model classes, not strings
+        related_models = [Startup, Category]
+
+    def prepare_category(self, instance):
+        if instance.category:
+            return {
+                'id': instance.category.id,
+                'name': instance.category.name,
+            }
+        return {}
+
+    def prepare_startup(self, instance):
+        if instance.startup:
+            return {
+                'id': instance.startup.id,
+                'company_name': instance.startup.company_name,
+            }
+        return {}
+
+    def get_instances_from_related(self, related_instance):
+        if isinstance(related_instance, Category):
+            return related_instance.project_set.all()
+        elif isinstance(related_instance, Startup):
+            return related_instance.projects.all()
+        return []
+
