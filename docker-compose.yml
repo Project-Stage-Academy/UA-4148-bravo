@@ -1,0 +1,159 @@
+services:
+  web:
+    build: .
+    container_name: api-dev
+    restart: on-failure
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - elasticsearch
+    networks:
+      - forum
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/healthcheck/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    
+  fastapi:
+    build: .
+    command: uvicorn core.asgi:application --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - elasticsearch
+    networks:
+      - forum
+
+  elasticsearch:
+    image: elasticsearch:7.17.12
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:9200/_cluster/health?wait_for_status=yellow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - forum
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - forum
+
+  celery:
+    build: .
+    entrypoint: []
+    command: celery -A core worker -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - .env  
+    networks:
+      - forum    
+  db:
+    image: postgres:14
+    container_name: db
+    restart: always
+    volumes:
+      - ./configs/postgres:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - forum
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin/data
+    depends_on:
+      - db
+    networks:
+      - forum
+
+  test:
+    build: .
+    container_name: test-runner
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.test_settings
+      - DB_HOST=db 
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: ["db", "python", "manage.py", "test"]
+    
+  mongo:
+    image: mongo:6
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - forum
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  esdata:
+    driver: local
+  mongo_data:
+networks:
+  forum:

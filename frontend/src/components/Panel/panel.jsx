@@ -1,5 +1,7 @@
 import "./panel.css";
 import PropTypes from 'prop-types';
+import clsx from 'clsx';
+import { Link } from 'react-router-dom';
 
 /**
  * Panel component to wrap content with a styled container.
@@ -11,11 +13,6 @@ function PanelTitle({ children }) {
     return <h2 className={'panel--title'}>{ children }</h2>;
 }
 
-/**
- * PanelTitle component to display the title of the panel.
- * It is typically used to provide a heading for the panel content.
- * @param children - The title text to be displayed inside the panel title.
- */
 PanelTitle.propTypes = {
     children: PropTypes.node.isRequired
 }
@@ -39,11 +36,6 @@ function PanelBody({ children }) {
     );
 }
 
-/**
- * PanelBody component to display the main content of the panel.
- * It is typically used to provide a structured layout for the panel's body content.
- * @param children - The content to be displayed inside the panel body.
- */
 PanelBody.propTypes = {
     children: PropTypes.node.isRequired
 }
@@ -61,7 +53,7 @@ PanelBody.propTypes = {
  */
 function PanelBodyTitle({ title, children, className = '', required = true }) {
     return (
-        <div className={`content--text-container ${className}`}>
+        <div className={clsx('content--text-container', className)}>
             {required && <span className={'content--text content--text__starred content--text__margin'}>*</span>}
             <div>
                 {title && <span className={'content--text'}>{ title }</span>}
@@ -71,20 +63,41 @@ function PanelBodyTitle({ title, children, className = '', required = true }) {
     );
 }
 
-/**
- * PanelBodyTitle component to display a title with a star indicator and additional text.
- * It is typically used to highlight important titles within the panel body.
- * The star indicates that the title is required or important.
- * It accepts a title and children for additional text.
- * @param title - The title text to be displayed, typically indicating a required field.
- * @param children - Additional text to be displayed below the title, providing more context or instructions.
- * @param className - Additional CSS class names to apply to the title container.
- * @param required - A boolean indicating if the title is required (typically used to show a star).
- */
 PanelBodyTitle.propTypes = {
     required: PropTypes.bool,
     title: PropTypes.string,
     children: PropTypes.node,
+    className: PropTypes.string
+}
+
+/**
+ * PanelBodyBottomLink is used in pair with input field.
+ *
+ * @example
+ * <Input>Password</Input>
+ * <PanelBodyBottomLink
+ *     linkText="Забули пароль?"
+ *     to="/auth/forgot"
+ * />
+ *
+ * @component
+ *
+ * @param linkText - Text that will be displayed
+ * @param to - Link URL
+ * @param className - Additional style settings
+ * @returns {JSX.Element}
+ */
+function PanelBodyBottomLink({ linkText, to, className }) {
+    return (
+        <Link to={to} className={clsx('text-underline', 'text-bold', 'content__link-container', className)}>
+            { linkText }
+        </Link>
+    );
+}
+
+PanelBodyBottomLink.propTypes = {
+    linkText: PropTypes.string.isRequired,
+    to: PropTypes.string.isRequired,
     className: PropTypes.string
 }
 
@@ -98,11 +111,6 @@ function PanelNavigation({ children }) {
     return <div className={"panel--navigation"}>{ children }</div>;
 }
 
-/**
- * PanelNavigation component to display navigation elements within the panel.
- * It is typically used to provide navigation options related to the panel's content.
- * @param children - The navigation elements to be displayed inside the panel navigation.
- */
 PanelNavigation.propTypes = {
     children: PropTypes.node.isRequired
 }
@@ -116,8 +124,8 @@ PanelNavigation.propTypes = {
  * @returns {JSX.Element}
  */
 function Panel({ className, children }) {
-    return <div className={`panel panel__margin ${className}`}>{children}</div>;
+    return <div className={clsx('panel', 'panel__margin', className)}>{children}</div>;
 }
 
-export { PanelTitle, PanelBody, PanelBodyTitle, PanelNavigation };
+export { PanelTitle, PanelBody, PanelBodyTitle, PanelBodyBottomLink, PanelNavigation };
 export default Panel;

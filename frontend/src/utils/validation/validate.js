@@ -11,12 +11,12 @@ export class Validator {
      * @type {Object<string, function(value: any, data?: Object): boolean>}
      */
     static validators = {
-        companyName: (value) => /^[\w\s]{2,}$/.test(value),
+        companyName: (value) => /^[\p{L}’ʼ-]{2,}$/u.test(value),
         email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-        password: (value) => /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value),
+        password: (value) => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(value),
         confirmPassword: (value, data) => typeof value === "string" && value.trim() !== "" && value === data.password,
-        firstName: (value) => /^[A-Za-z]{2,}$/.test(value),
-        lastName: (value) => /^[A-Za-z]{2,}$/.test(value),
+        firstName: (value) => /^[\p{L}’ʼ-]{2,}$/u.test(value),
+        lastName: (value) => /^[\p{L}’ʼ-]{2,}$/u.test(value),
         representation: (value) => Object.values(value).some(v => v),
         businessType: (value) => Object.values(value).some(v => v)
     };
@@ -70,7 +70,8 @@ export class Validator {
      */
     static serverSideErrorMessages = {
         emailAlreadyExist: "Ця електронна пошта вже зареєстрована",
-        emailNotExist: "Зазначена електронна адреса не зареєстрована",
+        companyAlreadyExist: "Компанія з такою назвою вже зареєстрована",
+        noUserFoundByProvidedData: "Облікового запис за вказаними обліковими даними не знайдено",
         unexpected: "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз пізніше"
     }
 
@@ -154,7 +155,7 @@ export class Validator {
      * @param errorZeroLengthMessages - Error messages for fields that have zero length.
      * @param errorValidationMessages - Error messages for fields that do not pass validation.
      * @param validators - An object containing validation functions for each field.
-     * @return {void}
+     * @return {boolean} - True if the form is valid, false if there are errors.
      */
     static handleChange(
         e,
@@ -168,6 +169,9 @@ export class Validator {
         const { name, value, type, checked } = e.target;
         const realValue = type === "checkbox" ? checked : value;
 
+        let currentError = null;
+        let updatedFormData;
+
         if (name.includes(".")) {
             const [group, field] = name.split(".");
 
@@ -176,43 +180,61 @@ export class Validator {
                 [field]: realValue
             };
 
-            setFormData(prev => ({
-                ...prev,
-                [group]: updatedGroup
-            }));
-
-            const error = Validator.validateField(group, updatedGroup, {
+            updatedFormData = {
                 ...formData,
                 [group]: updatedGroup
-            }, errorZeroLengthMessages, errorValidationMessages, validators);
+            };
+
+            setFormData(updatedFormData);
+
+            currentError = Validator.validateField(
+                group,
+                updatedGroup,
+                updatedFormData,
+                errorZeroLengthMessages,
+                errorValidationMessages,
+                validators
+            );
 
             setErrors(prev => {
                 const newErrors = { ...prev };
-                if (!error) {
+                if (!currentError) {
                     delete newErrors[group];
                 } else {
-                    newErrors[group] = error;
+                    newErrors[group] = currentError;
                 }
                 return newErrors;
             });
 
         } else {
-            setFormData(prev => ({ ...prev, [name]: realValue }));
-
-            const error = Validator.validateField(name, realValue, {
+            updatedFormData = {
                 ...formData,
                 [name]: realValue
-            }, errorZeroLengthMessages, errorValidationMessages, validators);
+            };
+
+            setFormData(updatedFormData);
+
+            currentError = Validator.validateField(
+                name,
+                realValue,
+                updatedFormData,
+                errorZeroLengthMessages,
+                errorValidationMessages,
+                validators
+            );
 
             setErrors(prev => {
                 const newErrors = { ...prev };
-                if (!error) {
+                if (!currentError) {
                     delete newErrors[name];
                 } else {
-                    newErrors[name] = error;
+                    newErrors[name] = currentError;
                 }
                 return newErrors;
             });
         }
+
+        const hasErrors = !!currentError;
+        return !hasErrors;
     };
 }

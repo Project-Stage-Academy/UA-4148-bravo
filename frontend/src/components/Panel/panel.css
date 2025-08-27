@@ -65,8 +65,21 @@
     margin-bottom: 4px;
 }
 
+.content__link-container {
+    display: block;
+    margin-top: 8px;
+    text-align: right;
+    font-size: 14px;
+    line-height: 22px;
+}
+
 .panel--under-panel {
     margin-bottom: 40px;
+}
+
+.panel--under-panel > * {
+    font-size: 14px;
+    line-height: 22px;
 }
 
 .panel--under-panel > *:not(:last-child) {

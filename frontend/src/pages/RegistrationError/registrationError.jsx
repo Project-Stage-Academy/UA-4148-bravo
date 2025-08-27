@@ -13,11 +13,17 @@ function RegistrationError() {
     }
 
     return (
-        <Panel className={"panel__margin-large"}>
-            <PanelTitle>Помилка активації</PanelTitle>
+        <Panel className={"panel__margin-large"}
+               aria-labelledby="registrationError-title"
+        >
+            <PanelTitle id="registrationError-title"
+                        aria-describedby="registrationError-help"
+            >
+                Помилка активації
+            </PanelTitle>
             <PanelBody>
                 <div>
-                    <p className={"panel--font-size"}>
+                    <p id="registrationError-help" className={"panel--font-size"}>
                         Під час активації сталася помилка. Спробуйте ще раз або звʼяжіться з підтримкою.
                     </p>
                 </div>
@@ -26,6 +32,7 @@ function RegistrationError() {
                 <Button
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
+                    type="submit"
                 >
                     Повернутися до входу
                 </Button>

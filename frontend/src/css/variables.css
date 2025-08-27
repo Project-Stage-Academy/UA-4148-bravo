@@ -56,12 +56,31 @@
     --panel-hr-color: #F0F0F0;
 
     /* header */
+    --yellow-bcg-color: #F9F5EC;
+    --white-bcg-color: #FFF;
     --header-bcg-color: #fff;
-
-    /* footer */
     --footer-bcg-color: #232424;
 
     /* loading */
     --loading-dot-active-color: rgba(180, 210, 122, 0.75);
     --loading-dot-inactive-color: rgba(180, 210, 122, 0.3);
+
+    /* home page */
+    --benefits-panel-color: #F9F5EC;
+    --for-whom-panel-color: #FFF;
+
+    /* Participant card */
+
+    --participant-card-color: #F9F5EC;
+    --participant-card-color-hover: #EDE0C5;
+    --other-services-color: #707070;
+
+    --profile-picture-bg-color: #FFF;
+    --profile-picture-border-color: #AAAAAA;
+
+    --participant-updated-color: #B4D27A;
+
+    /* Who we are page */
+    --who-we-are-bcg-color: #F9F5EC;
+
 }
