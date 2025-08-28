@@ -4,13 +4,14 @@ import os
 import re
 import time
 from collections import defaultdict
-from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
-from mongoengine import ValidationError, DoesNotExist
 from typing import Optional, Tuple
+from channels.db import database_sync_to_async
+from channels.generic.websocket import AsyncWebsocketConsumer
+from mongoengine import ValidationError, DoesNotExist
 from chat.documents import Room, Message
 from core.settings.constants import FORBIDDEN_WORDS_SET
 from users.models import User
+from utils.sanitize import sanitize_message
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,8 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             message = data.get("message", "").strip()
             if not message:
                 return
+            message = sanitize_message(message)
+
             if len(message) < MIN_MESSAGE_LENGTH or len(message) > MAX_MESSAGE_LENGTH:
                 await self.send(
                     json.dumps({"error": f"Message length must be {MIN_MESSAGE_LENGTH}-{MAX_MESSAGE_LENGTH} chars"}))

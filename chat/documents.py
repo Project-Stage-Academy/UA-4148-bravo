@@ -1,12 +1,15 @@
 import os
+import re
+from datetime import datetime, timezone
+from html import escape
 from mongoengine import CASCADE
 from mongoengine import (
     Document, StringField, ListField, ReferenceField,
     DateTimeField, BooleanField, ValidationError
 )
-from datetime import datetime, timezone
-import re
 from core.settings.constants import FORBIDDEN_WORDS_SET
+from utils.encrypt import EncryptedStringField
+from utils.sanitize import sanitize_message
 
 MAX_PARTICIPANTS = int(os.getenv("MAX_PARTICIPANTS", 50))
 MIN_MESSAGE_LENGTH = int(os.getenv("MIN_MESSAGE_LENGTH", 1))
@@ -29,7 +32,7 @@ class Room(Document):
         unique=True
     )
     is_group = BooleanField(default=False)
-    participants = ListField(StringField())  # <-- emails
+    participants = ListField(StringField())
     created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
     updated_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
 
@@ -45,6 +48,8 @@ class Room(Document):
 
         if len(self.participants) > MAX_PARTICIPANTS:
             raise ValidationError(f"Room cannot have more than {MAX_PARTICIPANTS} participants")
+
+        self.name = escape(self.name.strip())
 
     def save(self, *args, **kwargs):
         """ Update the 'updated_at' timestamp before saving. """
@@ -70,7 +75,7 @@ class Message(Document):
     room = ReferenceField(Room, required=True, reverse_delete_rule=CASCADE)
     sender_email = StringField(required=True)
     receiver_email = StringField(required=False)
-    text = StringField(required=True, min_length=MIN_MESSAGE_LENGTH, max_length=MAX_MESSAGE_LENGTH)
+    text = EncryptedStringField(required=True)
     timestamp = DateTimeField(default=lambda: datetime.now(timezone.utc))
     is_read = BooleanField(default=False)
 
@@ -102,6 +107,8 @@ class Message(Document):
 
         if re.search(r"([^aeiou\s])\1{10,}", self.text, re.IGNORECASE):
             raise ValidationError("Message looks like spam.")
+
+        self.text = sanitize_message(self.text)
 
     def save(self, *args, **kwargs):
         """ Update timestamp and clean before saving. """
