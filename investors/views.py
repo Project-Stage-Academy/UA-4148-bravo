@@ -18,9 +18,7 @@ from django.shortcuts import get_object_or_404
 
 from .models import ViewedStartup
 from startups.models import Startup
-from .serializers import ViewedStartupSerializer
-
-logger = logging.getLogger(__name__) 
+from investors.serializers.viewed_startup import ViewedStartupSerializer
 from users.permissions import IsInvestor, CanCreateCompanyPermission
 
 logger = logging.getLogger(__name__)
@@ -230,7 +228,7 @@ class ViewedStartupListView(generics.ListAPIView):
     Retrieve a paginated list of recently viewed startups for the authenticated investor.
     """
     serializer_class = ViewedStartupSerializer
-    permission_classes = [IsInvestor]  # ✅ тільки інвестори
+    permission_classes = [IsAuthenticated,IsInvestor]
     pagination_class = ViewedStartupPagination
 
     def get_queryset(self):
@@ -241,8 +239,9 @@ class ViewedStartupCreateView(APIView):
     """
     POST /api/v1/startups/view/{startup_id}/
     Log that the authenticated investor has viewed a specific startup.
+    Return the serialized ViewedStartup instance.
     """
-    permission_classes = [IsInvestor]  # ✅ тільки інвестори
+    permission_classes = [IsAuthenticated,IsInvestor]
 
     def post(self, request, startup_id):
         startup = get_object_or_404(Startup, id=startup_id)
@@ -253,22 +252,21 @@ class ViewedStartupCreateView(APIView):
             defaults={"viewed_at": timezone.now()}
         )
 
-        if created:
-            message = "Startup view logged successfully."
-        else:
-            message = "Startup view timestamp updated."
-
-        return Response({"detail": message}, status=status.HTTP_200_OK)
+        serializer = ViewedStartupSerializer(viewed_obj)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ViewedStartupClearView(APIView):
     """
     DELETE /api/v1/startups/viewed/clear/
     Clear the authenticated investor's viewed startups history.
+    Return number of deleted entries.
     """
-    permission_classes = [IsInvestor]  # ✅ тільки інвестори
+    permission_classes = [IsAuthenticated,IsInvestor]
 
     def delete(self, request):
-        ViewedStartup.objects.filter(user=request.user).delete()
-        return Response({"detail": "Viewed startups history cleared successfully."},
-                        status=status.HTTP_200_OK)
+        deleted_count, _ = ViewedStartup.objects.filter(user=request.user).delete()
+        return Response(
+            {"detail": f"Viewed startups history cleared successfully.", "deleted_count": deleted_count},
+            status=status.HTTP_200_OK
+        )
