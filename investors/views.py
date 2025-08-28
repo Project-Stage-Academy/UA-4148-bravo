@@ -1,4 +1,4 @@
-from datetime import timezone
+from django.utils import timezone
 import logging
 from django.db import IntegrityError
 from rest_framework import viewsets, status, generics, pagination
@@ -228,11 +228,11 @@ class ViewedStartupListView(generics.ListAPIView):
     Retrieve a paginated list of recently viewed startups for the authenticated investor.
     """
     serializer_class = ViewedStartupSerializer
-    permission_classes = [IsAuthenticated,IsInvestor]
+    permission_classes = [IsAuthenticated, IsInvestor]
     pagination_class = ViewedStartupPagination
 
     def get_queryset(self):
-        return ViewedStartup.objects.filter(user=self.request.user).order_by("-viewed_at")
+        return ViewedStartup.objects.filter(investor__user=self.request.user).order_by("-viewed_at")
 
 
 class ViewedStartupCreateView(APIView):
@@ -241,13 +241,14 @@ class ViewedStartupCreateView(APIView):
     Log that the authenticated investor has viewed a specific startup.
     Return the serialized ViewedStartup instance.
     """
-    permission_classes = [IsAuthenticated,IsInvestor]
+    permission_classes = [IsAuthenticated, IsInvestor]
 
     def post(self, request, startup_id):
         startup = get_object_or_404(Startup, id=startup_id)
+        investor = request.user.investor 
 
         viewed_obj, created = ViewedStartup.objects.update_or_create(
-            user=request.user,
+            investor=investor,
             startup=startup,
             defaults={"viewed_at": timezone.now()}
         )
@@ -262,11 +263,12 @@ class ViewedStartupClearView(APIView):
     Clear the authenticated investor's viewed startups history.
     Return number of deleted entries.
     """
-    permission_classes = [IsAuthenticated,IsInvestor]
+    permission_classes = [IsAuthenticated, IsInvestor]
 
     def delete(self, request):
-        deleted_count, _ = ViewedStartup.objects.filter(user=request.user).delete()
+        investor = request.user.investor
+        deleted_count, _ = ViewedStartup.objects.filter(investor=investor).delete()
         return Response(
-            {"detail": f"Viewed startups history cleared successfully.", "deleted_count": deleted_count},
+            {"detail": "Viewed startups history cleared successfully.", "deleted_count": deleted_count},
             status=status.HTTP_200_OK
         )

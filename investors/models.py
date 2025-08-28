@@ -46,6 +46,15 @@ class Investor(Company):
         help_text='Startups that this investor has bookmarked.',
     )
 
+    viewed_startups = models.ManyToManyField(
+        'startups.Startup',
+        through='investors.ViewedStartup',
+        related_name='viewed_by',
+        blank=True,
+        verbose_name='Viewed startups',
+        help_text='Startups that this investor recently viewed.',
+    )
+
     @property
     def user_id(self):
         return self.user.id if self.user else None
@@ -122,25 +131,24 @@ class SavedStartup(models.Model):
         ]
 
 class ViewedStartup(models.Model):
-    user=models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    investor = models.ForeignKey(
+        'investors.Investor',
         on_delete=models.CASCADE,
-        related_name="viewed_startups",
-        help_text="User with investor role"
+        related_name='viewed_startups_links',
+        help_text="Investor who viewed the startup"
     )
-    startup=models.ForeignKey(
+    startup = models.ForeignKey(
         "startups.Startup",
         on_delete=models.CASCADE,
         related_name="views"
     )
-    viewed_at=models.DateTimeField(auto_now_add=True)
+    viewed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Startup view history"
         verbose_name_plural = "Startup view histories"
-        unique_together = ("user", "startup")
+        unique_together = ("investor", "startup")
         ordering = ["-viewed_at"]
 
     def __str__(self):
-        return f"{self.user} viewed {self.startup} at {self.viewed_at}"
-
+        return f"{self.investor} viewed {self.startup} at {self.viewed_at}"

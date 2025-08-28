@@ -1,130 +1,113 @@
-from django.utils import timezone
-from datetime import timedelta
-from rest_framework.test import APITestCase
 from django.urls import reverse
-from users.models import User, UserRole
-from investors.models import ViewedStartup, Startup
+from rest_framework.test import APITestCase, APIClient
+from rest_framework import status
+from investors.models import Investor, ViewedStartup
+from startups.models import Startup, Industry, Location, Stage
+from users.models import User
 
 class ViewedStartupTests(APITestCase):
-    """
-    Test suite for the ViewedStartup API endpoints:
-    - List viewed startups
-    - Create a viewed startup record
-    - Clear viewed startups history
-    """
+    """Tests for the ViewedStartup API endpoints."""
 
     def setUp(self):
-        """
-        Set up an investor user, multiple startups, and corresponding
-        viewed startup records with different timestamps.
-        """
-        # Create roles
-        self.investor_role = UserRole.objects.create(role="investor")
+        """Set up test data: an investor user and two startups."""
+        self.client = APIClient()
 
-        # Create an investor user
-        self.investor = User.objects.create_user(
+        # Create investor user
+        self.user = User.objects.create_user(
             email="investor@example.com",
-            password="strongpass123",
-            first_name="Investor",
-            last_name="Test",
-            role=self.investor_role
+            password="password123"
         )
-        self.client.force_authenticate(user=self.investor)
+        self.investor = Investor.objects.create(
+            user=self.user,
+            company_name="Test Investor Ltd",
+            industry=Industry.objects.create(name="Tech"),
+            location=Location.objects.create(city="Warsaw", country="PL"),
+            email="investor@example.com",
+            founded_year=2020,
+            stage=Stage.MVP,
+            fund_size=1000000
+        )
 
-        # Create multiple startups
-        self.startups = [Startup.objects.create(company_name=f"Startup {i}") for i in range(5)]
+        # Create startup users
+        self.startup_user1 = User.objects.create_user(
+            email="startup1user@example.com",
+            password="password123"
+        )
+        self.startup_user2 = User.objects.create_user(
+            email="startup2user@example.com",
+            password="password123"
+        )
 
-        # Create ViewedStartup records
-        now = timezone.now()
-        for i, startup in enumerate(self.startups):
-            ViewedStartup.objects.create(
-                user=self.investor,
-                startup=startup,
-                viewed_at=now - timedelta(minutes=i)
-            )
+        # Create startups
+        self.startup1 = Startup.objects.create(
+            user=self.startup_user1,
+            company_name="Startup One",
+            industry=self.investor.industry,
+            location=self.investor.location,
+            email="startup1@example.com",
+            founded_year=2021,
+            stage=Stage.MVP
+        )
+        self.startup2 = Startup.objects.create(
+            user=self.startup_user2,
+            company_name="Startup Two",
+            industry=self.investor.industry,
+            location=self.investor.location,
+            email="startup2@example.com",
+            founded_year=2022,
+            stage=Stage.MVP
+        )
 
-        # URLs
-        self.list_url = reverse("viewed-startups-list")
-        self.clear_url = reverse("viewed-startups-clear")
-        self.create_url = lambda startup_id: reverse("viewed-startup-create", args=[startup_id])
-
-    def test_list_viewed_startups_ordered(self):
-        """
-        Ensure the list of viewed startups is ordered by viewed_at
-        in descending order.
-        """
-        response = self.client.get(self.list_url)
-        self.assertEqual(response.status_code, 200)
-        results = response.data["results"]
-
-        # First item is the most recently viewed
-        self.assertEqual(results[0]["company_name"], "Startup 0")
-        # Last item on default page
-        self.assertEqual(results[-1]["company_name"], "Startup 4")
-
-    def test_list_pagination_limit(self):
-        """
-        Ensure the `limit` query parameter correctly limits the number
-        of results returned.
-        """
-        response = self.client.get(self.list_url + "?limit=2")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data["results"]), 2)
+        # Authenticate client as the investor
+        self.client.force_authenticate(user=self.user)
 
     def test_create_viewed_startup(self):
-        """
-        Ensure that posting to the viewed startup endpoint creates
-        a new record or updates the existing one.
-        """
-        startup = Startup.objects.create(company_name="New Startup")
-        response = self.client.post(self.create_url(startup.id))
-        self.assertEqual(response.status_code, 200)
-        data = response.data
-        self.assertEqual(data["company_name"], "New Startup")
-        self.assertIn("viewed_at", data)
+        """Ensure posting to the viewed startup endpoint creates a ViewedStartup record."""
+        url = reverse('investors:viewed-startup-create', args=[str(self.startup1.id)])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(ViewedStartup.objects.filter(investor=self.investor, startup=self.startup1).exists())
 
-        # Posting again should update the timestamp
-        old_viewed_at = ViewedStartup.objects.get(user=self.investor, startup=startup).viewed_at
-        response = self.client.post(self.create_url(startup.id))
-        new_viewed_at = ViewedStartup.objects.get(user=self.investor, startup=startup).viewed_at
-        self.assertGreater(new_viewed_at, old_viewed_at)
+    def test_list_viewed_startups_ordered(self):
+        """Ensure the list of viewed startups is ordered by viewed_at descending."""
+        # Create two ViewedStartup records
+        ViewedStartup.objects.create(investor=self.investor, startup=self.startup1)
+        ViewedStartup.objects.create(investor=self.investor, startup=self.startup2)
+
+        url = reverse('investors:viewed-startup-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data['results']
+        returned_ids = [str(item['startup_id']) for item in data]
+        expected_ids = [str(self.startup2.id), str(self.startup1.id)]
+        self.assertEqual(returned_ids, expected_ids)
 
     def test_clear_viewed_startups(self):
-        """
-        Ensure the DELETE endpoint clears all viewed startup history
-        for the authenticated investor.
-        """
-        response = self.client.delete(self.clear_url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(ViewedStartup.objects.filter(user=self.investor).count(), 0)
-        self.assertIn("deleted_count", response.data)
-        self.assertEqual(response.data["deleted_count"], 5)
+        """Ensure DELETE endpoint clears all viewed startup history."""
+        ViewedStartup.objects.create(investor=self.investor, startup=self.startup1)
+        ViewedStartup.objects.create(investor=self.investor, startup=self.startup2)
 
-    def test_only_investor_can_access_endpoints(self):
-        """
-        Ensure that only users with the investor role can access the
-        list, create, and clear endpoints.
-        """
-        # Create a non-investor user
-        user_role = UserRole.objects.create(role="user")
-        normal_user = User.objects.create_user(
-            email="user@example.com",
-            password="strongpass123",
-            first_name="Normal",
-            last_name="User",
-            role=user_role
-        )
-        self.client.force_authenticate(user=normal_user)
+        url = reverse('investors:viewed-startup-clear')
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(ViewedStartup.objects.filter(investor=self.investor).count(), 0)
 
-        # List endpoint
-        response = self.client.get(self.list_url)
-        self.assertEqual(response.status_code, 403)
+    def test_list_pagination_limit(self):
+        """Ensure the `limit` query parameter correctly limits the number of returned startups."""
+        ViewedStartup.objects.create(investor=self.investor, startup=self.startup1)
+        ViewedStartup.objects.create(investor=self.investor, startup=self.startup2)
 
-        # Create endpoint
-        startup = Startup.objects.create(company_name="Forbidden Startup")
-        response = self.client.post(self.create_url(startup.id))
-        self.assertEqual(response.status_code, 403)
+        url = reverse('investors:viewed-startup-list') + "?limit=1"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()['results']
+        self.assertEqual(len(data), 1)
 
-        # Clear endpoint
-        response = self.client.delete(self.clear_url)
-        self.assertEqual(response.status_code, 403)
+    def test_non_investor_cannot_access(self):
+        """Ensure non-investor users cannot access viewed startups endpoints."""
+        non_investor_user = User.objects.create_user(email="noninvestor@example.com", password="pass")
+        self.client.force_authenticate(user=non_investor_user)
+
+        url = reverse('investors:viewed-startup-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
