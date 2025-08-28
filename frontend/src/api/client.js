@@ -20,7 +20,7 @@ function createApiClient() {
     const refreshAccess = async () => {
         try {
             const res = await axios.post(
-                `${process.env.REACT_APP_API_URL}/auth/jwt/refresh/`
+                `${process.env.REACT_APP_API_URL}/api/v1/auth/jwt/refresh/`
             );
 
             if (res.data && typeof res.data.access === "string" && res.data.access.trim() !== "") {

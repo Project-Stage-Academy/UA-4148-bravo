@@ -11,19 +11,8 @@ export const CSRF_REFRESH_THRESHOLD_MINUTES = 5;
  */
 function needsCsrfRefresh() {
     const token = Cookies.get(CSRF_COOKIE_NAME);
-    if (!token) return true;
-
-    try {
-        const [, payloadBase64] = token.split(".");
-        const payload = JSON.parse(atob(payloadBase64));
-        const exp = payload.exp * 1000;
-        const now = Date.now();
-
-        return exp - now < CSRF_REFRESH_THRESHOLD_MINUTES * 60 * 1000;
-    } catch (e) {
-        console.error("Invalid token", e);
-        return true;
-    }
+    if (!token) return true; // token is expired
+    return false; // token is fine
 }
 
 /**

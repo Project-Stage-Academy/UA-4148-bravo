@@ -176,20 +176,18 @@ function AuthProvider({ children }) {
      *
      * @returns {Promise<void>}
      */
-    // eslint-disable-next-line
     const loadUser = useCallback(async () => {
-        try {
-            const { data } = await api.get('/api/v1/auth/me/').catch((err) => {
-                console.error(err);
+        const { data } = await api.get('/api/v1/auth/me/')
+            .then(() => {
+                setUser(data);
+            })
+            .catch((err) => {
+                if (err.response?.status === 404) {
+                    setUser(null);
+                } else {
+                    throw err;
+                }
             });
-            setUser(data);
-        } catch (err) {
-            if (err.response?.status === 404) {
-                setUser(null);
-            } else {
-                throw err;
-            }
-        }
     }, []);
 
     /**

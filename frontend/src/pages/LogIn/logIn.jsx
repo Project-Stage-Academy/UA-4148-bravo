@@ -51,7 +51,7 @@ function LogInPage() {
 
     // Function to handle server-side errors
     const handleError = (error) => {
-        if (error?.response && error?.response?.status === 401) {
+        if (error?.response && error?.response?.status === 404) {
             setErrors(prev => ({
                 ...prev,
                 unexpected: Validator.serverSideErrorMessages.noUserFoundByProvidedData
