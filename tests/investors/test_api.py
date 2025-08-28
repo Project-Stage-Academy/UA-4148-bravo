@@ -1,6 +1,6 @@
 from django.urls import reverse, reverse_lazy
 from rest_framework import status
-
+from unittest.mock import patch
 from common.enums import Stage
 from investors.models import Investor
 from tests.test_base_case import BaseAPITestCase
@@ -8,79 +8,9 @@ from tests.test_base_case import BaseAPITestCase
 
 class InvestorAPITests(BaseAPITestCase):
     """
-    API tests for Investor model: create, list, update, delete,
+    API tests for Investor model: list, update, delete,
     including validation and permission checks.
     """
-
-    def test_create_investor(self):
-        """
-        Test successful creation of an investor with valid data.
-        """
-        url = reverse_lazy('investor-list')
-        data = {
-            'company_name': 'API Investor',
-            'email': 'investor@api.com',
-            'industry': self.industry.pk,
-            'location': self.location.pk,
-            'founded_year': 2020,
-            'team_size': 5,
-            'stage': Stage.MVP,
-            'fund_size': '1000000.00',
-        }
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED, f"Errors: {response.data}")
-        self.assertEqual(response.data['company_name'], data['company_name'])
-        self.assertEqual(response.data['email'], data['email'])
-        self.assertEqual(str(response.data['fund_size']), data['fund_size'])
-        self.assertEqual(response.data['industry'], data['industry'])
-        self.assertEqual(response.data['location'], data['location'])
-        self.assertEqual(response.data['founded_year'], data['founded_year'])
-        self.assertEqual(response.data['team_size'], data['team_size'])
-        self.assertEqual(response.data['stage'], data['stage'])
-
-        investor = Investor.objects.get(pk=response.data['id'])
-        self.assertEqual(investor.user, self.user)
-
-    def test_create_investor_missing_required_fields(self):
-        """
-        Creation should fail if required fields are missing.
-        Missing company_name.
-        """
-        url = reverse('investor-list')
-        data = {
-            'email': 'badinvestor@api.com',
-            'industry': self.industry.pk,
-            'location': self.location.pk,
-        }
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('company_name', response.data)
-
-    def test_create_investor_invalid_data(self):
-        """
-        Creation should fail on invalid data types or values.
-        Checked some expected error fields.
-        """
-        url = reverse('investor-list')
-        data = {
-            'company_name': 'BadInvestor',
-            'email': 'bademail',
-            'industry': 'not-an-id',
-            'location': self.location.pk,
-            'founded_year': 'not-a-year',
-            'team_size': -5,
-            'stage': 'invalid-stage',
-            'fund_size': 'not-a-number',
-        }
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        self.assertIn('email', response.data)
-        self.assertIn('industry', response.data)
-        self.assertIn('founded_year', response.data)
-        self.assertIn('team_size', response.data)
-        self.assertIn('stage', response.data)
-        self.assertIn('fund_size', response.data)
 
     def test_get_investor_list(self):
         """

@@ -7,7 +7,6 @@ import Button from '../../components/Button/button';
  * It provides a message indicating that the requested page could not be found
  * and includes a button to navigate back to the home page.
  * @returns {JSX.Element}
- * @constructor
  */
 function NotFound() {
     const navigate = useNavigate();

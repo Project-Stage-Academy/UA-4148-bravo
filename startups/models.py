@@ -2,13 +2,10 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import UniqueConstraint, F
 from django_countries.fields import CountryField
-from typing import cast
 
 from common.company import Company
 from common.enums import Stage
-from core import settings
 from validation.validate_names import validate_forbidden_names, validate_latin
-from validation.validate_social_links import validate_social_links_dict
 
 
 class Location(models.Model):
@@ -189,12 +186,6 @@ class Startup(Company):
         verbose_name="Development Stage",
         help_text="Current development stage of the startup"
     )
-    social_links = models.JSONField(
-        blank=True,
-        default=dict,
-        verbose_name="Social Links",
-        help_text="Social media links as a JSON object"
-    )
 
     def clean(self):
         """
@@ -207,12 +198,6 @@ class Startup(Company):
             ValidationError: If social_links are invalid.
         """
         super().clean()
-        social_links = cast(dict, self.social_links)
-        validate_social_links_dict(
-            social_links=social_links,
-            allowed_platforms=settings.ALLOWED_SOCIAL_PLATFORMS,
-            raise_serializer=False
-        )
 
     def __str__(self):
         return self.company_name

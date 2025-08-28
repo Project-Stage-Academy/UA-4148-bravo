@@ -33,6 +33,13 @@ class NotificationPriority(models.TextChoices):
     HIGH = 'high', _('High')
 
 
+class NotificationChannel(models.TextChoices):
+    """Channels for delivering notifications."""
+    IN_APP = 'in_app', _('In-App')
+    EMAIL = 'email', _('Email')
+    PUSH = 'push', _('Push')
+
+
 class NotificationType(TimeStampedModel):
     """Model to store different types of notifications."""
     code = models.SlugField(
@@ -149,12 +156,6 @@ class Notification(TimeStampedModel):
     )
     is_read = models.BooleanField(default=False)
     expires_at = models.DateTimeField(null=True, blank=True)
-    action_link = models.URLField(
-        max_length=500,
-        blank=True,
-        null=True,
-        help_text=_('Optional URL for client action (e.g., deep link or page URL)')
-    )
 
     class Meta:
         ordering = ['-created_at']

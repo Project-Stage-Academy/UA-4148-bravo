@@ -1,0 +1,4 @@
+Hello,
+
+You have successfully {{ action }} using {{ provider_name }}.
+Now you can access Forum — the platform where startups meet investors and ideas become reality.

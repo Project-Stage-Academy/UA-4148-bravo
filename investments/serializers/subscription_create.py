@@ -1,51 +1,97 @@
 from decimal import Decimal
-
 from django.db import transaction
-from django.utils.translation import gettext_lazy as _
+from django.db.models import Sum
 from rest_framework import serializers
-
-from investors.models import Investor
+from investments.models import Subscription
 from projects.models import Project
-from ..models import Subscription
 from ..services.investment_share_service import calculate_investment_share
-from ..services.subscription_validation_service import validate_subscription_business_rules
 
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
-    investor = serializers.IntegerField()
-    project = serializers.IntegerField()
-    amount = serializers.DecimalField(max_digits=18, decimal_places=2, min_value=Decimal("0.01"))
+    """
+    Serializer for creating a new investment subscription.
 
+    Fields:
+        investor (Investor): The investor making the subscription.
+        project (Project): The project to invest in.
+        amount (Decimal): Investment amount, required and must be >= 0.01.
+
+    Validation:
+        - Ensures project exists and is a valid instance.
+        - Ensures the requesting user is an investor.
+        - Prevents self-investment (investor cannot fund their own startup project).
+        - Prevents investments into fully funded projects.
+        - Prevents investment amounts that exceed remaining funding.
+        - Ensures amount is greater than or equal to 0.01.
+
+    Creation:
+        - Uses database transactions with row-level locking to prevent race conditions.
+        - Recalculates effective funding using both DB aggregate and project's current_funding to avoid drift.
+        - Updates the project's current_funding field after saving the subscription.
+    """
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    
+    project = serializers.PrimaryKeyRelatedField(
+        queryset=Project.objects.all(),
+        error_messages={
+            'does_not_exist': 'Project does not exist or is not available for investment.'
+        }
+    )
     class Meta:
         model = Subscription
-        fields = ['id', 'investor', 'project', 'amount', 'investment_share', 'created_at']
-        read_only_fields = ['investment_share', 'created_at']
+        fields = ["id", "investor", "project", "amount"]
+        extra_kwargs = {"amount": {"required": True}}
 
     def validate(self, data):
-        try:
-            investor = Investor.objects.get(pk=data['investor'])
-        except Investor.DoesNotExist:
-            raise serializers.ValidationError({"investor": _("Investor does not exist.")})
+        project = data.get("project")
+        investor = data.get("investor")
+        amount = data.get("amount")
 
-        try:
-            project = Project.objects.get(pk=data['project'])
-        except Project.DoesNotExist:
-            raise serializers.ValidationError({"project": _("Project does not exist.")})
+        startup = getattr(project, 'startup', None)
+        if startup and getattr(investor, 'user', None) and getattr(startup, 'user', None) and investor.user.pk == startup.user.pk:
+            raise serializers.ValidationError(
+                {"non_field_errors": ["Startup owners cannot invest in their own project."]}
+            )
 
-        amount = data['amount']
-        exclude_amount = Decimal('0.00')
+        aggregated = project.subscriptions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        effective_current = max(project.current_funding or Decimal("0.00"), aggregated)
+        remaining = project.funding_goal - effective_current
 
-        validate_subscription_business_rules(investor, project, amount, exclude_amount)
-        data['investor'] = investor
-        data['project'] = project
+        if effective_current >= project.funding_goal:
+            raise serializers.ValidationError(
+                {"project": "Project is fully funded."}
+            )
+
+        remaining = project.funding_goal - effective_current
+        if amount is not None and amount > remaining:
+            raise serializers.ValidationError(
+                {"amount": f"Amount exceeds funding goal — exceeds the remaining funding. Max allowed: {remaining:.2f}"}
+            )
+
         return data
 
     def create(self, validated_data):
-        project = validated_data['project']
-        amount = validated_data['amount']
+        project = validated_data["project"]
+        amount = validated_data["amount"]
 
         with transaction.atomic():
             project_locked = Project.objects.select_for_update().get(pk=project.pk)
-            validate_subscription_business_rules(validated_data['investor'], project_locked, amount)
-            validated_data['investment_share'] = calculate_investment_share(amount, project_locked.funding_goal)
-            return Subscription.objects.create(**validated_data)
+
+            aggregated = project_locked.subscriptions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+            effective_current = max(project_locked.current_funding or Decimal("0.00"), aggregated)
+            remaining = project_locked.funding_goal - effective_current
+
+            if amount > remaining or remaining <= 0:
+                raise serializers.ValidationError(
+                    {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
+                )
+
+            validated_data['investment_share'] = calculate_investment_share(
+                amount, project_locked.funding_goal
+            )
+            
+            subscription = Subscription.objects.create(**validated_data)
+            project_locked.current_funding = effective_current + amount
+            project_locked.save(update_fields=["current_funding"])
+
+        return subscription

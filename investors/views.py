@@ -3,11 +3,15 @@ import logging
 from django.db import IntegrityError
 from rest_framework import viewsets, status, generics, pagination
 from rest_framework.permissions import IsAuthenticated, BasePermission
+
+from rest_framework import viewsets, status, permissions
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from investors.models import Investor, SavedStartup
-from investors.serializers import InvestorSerializer, SavedStartupSerializer
+from investors.permissions import IsSavedStartupOwner
+from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer
+from investors.serializers.investor_create import InvestorCreateSerializer
 
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
@@ -17,6 +21,9 @@ from startups.models import Startup
 from .serializers import ViewedStartupSerializer
 
 logger = logging.getLogger(__name__) 
+from users.permissions import IsInvestor, CanCreateCompanyPermission
+
+logger = logging.getLogger(__name__)
 
 
 class InvestorViewSet(viewsets.ModelViewSet):
@@ -26,25 +33,29 @@ class InvestorViewSet(viewsets.ModelViewSet):
     """
     queryset = Investor.objects.select_related("user", "industry", "location")
     serializer_class = InvestorSerializer
-    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action == 'create':
+            return [permissions.IsAuthenticated(), CanCreateCompanyPermission()]
+        return [permissions.IsAuthenticated()]
 
-
-class IsSavedStartupOwner(BasePermission):
-    """
-    Custom permission to allow only the owner of a SavedStartup (its investor) to modify or delete it.
-    """
-    def has_object_permission(self, request, view, obj):
-        if not hasattr(request.user, "investor"):
-            return False
-        return obj.investor_id == request.user.investor.pk
-
+    def get_serializer_class(self):
+        """
+        Return the appropriate serializer class based on the request action.
+        """
+        if self.action == 'create':
+            return InvestorCreateSerializer
+        return InvestorSerializer
 
 class SavedStartupViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing SavedStartup instances.
     Only authenticated investors who own the SavedStartup can modify/delete it.
     """
-    permission_classes = [IsAuthenticated, IsSavedStartupOwner]
+    permission_classes = [permissions.IsAuthenticated, IsInvestor, IsSavedStartupOwner]
     serializer_class = SavedStartupSerializer
 
     def get_queryset(self):
@@ -55,12 +66,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
                 extra={"by_user": getattr(user, "pk", None)},
             )
             raise PermissionDenied("Only investors can list saved startups.")
-        return (
-            SavedStartup.objects
-            .select_related("startup", "investor")
-            .filter(investor=user.investor)
-            .order_by("-saved_at")
-        )
+        return SavedStartup.objects.filter(investor=self.request.user.investor)
 
     def create(self, request, *args, **kwargs):
         user = request.user
@@ -224,13 +230,10 @@ class ViewedStartupListView(generics.ListAPIView):
     Retrieve a paginated list of recently viewed startups for the authenticated investor.
     """
     serializer_class = ViewedStartupSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsInvestor]  # ✅ тільки інвестори
     pagination_class = ViewedStartupPagination
 
     def get_queryset(self):
-        # Only allow investors
-        if not hasattr(self.request.user, "investor"):
-            return ViewedStartup.objects.none()
         return ViewedStartup.objects.filter(user=self.request.user).order_by("-viewed_at")
 
 
@@ -239,17 +242,11 @@ class ViewedStartupCreateView(APIView):
     POST /api/v1/startups/view/{startup_id}/
     Log that the authenticated investor has viewed a specific startup.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsInvestor]  # ✅ тільки інвестори
 
     def post(self, request, startup_id):
-        # Only investors can log views
-        if not hasattr(request.user, "investor"):
-            return Response({"detail": "Only investors can log viewed startups."},
-                            status=status.HTTP_403_FORBIDDEN)
-
         startup = get_object_or_404(Startup, id=startup_id)
 
-        # Create or update the viewed record
         viewed_obj, created = ViewedStartup.objects.update_or_create(
             user=request.user,
             startup=startup,
@@ -269,14 +266,9 @@ class ViewedStartupClearView(APIView):
     DELETE /api/v1/startups/viewed/clear/
     Clear the authenticated investor's viewed startups history.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsInvestor]  # ✅ тільки інвестори
 
     def delete(self, request):
-        if not hasattr(request.user, "investor"):
-            return Response({"detail": "Only investors can clear viewed startups history."},
-                            status=status.HTTP_403_FORBIDDEN)
-
         ViewedStartup.objects.filter(user=request.user).delete()
         return Response({"detail": "Viewed startups history cleared successfully."},
                         status=status.HTTP_200_OK)
-

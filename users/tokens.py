@@ -7,6 +7,7 @@ from .models import User
 
 logger = logging.getLogger(__name__)
 
+
 class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
     """
     Token generator for email verification.
@@ -80,7 +81,7 @@ def decode_uidb64(uidb64: str) -> Optional[int]:
         decoded = force_str(urlsafe_base64_decode(uidb64))
         if decoded.isdigit():
             return int(decoded)
-        return decoded 
+        return decoded
     except (TypeError, ValueError, OverflowError) as e:
         logger.error(f"Failed to decode uidb64 '{uidb64}': {e}", exc_info=True)
         return None
@@ -98,10 +99,10 @@ def make_token(user: User) -> str:
     """
     if user is None:
         raise ValueError("Cannot generate token: user must not be None.")
-    
+
     if not user.is_active:
         raise ValueError("Cannot generate token: user is inactive.")
-    
+
     return EMAIL_VERIFICATION_TOKEN.make_token(user)
 
 
