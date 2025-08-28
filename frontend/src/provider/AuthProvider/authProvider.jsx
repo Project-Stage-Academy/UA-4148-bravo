@@ -151,15 +151,10 @@ function AuthProvider({ children }) {
      * @returns {Promise<AxiosResponse<any>>}
      */
     const login = useCallback(async (email, password) => {
-        const csrfToken = Cookies.get("csrftoken");
         const res = await api
             .post('/api/v1/auth/jwt/create/', {
                 email,
                 password,
-            }, {
-                headers: {
-                    "X-CSRFToken": csrfToken,
-                }
             })
             .catch((err) => {
                 console.error(err);
@@ -199,12 +194,12 @@ function AuthProvider({ children }) {
 
     /**
      * Logout
-     * URL: /api/v1/auth/jwt/logout/
+     * URL: /api/v1/auth/logout/
      * Req: {  }
      * Res: 205
      */
     const logout = useCallback(async () => {
-        await api.post('/api/v1/auth/jwt/logout/').catch(() => {
+        await api.post('/api/v1/auth/logout/').catch(() => {
             console.log('Logout');
         });
         setUser(null);
