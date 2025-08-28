@@ -17,6 +17,7 @@ from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_protect
 from utils.cookies import set_auth_cookies, clear_auth_cookies
 from validation.validate_token import safe_decode
+from django.contrib.auth import authenticate
 
 logger = logging.getLogger(__name__)
 
@@ -92,18 +93,19 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         3) Return user info in JSON (no tokens in body).
         """
         response = super().post(request, *args, **kwargs)
-
         if "access" not in response.data or "refresh" not in response.data:
             return Response({"detail": "Tokens missing."}, status=status.HTTP_400_BAD_REQUEST)
 
         set_auth_cookies(response, response.data["access"], response.data["refresh"])
 
-        user = self.user if hasattr(self, 'user') else request.user
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.user
 
         response.data = {
             "detail": "Login successful",
-            "email": getattr(user, "email", None),
-            "user_id": getattr(user, "id", None)
+            "email": user.email,
+            "user_id": user.id
         }
         return response
 
@@ -172,8 +174,8 @@ class CustomTokenRefreshView(TokenRefreshView):
     tags=["Auth"],
     summary="Logout (blacklist refresh token)",
     description=(
-        "Attempts to blacklist the refresh token (if blacklist app enabled) "
-        "and deletes both `refresh_token` and `access_token` cookies."
+            "Attempts to blacklist the refresh token (if blacklist app enabled) "
+            "and deletes both `refresh_token` and `access_token` cookies."
     ),
     responses={
         200: OpenApiResponse(

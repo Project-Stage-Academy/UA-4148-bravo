@@ -1,4 +1,3 @@
-import os
 import asyncio
 from unittest.mock import patch, MagicMock
 from channels.testing import WebsocketCommunicator
@@ -6,9 +5,7 @@ from django.test import TransactionTestCase
 from chat.consumers import InvestorStartupMessageConsumer
 from users.models import User
 from django.contrib.auth.models import AnonymousUser
-
-MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", 1000))
-MESSAGE_RATE_LIMIT = int(os.getenv("MESSAGE_RATE_LIMIT", 5))
+from chat.consumers import MAX_MESSAGE_LENGTH, MIN_MESSAGE_LENGTH, MESSAGE_RATE_LIMIT
 
 
 class InvestorStartupMessageConsumerTest(TransactionTestCase):
@@ -122,8 +119,20 @@ class InvestorStartupMessageConsumerTest(TransactionTestCase):
     @patch("chat.consumers.InvestorStartupMessageConsumer.get_user_by_email")
     @patch("chat.consumers.InvestorStartupMessageConsumer.save_message")
     def test_message_validations(self, save_mock, get_user_mock, get_or_create_mock):
+        """
+        Tests all message validation rules in InvestorStartupMessageConsumer:
+        - Forbidden words
+        - Empty messages
+        - Messages exceeding max length
+        - Spam detection
+        - Rate limiting
+        """
         get_user_mock.return_value = self.startup
-        room_mock = MagicMock(id="roomid", name="roomname", participants=[self.investor.email, self.startup.email])
+        room_mock = MagicMock(
+            id="roomid",
+            name="roomname",
+            participants=[self.investor.email, self.startup.email]
+        )
         get_or_create_mock.return_value = (room_mock, True)
 
         async def async_save_message(message_text):
@@ -144,36 +153,59 @@ class InvestorStartupMessageConsumerTest(TransactionTestCase):
         self.assertTrue(connected)
 
         with patch("chat.consumers.FORBIDDEN_WORDS_SET", {"forbiddenword"}):
-            self.loop.run_until_complete(communicator.send_json_to({"message": "This contains forbiddenword"}))
-            response = self.loop.run_until_complete(self.try_receive(communicator))
+            self.loop.run_until_complete(
+                communicator.send_json_to({"message": "This contains forbiddenword"})
+            )
+            response = self.loop.run_until_complete(communicator.receive_json_from())
             self.assertIsNotNone(response)
             self.assertIn("error", response)
+            self.assertEqual(response["error"], "Message contains forbidden content")
 
         self.loop.run_until_complete(communicator.send_json_to({"message": ""}))
-        response = self.loop.run_until_complete(self.try_receive(communicator))
-        self.assertIsNone(response)
+        response = self.loop.run_until_complete(communicator.receive_nothing())
+        self.assertTrue(response)
 
-        self.loop.run_until_complete(communicator.send_json_to({"message": "x" * (MAX_MESSAGE_LENGTH + 1)}))
+        self.loop.run_until_complete(
+            communicator.send_json_to({"message": "x" * (MAX_MESSAGE_LENGTH + 1)})
+        )
+        response = self.loop.run_until_complete(communicator.receive_json_from())
+        self.assertIsNotNone(response)
+        self.assertIn("error", response)
+        self.assertEqual(
+            response["error"],
+            f"Message length must be {MIN_MESSAGE_LENGTH}-{MAX_MESSAGE_LENGTH} chars"
+        )
+
+        self.loop.run_until_complete(
+            communicator.send_json_to({"message": "bbbbbbbbbbbb"})
+        )
+        response = self.loop.run_until_complete(communicator.receive_json_from())
+        self.assertIsNotNone(response)
+        self.assertIn("error", response)
+        self.assertEqual(response["error"], "Message looks like spam")
+
+        for i in range(MESSAGE_RATE_LIMIT):
+            self.loop.run_until_complete(
+                communicator.send_json_to({"message": f"Hello {i}"})
+            )
+            response = self.loop.run_until_complete(communicator.receive_json_from())
+            self.assertIsNotNone(response)
+            self.assertIn("message", response)
+            self.assertEqual(response["message"], f"Hello {i}")
+            self.assertEqual(response["sender"], self.investor.email)
+
+        self.loop.run_until_complete(
+            communicator.send_json_to({"message": "Hello rate limit"})
+        )
+        response = self.loop.run_until_complete(communicator.receive_json_from())
+        self.assertIsNotNone(response)
+        self.assertIn("error", response)
+        self.assertIn("Rate limit exceeded", response["error"])
+
+        self.loop.run_until_complete(
+            communicator.send_json_to({"message": "Hello after limit"})
+        )
         response = self.loop.run_until_complete(self.try_receive(communicator))
         self.assertIsNotNone(response)
         self.assertIn("error", response)
-
-        self.loop.run_until_complete(communicator.send_json_to({"message": "bbbbbbbbbbbb"}))
-        response = self.loop.run_until_complete(self.try_receive(communicator))
-        self.assertIsNotNone(response)
-        self.assertIn("error", response)
-
-        for i in range(MESSAGE_RATE_LIMIT + 1):
-            self.loop.run_until_complete(communicator.send_json_to({"message": f"Hello {i}"}))
-            if i >= MESSAGE_RATE_LIMIT:
-                response = self.loop.run_until_complete(self.try_receive(communicator))
-                self.assertIsNotNone(response)
-                self.assertIn("Rate limit exceeded", response.get("error", ""))
-
-        self.loop.run_until_complete(communicator.send_json_to({"message": "Hello"}))
-        response = self.loop.run_until_complete(self.try_receive(communicator))
-        self.assertIsNotNone(response)
-        self.assertEqual(response.get("message"), "Hello")
-        self.assertEqual(response.get("sender"), self.investor.email)
-
-        self.loop.run_until_complete(communicator.disconnect())
+        self.assertIn("Rate limit exceeded", response["error"])

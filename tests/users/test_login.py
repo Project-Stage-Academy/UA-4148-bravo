@@ -33,13 +33,14 @@ class AuthLoginTestCase(TestCase):
             "email": "testuser@example.com",
             "password": "testpass"
         }, format="json")
-
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertIn("access", data)
-        self.assertIn("refresh", data)
-        self.assertEqual(data["user_id"], self.user.user_id)
+        self.assertIn("detail", data)
+        self.assertEqual(data["detail"], "Login successful")
+        self.assertEqual(data["user_id"], self.user.id)
         self.assertEqual(data["email"], self.user.email)
+        self.assertIn("access_token", response.cookies)
+        self.assertIn("refresh_token", response.cookies)
 
     def test_login_wrong_password(self):
         """Login attempt with wrong password returns 401 Unauthorized."""
