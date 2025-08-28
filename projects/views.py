@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
 from elasticsearch_dsl import Q
-
+from rest_framework.permissions import IsAuthenticated
 from projects.models import Project
 
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
@@ -13,10 +13,11 @@ from django_elasticsearch_dsl_drf.filter_backends import (
     OrderingFilterBackend,
     SearchFilterBackend,
 )
+
+
 from .documents import ProjectDocument
 from .permissions import IsOwnerOrReadOnly
 from .serializers import ProjectDocumentSerializer, ProjectReadSerializer, ProjectWriteSerializer
-from rest_framework.permissions import IsAuthenticated
 import logging
 
 logger = logging.getLogger(__name__)
@@ -81,9 +82,9 @@ class ProjectDocumentView(DocumentViewSet):
     Elasticsearch-backed viewset for Project documents.
     Supports filtering, ordering, and full-text search with robust error handling.
     """
+    permission_classes = [IsAuthenticated]
     document = ProjectDocument
     serializer_class = ProjectDocumentSerializer
-    permission_classes = [IsAuthenticated]
 
     filter_backends = [
         FilteringFilterBackend,

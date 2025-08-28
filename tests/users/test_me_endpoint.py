@@ -7,10 +7,11 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 User = get_user_model()
 
+
 class MeEndpointTests(APITestCase):
     """
     Test suite for the /api/v1/auth/me/ endpoint.
-    
+
     Covers:
     - Successful response with authenticated user details.
     - Rejection of unauthenticated requests.
@@ -88,5 +89,3 @@ class MeEndpointTests(APITestCase):
         resp = self.client.get(self.url)
 
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
-    
-

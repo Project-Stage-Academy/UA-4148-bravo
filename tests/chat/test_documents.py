@@ -1,19 +1,15 @@
-import os
-import re
-
+import mongomock
 from django.test import TestCase
 from mongoengine import connect, disconnect, ValidationError
-from datetime import datetime, timezone
 from chat.documents import Room, Message
-from users.documents import UserDocument, UserRoleDocument, UserRoleEnum
 from core.settings.constants import FORBIDDEN_WORDS_SET
-import mongomock
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'tests.chat.setup_test_env.'
-TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "testpassword123")
+TEST_USER_EMAIL = "user@example.com"
+TEST_USER2_EMAIL = "user2@example.com"
+TEST_USER3_EMAIL = "user3@example.com"
 
 
-class MongoEngineTestCase(TestCase):
+class ChatDocumentsTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -24,107 +20,106 @@ class MongoEngineTestCase(TestCase):
             mongo_client_class=mongomock.MongoClient
         )
 
-        role = UserRoleDocument.objects(role=UserRoleEnum.USER).first()
-        if not role:
-            role = UserRoleDocument(role=UserRoleEnum.USER)
-            role.save()
-        cls.user_role = role
-
     @classmethod
     def tearDownClass(cls):
         disconnect()
         super().tearDownClass()
 
     def setUp(self):
-        UserDocument.drop_collection()
         Room.drop_collection()
         Message.drop_collection()
-        self.user = UserDocument(
-            email="test@example.com",
-            first_name="John",
-            last_name="Doe",
-            password=TEST_USER_PASSWORD,
-            role=self.user_role
-        )
-        self.user.save()
+        self.user1 = TEST_USER_EMAIL
+        self.user2 = TEST_USER2_EMAIL
+        self.user3 = TEST_USER3_EMAIL
 
-    def test_create_room(self):
-        """Test that a Room can be created with a valid name and participants."""
-        room = Room(name="TestRoom", participants=[self.user])
+    def test_room_creation_and_limits(self):
+        """Room creation and participant limits."""
+        room = Room(name="RoomTest", participants=[self.user1, self.user2])
         room.save()
         self.assertIsNotNone(room.id)
-        self.assertEqual(room.name, "TestRoom")
-        self.assertIn(self.user, room.participants)
-        self.assertLessEqual(room.created_at, datetime.now(timezone.utc))
-
-    def test_room_name_validation(self):
-        """Room with invalid characters raises ValidationError."""
-        room = Room(name="Invalid Room!", participants=[self.user])
-        with self.assertRaises(ValidationError):
-            if not re.match(Room.NAME_REGEX, room.name):
-                raise ValidationError(f"Room name '{room.name}' contains invalid characters")
-            room.clean()
-
-    def test_room_participants_limit(self):
-        """Test that a Room with more than 50 participants raises ValidationError."""
-        users = []
-        for i in range(51):
-            u = UserDocument(
-                email=f"user{i}@example.com",
-                first_name=f"User{i}",
-                last_name="Test",
-                password=TEST_USER_PASSWORD,
-                role=self.user_role
-            )
-            u.save()
-            users.append(u)
+        self.assertEqual(len(room.participants), 2)
+        users = [f"user{i}@example.com" for i in range(51)]
         room = Room(name="BigRoom", participants=users)
         with self.assertRaises(ValidationError):
             room.clean()
 
-    def test_message_creation(self):
-        """Test that a Message can be created in a Room by a participant."""
-        room = Room(name="ChatRoom", participants=[self.user])
+    def _create_room(self, is_group=True, participants=None):
+        if participants is None:
+            participants = [self.user1, self.user2]
+        room = Room(name=f"Room_{is_group}", participants=participants, is_group=is_group)
         room.save()
-        message = Message(room=room, sender=self.user, text="Hello, world!")
+        return room
+
+    def test_private_message_valid(self):
+        """Private message with exactly 2 participants and valid receiver."""
+        room = self._create_room(is_group=False, participants=[self.user1, self.user2])
+        message = Message(room=room, sender_email=self.user1, receiver_email=self.user2, text="Hello!")
         message.clean()
         message.save()
         self.assertIsNotNone(message.id)
-        self.assertEqual(message.text, "Hello, world!")
-        self.assertLessEqual(message.timestamp, datetime.now(timezone.utc))
 
-    def test_message_forbidden_words(self):
-        """Test that a Message containing forbidden words raises ValidationError."""
-        room = Room(name="SpamRoom", participants=[self.user])
-        room.save()
-        forbidden_word = next(iter(FORBIDDEN_WORDS_SET)) if FORBIDDEN_WORDS_SET else "forbidden"
-        message = Message(room=room, sender=self.user, text=f"This contains {forbidden_word}")
+    def test_private_message_missing_receiver(self):
+        """Private message without receiver raises ValidationError."""
+        room = self._create_room(is_group=False, participants=[self.user1, self.user2])
+        message = Message(room=room, sender_email=self.user1, text="Hello!")
         with self.assertRaises(ValidationError):
             message.clean()
 
-    def test_message_sender_not_in_room(self):
-        """Test that a Message from a non-participant raises ValidationError."""
-        sender = UserDocument(
-            email="other@example.com",
-            first_name="Other",
-            last_name="User",
-            password=TEST_USER_PASSWORD,
-            role=self.user_role
-        )
-        sender.save()
-        room = Room(name="OtherRoom", participants=[])
-        room.save()
-        message = Message(room=room, sender=sender, text="Hi")
+    def test_private_message_wrong_participant_count(self):
+        """Private room must have exactly 2 participants."""
+        room = self._create_room(is_group=False, participants=[self.user1, self.user2, self.user3])
+        message = Message(room=room, sender_email=self.user1, receiver_email=self.user2, text="Hello!")
         with self.assertRaises(ValidationError):
             message.clean()
 
-    def test_message_spam_repeated_chars(self):
+    def test_group_message_valid_no_receiver(self):
+        """Group message without receiver_email is valid."""
+        room = self._create_room(is_group=True)
+        message = Message(room=room, sender_email=self.user1, text="Hi everyone!")
+        message.clean()
+        message.save()
+        self.assertIsNotNone(message.id)
+
+    def test_group_message_with_receiver_in_group(self):
+        """Group message with receiver_email who is in participants is valid."""
+        room = self._create_room(is_group=True)
+        message = Message(room=room, sender_email=self.user1, receiver_email=self.user2, text="Hi!")
+        message.clean()
+        message.save()
+        self.assertIsNotNone(message.id)
+
+    def test_group_message_with_receiver_not_in_group(self):
+        """Group message with receiver_email not in participants raises ValidationError."""
+        room = self._create_room(is_group=True)
+        message = Message(room=room, sender_email=self.user1, receiver_email=self.user3, text="Hi!")
+        with self.assertRaises(ValidationError):
+            message.clean()
+
+    def test_sender_not_in_room(self):
+        """Message from non-participant raises ValidationError."""
+        room = self._create_room(is_group=True)
+        message = Message(room=room, sender_email=self.user3, text="Hi!")
+        with self.assertRaises(ValidationError):
+            message.clean()
+
+    def test_empty_text_message(self):
+        """Message with empty text raises ValidationError."""
+        room = self._create_room()
+        message = Message(room=room, sender_email=self.user1, text="   ")
+        with self.assertRaises(ValidationError):
+            message.clean()
+
+    def test_forbidden_words(self):
+        """Message with forbidden words raises ValidationError."""
+        room = self._create_room()
+        forbidden_word = next(iter(FORBIDDEN_WORDS_SET)) if FORBIDDEN_WORDS_SET else "badword"
+        message = Message(room=room, sender_email=self.user1, text=f"This is {forbidden_word}")
+        with self.assertRaises(ValidationError):
+            message.clean()
+
+    def test_spam_repeated_chars(self):
         """Message with repeated characters (spam) raises ValidationError."""
-        room = Room(name="SpamRoom2", participants=[self.user])
-        room.save()
-        spam_text = "aaaaaaabbbbbbbcccccc"
-        message = Message(room=room, sender=self.user, text=spam_text)
+        room = self._create_room()
+        message = Message(room=room, sender_email=self.user1, text="bbbbbbbbbbbb")
         with self.assertRaises(ValidationError):
-            if re.search(r"(.)\1{5,}", message.text, re.IGNORECASE):
-                raise ValidationError("Message looks like spam.")
             message.clean()
