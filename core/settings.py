@@ -383,10 +383,10 @@ COMMUNICATIONS_NOTIFICATION_TYPES = [
         'is_active': True,
     },
     {
-        'code': 'project_updated',
-        'name': 'Project Updated',
-        'description': 'Notification when a followed project is updated',
-        'default_frequency': 'daily_digest',
+        'code': 'activity_summarized',
+        'name': 'Activity Summarized',
+        'description': 'Daily or weekly summary of notifications/activity',
+        'default_frequency': 'weekly_summary',
         'is_active': True,
     },
 ]

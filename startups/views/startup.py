@@ -47,7 +47,6 @@ class StartupViewSet(BaseValidatedModelViewSet):
             serializer = UserNotificationPreferenceSerializer(pref, context={'request': request})
             return Response(serializer.data)
 
-        # PATCH
         serializer = UserNotificationPreferenceSerializer(
             pref,
             data=request.data,
