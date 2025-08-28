@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'corsheaders',
+    'common',
 
     # API schema / docs
     'drf_spectacular',

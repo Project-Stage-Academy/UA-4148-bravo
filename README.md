@@ -227,3 +227,99 @@ Example:
 ```
 curl "http://localhost:8000/api/projects/?search=solar&category.name=Tech"
 ```
+
+# OAuth Authentication Setup
+
+This project supports authentication using **OAuth providers** (**Google** and **GitHub**).
+
+## 🔹 Google OAuth Setup
+
+### Create Google OAuth Credentials
+1. Go to [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project (or select an existing one).
+3. Navigate to **APIs & Services → Credentials**.
+4. Click **Create Credentials → OAuth 2.0 Client ID**.
+5. If prompted, configure the consent screen.
+6. Add **Authorized Redirect URIs**:  `http://yourdomain.com/oauth/callback/`(example)
+7. Copy the **Client ID** and **Client Secret**.
+
+### Environment Variables
+Add the following to `.env` file:
+
+```text
+GOOGLE_OAUTH_CLIENT_ID=your_google_client_id
+GOOGLE_OAUTH_CLIENT_SECRET=your_google_client_secret
+```
+## 🔹 GitHub OAuth Setup
+
+### Create GitHub OAuth App
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers).
+2. Click **New OAuth App**.
+3. Fill in application details.
+4. Set **Authorization Callback URL**:  `http://yourdomain.com/oauth/callback/`
+5. Copy the **Client ID** and generate a **Client Secret**.
+
+### Environment Variables
+Add these to `.env` file:
+
+```text
+GITHUB_OAUTH_CLIENT_ID=your_github_client_id
+GITHUB_OAUTH_CLIENT_SECRET=your_github_client_secret
+```
+
+## 🔐 Authentication Flow
+
+### OAuth Login Process
+
+#### Client-Side OAuth Flow
+1. Frontend redirects users to **Google/GitHub OAuth consent screen**.
+2. After consent, provider redirects back with **authorization code**.
+3. Frontend exchanges code for **access token** using provider's token endpoint.
+
+#### Backend Token Validation
+Example request:
+
+```http
+POST api/v1/auth/oauth/login/
+Content-Type: application/json
+
+{
+  "provider": "google",  // or "github"
+  "access_token": "oauth_provided_access_token"
+}
+```
+#### Backend Processing
+1. Validates access token with provider's API.
+2. Retrieves user profile information.
+3. Creates or updates local user record.
+4. Issues JWT tokens for authentication(Only for users with is_active=True).
+
+#### Response
+```json
+{
+  "access": "jwt_access_token",
+    "user": {
+    "id": "user_123",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_phone": "",
+    "title": "",
+    "role": "user"
+  }
+}
+```
+### JWT Token Issuance
+The system uses Django REST Framework Simple JWT for token management:
+- Access Token: Short-lived (default 5 minutes) for API authentication
+- Refresh Token - set in HTTP-only cookie: Longer-lived (default 24 hours) for obtaining new access tokens.
+- Automatic User Creation: New users are automatically created with data from OAuth providers.
+### Troubleshooting
+Common Errors
+|    Error Message                        |      HTTP Status    |                    Cause                   |                     Solution                          |
+|-----------------------------------------|---------------------|--------------------------------------------|-------------------------------------------------------|
+| "Invalid provider"                      | 400 Bad Request     | provider missing/invalid                   | Ensure both `provider` and `access_token` are strings.|
+| "access_token is missing"               | 400 Bad Request     | Missing token                              | Provide access_token                                  |
+| "Unsupported provider"                  | 400 Bad Request     | Provider other than Google/GitHub          | Use only `"google"` or `"github"` as provider value.  |
+| "OAuth authentication failed"           | 400 Bad Request     | Expired, malformed, or revoked token       | Re-authenticate with provider                         |
+| "No verified primary email found"       | 403 Forbidden       | GitHub account lacks verified email        | User must add/verify email in GitHub settings.        |
