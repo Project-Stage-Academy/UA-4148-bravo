@@ -50,6 +50,7 @@ class CustomPasswordResetView(APIView):
         Response: DRF Response with success message or error details.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = PasswordResetSerializer
 
     def post(self, request, *args, **kwargs):
@@ -109,6 +110,7 @@ class CustomPasswordResetConfirmView(APIView):
             - 400 Bad Request for missing fields, invalid token, invalid UID, or invalid password.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = PasswordResetConfirmSerializer
 
     def post(self, request, *args, **kwargs):

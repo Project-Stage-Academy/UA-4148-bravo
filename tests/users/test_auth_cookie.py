@@ -161,18 +161,18 @@ class AuthCookieTests(APITestCase):
 
     def test_access_protected_endpoint_without_token(self):
         """
-        Ensure accessing a protected endpoint without a token
-        returns HTTP 401 Unauthorized.
+        Ensure accessing a protected endpoint without a cookie
+        returns HTTP 403 Forbidden (AnonymousUser rejected by IsAuthenticated).
         """
         response = self.client.get(self.protected_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_access_protected_endpoint_with_invalid_token(self):
         """
-        Ensure accessing a protected endpoint with an invalid token
-        returns HTTP 401 Unauthorized.
+        Ensure accessing a protected endpoint with an invalid cookie token
+        returns HTTP 401 Unauthorized (rejected by CookieJWTAuthentication).
         """
-        self.client.credentials(HTTP_AUTHORIZATION="Bearer invalidtoken123")
+        self.client.cookies["access_token"] = "invalidtoken123"
         response = self.client.get(self.protected_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 

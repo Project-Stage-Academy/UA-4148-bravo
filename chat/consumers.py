@@ -54,7 +54,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             3. Creates or fetches a chat room (investor-startup).
             4. Joins the Channels group and accepts the connection.
         """
-        self.user = self.scope.get("user")
+        self.user = self.scope.get('user', None)
         other_user_email = self.scope["url_route"]["kwargs"].get("other_user_email")
 
         if not self.user or not self.user.is_authenticated:
@@ -210,7 +210,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             Tuple[Room, bool]: The Room instance and a boolean indicating if it was created.
         """
         investor = user1 if hasattr(user1, 'roles') and user1.roles.filter(name='Investor').exists() else user2
-        startup = user1 if hasattr(user1, 'roles') and user1.roles.filter(name='Startup').exists() else user2
+        startup = user2 if hasattr(user2, 'roles') and user2.roles.filter(name='Startup').exists() else user1
 
         room_name = f"{investor.email}_{startup.email}"
 

@@ -54,30 +54,36 @@ class Room(Document):
 
 
 class Message(Document):
-    """ Represents a chat message stored in MongoDB using sender and receiver emails. """
+    """
+    Represents a chat message stored in MongoDB using sender and receiver emails.
+
+    Validation rules:
+        - Room must exist and be persisted.
+        - Sender must be a participant of the room.
+        - Private messages: must have exactly 2 participants and a receiver.
+        - Group messages: receiver can be None; if specified, must be a participant.
+        - Message text cannot be empty.
+        - Forbidden words are not allowed.
+        - Messages with repeated characters (spam) are rejected.
+    """
+
     room = ReferenceField(Room, required=True, reverse_delete_rule=CASCADE)
     sender_email = StringField(required=True)
     receiver_email = StringField(required=False)
-    text = StringField(required=True, min_length=1, max_length=1000)
+    text = StringField(required=True, min_length=MIN_MESSAGE_LENGTH, max_length=MAX_MESSAGE_LENGTH)
     timestamp = DateTimeField(default=lambda: datetime.now(timezone.utc))
     is_read = BooleanField(default=False)
 
     def clean(self):
-        """
-        Validation rules:
-        - Room must exist.
-        - Sender must be in room participants.
-        - If private chat: receiver must be set and also in participants.
-        - In group chat: receiver can be None (message for everyone).
-        """
+        """ Validate message before saving. """
         if not self.room or not self.room.id:
             raise ValidationError("Message must belong to a persisted room.")
 
         if self.sender_email not in self.room.participants:
             raise ValidationError("Sender must be a participant of the room.")
 
-        if self.room.is_group and self.receiver_email is not None:
-            if self.receiver_email not in self.room.participants:
+        if self.room.is_group:
+            if self.receiver_email is not None and self.receiver_email not in self.room.participants:
                 raise ValidationError("Receiver must be a participant of the group.")
         else:
             if len(self.room.participants) != 2:
@@ -89,9 +95,16 @@ class Message(Document):
             raise ValidationError("Message text cannot be empty.")
 
         lowered = self.text.lower()
-        forbidden_pattern = r'\b(?:' + '|'.join(re.escape(word) for word in FORBIDDEN_WORDS_SET) + r')\b'
-        if re.search(forbidden_pattern, lowered):
-            raise ValidationError("Message contains forbidden content.")
+        if FORBIDDEN_WORDS_SET:
+            forbidden_pattern = r'\b(?:' + '|'.join(re.escape(word) for word in FORBIDDEN_WORDS_SET) + r')\b'
+            if re.search(forbidden_pattern, lowered):
+                raise ValidationError("Message contains forbidden content.")
 
         if re.search(r"([^aeiou\s])\1{10,}", self.text, re.IGNORECASE):
             raise ValidationError("Message looks like spam.")
+
+    def save(self, *args, **kwargs):
+        """ Update timestamp and clean before saving. """
+        self.timestamp = datetime.now(timezone.utc)
+        self.clean()
+        return super().save(*args, **kwargs)

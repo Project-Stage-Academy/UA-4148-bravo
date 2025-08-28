@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 )
 class CSRFTokenView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     @method_decorator(ensure_csrf_cookie)
     def get(self, request, *args, **kwargs):
@@ -80,6 +81,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     Response body contains minimal user info only (no tokens in body).
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
@@ -96,8 +98,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
         set_auth_cookies(response, response.data["access"], response.data["refresh"])
 
-        serializer = self.get_serializer(data=request.data)
-        user = getattr(serializer, "user", request.user)
+        user = self.user if hasattr(self, 'user') else request.user
 
         response.data = {
             "detail": "Login successful",
@@ -191,6 +192,7 @@ class LogoutView(APIView):
     Requires authentication (access token).
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request, *args, **kwargs):
         """

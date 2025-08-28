@@ -1,10 +1,9 @@
 from rest_framework.generics import CreateAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 import logging
 
-from users.cookie_jwt import CookieJWTAuthentication
+from rest_framework.permissions import IsAuthenticated
 from .models import Subscription
 from projects.models import Project
 from investments.serializers.subscription_create import SubscriptionCreateSerializer
@@ -20,7 +19,6 @@ class SubscriptionCreateView(CreateAPIView):
     - Validates funding constraints and prevents invalid investments.
     - Returns project funding status along with subscription details.
     """
-    authentication_classes = [CookieJWTAuthentication]
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionCreateSerializer
     permission_classes = [IsAuthenticated, IsInvestor]

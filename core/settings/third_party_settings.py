@@ -66,6 +66,8 @@ DEFAULT_SCHEMA_CLASS = 'drf_spectacular.openapi.AutoSchema'
 
 REST_FRAMEWORK: dict[str, Any] = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
         "users.cookie_jwt.CookieJWTAuthentication",
     ),
     "DEFAULT_THROTTLE_CLASSES": [

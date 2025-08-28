@@ -14,13 +14,13 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse
 # Third-party imports
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 # Local application imports
 from users.serializers.user_serializers import CurrentUserSerializer
 from users.serializers.user_serializers import CustomUserCreateSerializer
-from users.views.base_protected_view import CookieJWTProtectedView
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,7 @@ class UserRegistrationView(APIView):
     Handle user registration with email verification.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = CustomUserCreateSerializer
 
     def _generate_verification_token(self):
@@ -149,8 +150,9 @@ User = get_user_model()
     },
     tags=["Auth"],
 )
-class MeView(CookieJWTProtectedView):
+class MeView(APIView):
     """Returns profile info of the currently authenticated user."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = CurrentUserSerializer(request.user)

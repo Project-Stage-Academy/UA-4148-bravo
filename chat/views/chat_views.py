@@ -3,12 +3,11 @@ from channels.layers import get_channel_layer
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from chat.documents import Room, Message
 from users.cookie_jwt import CookieJWTAuthentication
-from users.views.base_protected_view import CookieJWTProtectedView
-from .serializers import RoomSerializer, MessageSerializer
+from chat.views.base_protected_view import CookieJWTProtectedView
+from chat.serializers import RoomSerializer, MessageSerializer
 from rest_framework.pagination import LimitOffsetPagination
 
 

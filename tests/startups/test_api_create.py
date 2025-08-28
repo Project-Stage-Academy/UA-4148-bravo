@@ -55,12 +55,13 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
 
     def test_unauthorized_creation_fails(self):
         """
-        Ensure an unauthenticated user receives a 401 Unauthorized error.
+        Ensure an unauthenticated user receives a 403 Forbidden error
+        (AnonymousUser rejected by IsAuthenticated).
         """
         self.client.logout()
         payload = self.get_valid_payload()
         response = self.client.post(self.url, payload, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_with_duplicate_name_fails(self):
         """

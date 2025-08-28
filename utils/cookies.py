@@ -1,6 +1,5 @@
 from django.conf import settings
 from core.settings.third_party_settings import SIMPLE_JWT
-from django.utils import timezone
 
 
 def set_auth_cookies(response, access_token: str, refresh_token: str = None):
@@ -18,23 +17,19 @@ def set_auth_cookies(response, access_token: str, refresh_token: str = None):
     }
 
     access_lifetime = settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"]
-    access_expires = timezone.now() + access_lifetime
     response.set_cookie(
         key="access_token",
         value=access_token,
         max_age=int(access_lifetime.total_seconds()),
-        expires=access_expires,
         **cookie_settings,
     )
 
     if refresh_token:
         refresh_lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
-        refresh_expires = timezone.now() + refresh_lifetime
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
             max_age=int(refresh_lifetime.total_seconds()),
-            expires=refresh_expires,
             **cookie_settings,
         )
 

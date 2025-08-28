@@ -1,15 +1,14 @@
 import logging
 from django.db import IntegrityError
 
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
-
+from rest_framework.permissions import IsAuthenticated
 from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
 from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
-from users.cookie_jwt import CookieJWTAuthentication
 
 from users.permissions import IsInvestor, CanCreateCompanyPermission
 
@@ -21,17 +20,20 @@ class InvestorViewSet(viewsets.ModelViewSet):
     ViewSet for managing Investor instances.
     Optimized with select_related to avoid N+1 queries when fetching related user, industry, and location.
     """
-    authentication_classes = [CookieJWTAuthentication]
     queryset = Investor.objects.select_related("user", "industry", "location")
     serializer_class = InvestorSerializer
-    
+
+    permission_classes_by_action = {
+        "create": [IsAuthenticated, CanCreateCompanyPermission],
+        "default": [IsAuthenticated],
+    }
+
     def get_permissions(self):
         """
         Instantiates and returns the list of permissions that this view requires.
         """
-        if self.action == 'create':
-            return [permissions.IsAuthenticated(), CanCreateCompanyPermission()]
-        return [permissions.IsAuthenticated()]
+        perms = self.permission_classes_by_action.get(self.action, self.permission_classes_by_action["default"])
+        return [perm() for perm in perms]
 
     def get_serializer_class(self):
         """
@@ -41,13 +43,13 @@ class InvestorViewSet(viewsets.ModelViewSet):
             return InvestorCreateSerializer
         return InvestorSerializer
 
+
 class SavedStartupViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing SavedStartup instances.
     Only authenticated investors who own the SavedStartup can modify/delete it.
     """
-    authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated, IsInvestor, IsSavedStartupOwner]
+    permission_classes = [IsAuthenticated, IsInvestor, IsSavedStartupOwner]
     serializer_class = SavedStartupSerializer
 
     def get_queryset(self):
@@ -90,7 +92,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
 
         startup_id = payload.get("startup")
         if startup_id and SavedStartup.objects.filter(
-            investor=user.investor, startup_id=startup_id
+                investor=user.investor, startup_id=startup_id
         ).exists():
             logger.warning(
                 "SavedStartup create failed: duplicate",
@@ -103,7 +105,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
         except ValidationError as e:
             if startup_id and SavedStartup.objects.filter(
-                investor=user.investor, startup_id=startup_id
+                    investor=user.investor, startup_id=startup_id
             ).exists():
                 logger.warning(
                     "SavedStartup create failed: duplicate",
