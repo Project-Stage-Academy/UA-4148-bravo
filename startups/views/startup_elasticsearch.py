@@ -11,11 +11,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from startups.documents import StartupDocument
 from startups.serializers.startup_elasticsearch import StartupDocumentSerializer
+from users.cookie_jwt import CookieJWTAuthentication
 
 logger = logging.getLogger(__name__)
 
 
 class StartupDocumentView(DocumentViewSet):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     document = StartupDocument
     serializer_class = StartupDocumentSerializer

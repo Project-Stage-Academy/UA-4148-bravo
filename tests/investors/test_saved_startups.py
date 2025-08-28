@@ -98,8 +98,8 @@ class SavedStartupAPITests(BaseInvestorTestCase):
         )
         self.client.force_authenticate(user=plain_user)
         res = self.client.post(self.list_url, {"startup": self.startup.id}, format="json")
-        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST, res.data)
-        self.assertIn("Only investors", str(res.data))
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+        self.assertIn("you do not have permission to perform this action.", str(res.data['detail']).lower())
 
     def test_auth_required_on_list(self):
         self.client.force_authenticate(user=None)

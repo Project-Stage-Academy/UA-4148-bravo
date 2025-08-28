@@ -20,7 +20,7 @@ User = get_user_model()
 class CompanyBindingViewTests(APITestCase):
     def setUp(self):
         """Set up test data"""
-        self.url = reverse('bind-company')
+        self.url = reverse('bind_company')
 
         self.user = UserFactory.create()
         self.user1 = UserFactory.create(email='user1@example.com')
@@ -55,62 +55,6 @@ class CompanyBindingViewTests(APITestCase):
         Investor.objects.all().delete()
         Industry.objects.all().delete()
         Location.objects.all().delete()
-
-    # def test_bind_to_new_startup_success(self):
-    #     """Test successful creation and binding to new startup"""
-    #     data = {
-    #         'company_name': 'New Startup',
-    #         'company_type': 'startup',
-    #         'industry': self.industry.pk,
-    #         'location': self.location.pk,
-    #         'founded_year': 2020,
-    #         'team_size': 5,
-    #         'stage': Stage.IDEA,
-    #         'email': 'bindstartup@gmail.com',
-    #         'description': 'Test startup description'
-    #     }
-    #
-    #     response = self.client.post(self.url, data, format='json')
-    #
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-    #     self.assertEqual(response.data['company_type'], 'startup')
-    #     self.assertEqual(response.data['company_name'], 'New Startup')
-    #
-    #     new_startup = Startup.objects.get(company_name='New Startup')
-    #     self.assertEqual(new_startup.user, self.user)
-    #     self.assertEqual(new_startup.email, f'{self.user.email}.startup')
-    #     self.assertEqual(new_startup.stage, Stage.IDEA)
-    #     self.assertEqual(new_startup.industry, self.industry)
-    #     self.assertEqual(new_startup.location, self.location)
-    #
-    # def test_bind_to_new_investor_success(self):
-    #     """Test successful creation and binding to new investor"""
-    #     data = {
-    #         'company_name': 'New Investor',
-    #         'company_type': 'investor',
-    #         'industry': self.industry.pk,
-    #         'location': self.location.pk,
-    #         'founded_year': 2020,
-    #         'team_size': 5,
-    #         'stage': Stage.MVP,
-    #         'fund_size': '100000.00',
-    #         'email': 'bindinvestor@gmail.com',
-    #         'description': 'Test investor description'
-    #     }
-    #
-    #     response = self.client.post(self.url, data, format='json')
-    #
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-    #     self.assertEqual(response.data['company_type'], 'investor')
-    #     self.assertEqual(response.data['company_name'], 'New Investor')
-    #
-    #     new_investor = Investor.objects.get(company_name='New Investor')
-    #     self.assertEqual(new_investor.user, self.user)
-    #     self.assertEqual(new_investor.email, f'{self.user.email}.investor')
-    #     self.assertEqual(new_investor.stage, Stage.MVP)
-    #     self.assertEqual(new_investor.fund_size, 100000.00)
-    #     self.assertEqual(new_investor.industry, self.industry)
-    #     self.assertEqual(new_investor.location, self.location)
 
     def test_bind_to_new_startup_success(self):
         """Test successful creation and binding to new startup"""

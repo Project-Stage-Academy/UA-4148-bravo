@@ -50,6 +50,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         - Password: {"email": "user@example.com", "password": "password123"}
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_classes = [AnonRateThrottle]
 
     def post(self, request, *args, **kwargs):
