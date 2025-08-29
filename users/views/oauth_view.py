@@ -50,6 +50,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         - OAuth: {"provider": "google|github", "access_token": "oauth_token"}
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_classes = [AnonRateThrottle]
 
     def post(self, request, *args, **kwargs):

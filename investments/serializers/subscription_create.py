@@ -30,21 +30,19 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         - Updates the project's current_funding field after saving the subscription.
     """
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
-    
-    project = serializers.PrimaryKeyRelatedField(
-        queryset=Project.objects.all(),
-        error_messages={
-            'does_not_exist': 'Project does not exist or is not available for investment.'
-        }
-    )
     class Meta:
         model = Subscription
         fields = ["id", "investor", "project", "amount"]
-        extra_kwargs = {"amount": {"required": True}}
+        read_only_fields = ["id", "investor", "project"]
 
     def validate(self, data):
-        project = data.get("project")
-        investor = data.get("investor")
+        project = self.context.get("project")
+        if not project:
+            raise serializers.ValidationError({"project": "Project is required."})
+        request = self.context.get("request")
+        if not request or not hasattr(request, "user") or not hasattr(request.user, "investor"):
+            raise serializers.ValidationError({"investor": "Authenticated investor required."})
+        investor = request.user.investor
         amount = data.get("amount")
 
         startup = getattr(project, 'startup', None)
@@ -71,7 +69,15 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        project = validated_data["project"]
+        project = self.context.get("project")
+        if not project:
+            raise serializers.ValidationError({"project": "Project is required."})
+
+        request = self.context.get("request")
+        if not request or not hasattr(request, "user") or not hasattr(request.user, "investor"):
+            raise serializers.ValidationError({"investor": "Authenticated investor required."})
+
+        investor = request.user.investor
         amount = validated_data["amount"]
 
         with transaction.atomic():
@@ -85,12 +91,13 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"amount": "Amount exceeds funding goal — exceeds the remaining funding."}
                 )
-
-            validated_data['investment_share'] = calculate_investment_share(
-                amount, project_locked.funding_goal
-            )
             
-            subscription = Subscription.objects.create(**validated_data)
+            subscription = Subscription.objects.create(
+                investor=investor,
+                project=project_locked,
+                amount=amount,
+                investment_share=calculate_investment_share(amount, project_locked.funding_goal),
+            )
             project_locked.current_funding = effective_current + amount
             project_locked.save(update_fields=["current_funding"])
 
