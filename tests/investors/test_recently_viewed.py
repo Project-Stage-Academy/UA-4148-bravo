@@ -63,7 +63,7 @@ class ViewedStartupTests(APITestCase):
 
     def test_create_viewed_startup(self):
         """Ensure posting to the viewed startup endpoint creates a ViewedStartup record."""
-        url = reverse('investors:viewed-startup-create', args=[str(self.startup1.id)])
+        url = reverse('viewed-startup-create', args=[str(self.startup1.id)])
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(ViewedStartup.objects.filter(investor=self.investor, startup=self.startup1).exists())
@@ -74,7 +74,7 @@ class ViewedStartupTests(APITestCase):
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup1)
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup2)
 
-        url = reverse('investors:viewed-startup-list')
+        url = reverse('viewed-startup-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.data['results']
@@ -87,7 +87,7 @@ class ViewedStartupTests(APITestCase):
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup1)
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup2)
 
-        url = reverse('investors:viewed-startup-clear')
+        url = reverse('viewed-startup-clear')
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(ViewedStartup.objects.filter(investor=self.investor).count(), 0)
@@ -97,7 +97,7 @@ class ViewedStartupTests(APITestCase):
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup1)
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup2)
 
-        url = reverse('investors:viewed-startup-list') + "?limit=1"
+        url = reverse('viewed-startup-list') + "?limit=1"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()['results']
@@ -108,6 +108,6 @@ class ViewedStartupTests(APITestCase):
         non_investor_user = User.objects.create_user(email="noninvestor@example.com", password="pass")
         self.client.force_authenticate(user=non_investor_user)
 
-        url = reverse('investors:viewed-startup-list')
+        url = reverse('viewed-startup-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
