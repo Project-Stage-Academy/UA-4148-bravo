@@ -10,11 +10,6 @@ from startups.serializers.startup_full import StartupSerializer
 from startups.serializers.startup_create import StartupCreateSerializer
 from startups.views.startup_base import BaseValidatedModelViewSet
 from users.permissions import IsStartupUser, CanCreateCompanyPermission
-from communications.models import (
-    UserNotificationPreference,
-    NotificationType,
-    UserNotificationTypePreference,
-)
 from communications.serializers import (
     UserNotificationPreferenceSerializer,
     UserNotificationTypePreferenceSerializer,

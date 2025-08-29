@@ -20,7 +20,13 @@ class BaseAPITestCase(TestDataMixin, DisableSignalMixin, APITestCase):
         factory = APIRequestFactory()
         request = factory.get('/')
         request.user = user
-        context = {'request': request, **extra_context}
+        project = extra_context.get('project', getattr(self, "project", None))
+        if not project:
+            class DummyProject:
+                id = None
+                name = "Default Project"
+            project = DummyProject()
+        context = {'request': request, 'project': project, **extra_context}
         return SubscriptionCreateSerializer(data=data, context=context)
 
     @classmethod

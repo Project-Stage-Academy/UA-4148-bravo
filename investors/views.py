@@ -1,16 +1,18 @@
 import logging
 from django.db import IntegrityError
+from django.shortcuts import get_object_or_404
 
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
-
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
 from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
-
 from users.permissions import IsInvestor, CanCreateCompanyPermission
+from startups.models import Startup
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +24,18 @@ class InvestorViewSet(viewsets.ModelViewSet):
     """
     queryset = Investor.objects.select_related("user", "industry", "location")
     serializer_class = InvestorSerializer
-    
+
+    permission_classes_by_action = {
+        "create": [IsAuthenticated, CanCreateCompanyPermission],
+        "default": [IsAuthenticated],
+    }
+
     def get_permissions(self):
         """
         Instantiates and returns the list of permissions that this view requires.
         """
-        if self.action == 'create':
-            return [permissions.IsAuthenticated(), CanCreateCompanyPermission()]
-        return [permissions.IsAuthenticated()]
+        perms = self.permission_classes_by_action.get(self.action, self.permission_classes_by_action["default"])
+        return [perm() for perm in perms]
 
     def get_serializer_class(self):
         """
@@ -39,12 +45,13 @@ class InvestorViewSet(viewsets.ModelViewSet):
             return InvestorCreateSerializer
         return InvestorSerializer
 
+
 class SavedStartupViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing SavedStartup instances.
     Only authenticated investors who own the SavedStartup can modify/delete it.
     """
-    permission_classes = [permissions.IsAuthenticated, IsInvestor, IsSavedStartupOwner]
+    permission_classes = [IsAuthenticated, IsInvestor, IsSavedStartupOwner]
     serializer_class = SavedStartupSerializer
 
     def get_queryset(self):
@@ -87,7 +94,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
 
         startup_id = payload.get("startup")
         if startup_id and SavedStartup.objects.filter(
-            investor=user.investor, startup_id=startup_id
+                investor=user.investor, startup_id=startup_id
         ).exists():
             logger.warning(
                 "SavedStartup create failed: duplicate",
@@ -100,7 +107,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
         except ValidationError as e:
             if startup_id and SavedStartup.objects.filter(
-                investor=user.investor, startup_id=startup_id
+                    investor=user.investor, startup_id=startup_id
             ).exists():
                 logger.warning(
                     "SavedStartup create failed: duplicate",
@@ -202,3 +209,28 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
             extra={"saved_id": instance.pk, "by_user": self.request.user.pk},
         )
         super().perform_destroy(instance)
+
+class SaveStartupView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, startup_id: int):
+        """
+        Allow an investor to save/follow a startup.
+        Returns 201 if newly created, 200 if already saved.
+        """
+        startup = get_object_or_404(Startup, pk=startup_id)
+
+        serializer = SavedStartupSerializer(
+            data={"startup": startup.id},
+            context={"request": request},
+        )
+        try:
+            serializer.is_valid(raise_exception=True)
+            obj = serializer.save()
+            return Response(SavedStartupSerializer(obj).data, status=status.HTTP_201_CREATED)
+        except Exception as exc:
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+            if isinstance(exc, DRFValidationError) and "Already saved." in str(exc.detail):
+                obj = SavedStartup.objects.get(investor=request.user.investor, startup=startup)
+                return Response(SavedStartupSerializer(obj).data, status=status.HTTP_200_OK)
+            raise

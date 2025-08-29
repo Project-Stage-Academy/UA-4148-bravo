@@ -14,11 +14,32 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='investor',
             name='company_name',
-            field=models.CharField(max_length=254, unique=True, validators=[validation.validate_names.validate_company_name, validation.validate_names.validate_latin]),
+            field=models.CharField(
+                max_length=254,
+                unique=True,
+                validators=[
+                    validation.validate_names.validate_company_name,
+                    validation.validate_names.validate_latin
+                ]
+            ),
         ),
         migrations.AlterField(
             model_name='investor',
             name='stage',
-            field=models.CharField(choices=[('idea', 'Idea'), ('mvp', 'MVP'), ('seed', 'Seed'), ('launch', 'Launch'), ('scale', 'Scale'), ('exit', 'Exit')], default='mvp', help_text='Current development stage of the investor', max_length=20, verbose_name='Stage'),
+            field=models.CharField(
+                choices=[
+                    ('idea', 'Idea'),
+                    ('mvp', 'MVP'),
+                    ('seed', 'Seed'),
+                    ('launch', 'Launch'),
+                    ('scale', 'Scale'),
+                    ('exit', 'Exit')
+                ],
+                default='mvp',
+                help_text='Current development stage of the investor',
+                max_length=20,
+                verbose_name='Stage'
+            ),
         ),
     ]
+

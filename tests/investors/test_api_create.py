@@ -3,7 +3,7 @@ from rest_framework import status
 from tests.test_base_case import BaseCompanyCreateAPITestCase
 from investors.models import Investor
 from startups.models import Industry, Location
-from users.models import User
+
 
 class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
     """
@@ -42,12 +42,12 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         """
         payload = self.get_valid_payload()
         self.assertEqual(Investor.objects.count(), 0)
-        
+
         response = self.client.post(self.url, payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Investor.objects.count(), 1)
-        
+
         investor = Investor.objects.first()
         self.assertEqual(investor.company_name, payload["company_name"])
         self.assertEqual(investor.user, self.user_for_creation)

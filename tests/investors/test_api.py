@@ -1,6 +1,5 @@
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from rest_framework import status
-from unittest.mock import patch
 from common.enums import Stage
 from investors.models import Investor
 from tests.test_base_case import BaseAPITestCase

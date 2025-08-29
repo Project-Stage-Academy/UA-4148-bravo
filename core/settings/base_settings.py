@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'corsheaders',
+    'common',
+    'search',
 
     # API schema / docs
     'drf_spectacular',
@@ -77,7 +79,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware'
 ]
 
 ROOT_URLCONF = 'core.urls'

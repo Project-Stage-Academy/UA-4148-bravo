@@ -6,20 +6,29 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import (
     ValidationError as DjangoValidationError,
 )
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator
 # Third-party imports
 from djoser.email import PasswordResetEmail
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 
 # Local application imports
+from core.settings import base_settings
 from users.models import User
 from users.serializers.password_reset_serializers import (
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
 )
 from utils.error_response import error_response
+from django.conf import settings
+from urllib.parse import urljoin
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +56,8 @@ class CustomPasswordResetView(APIView):
     Returns:
         Response: DRF Response with success message or error details.
     """
+    permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = PasswordResetSerializer
 
     def post(self, request, *args, **kwargs):
@@ -57,7 +68,7 @@ class CustomPasswordResetView(APIView):
             request (Request): HTTP request with 'email' in data.
 
         Returns:
-            Response:
+            Response: 
                 - 200 OK with success detail if email sent.
                 - 400 Bad Request if email is missing.
                 - 404 Not Found if user with email doesn't exist.
@@ -73,12 +84,31 @@ class CustomPasswordResetView(APIView):
         except User.DoesNotExist:
             return error_response({"email": "User with this email was not found."}, status.HTTP_404_NOT_FOUND)
 
-        context = {"user": user}
-        to = [getattr(user, User.EMAIL_FIELD)]
-        PasswordResetEmail(request=request._request, context=context).send(to)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_relative_url = base_settings.FRONTEND_ROUTES["reset_password"].format(
+            uid=uid,
+            token=token,
+        )
+        reset_url = urljoin(settings.FRONTEND_URL, reset_relative_url)
 
-        return Response({"detail": "Password reset instructions have been sent to the provided email."},
-                        status=status.HTTP_200_OK)
+        subject = "Reset your password"
+        context = {
+            "user": user,
+            "reset_url": reset_url,
+        }
+        html_message = render_to_string("email/password_reset.html", context)
+        plain_message = f"Use this link to reset your password: {reset_url}"
+
+        send_mail(
+            subject,
+            plain_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            html_message=html_message,
+        )
+
+        return Response({"detail": "Password reset instructions have been sent to the provided email."}, status=status.HTTP_200_OK)
 
 
 @extend_schema(
@@ -105,6 +135,8 @@ class CustomPasswordResetConfirmView(APIView):
             - 200 OK if password changed successfully.
             - 400 Bad Request for missing fields, invalid token, invalid UID, or invalid password.
     """
+    permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = PasswordResetConfirmSerializer
 
     def post(self, request, *args, **kwargs):
