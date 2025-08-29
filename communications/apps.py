@@ -1,9 +1,10 @@
 from django.apps import AppConfig
 
-
 class CommunicationsConfig(AppConfig):
-    name = 'communications'
-    verbose_name = 'Communications'
-    
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "communications"
+    verbose_name = "Communications"
+
     def ready(self):
-        from . import signals
+        # важливо: імпорт реєструє ресівери сигналів
+        from . import signals  # noqa: F401
