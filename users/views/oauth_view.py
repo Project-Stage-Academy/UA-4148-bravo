@@ -21,6 +21,7 @@ from users.serializers.token_serializer import CustomTokenObtainPairSerializer
 from users.serializers.user_serializers import UserSerializer
 from users.tasks import send_welcome_oauth_email_task
 from utils.get_default_user_role import get_default_user_role
+from utils.cookies import set_auth_cookies
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +109,13 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         Authenticate user using social-auth-app-django backend.
         Raises ValueError if token is invalid or expired.
         """
+        PROVIDER_BACKEND_MAP = {
+            "google": "google-oauth2",
+            "github": "github",
+        }
+        provider_name = PROVIDER_BACKEND_MAP.get(provider)
         strategy = load_strategy()
-        backend = load_backend(strategy=strategy, name=provider, redirect_uri=None)
+        backend = load_backend(strategy=strategy, name=provider_name, redirect_uri=None)
 
         try:
             user = backend.do_auth(access_token)
@@ -199,18 +205,9 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
 
         refresh = RefreshToken.for_user(user)
         refresh_token = str(refresh)
+        access = str(refresh.access_token)
         response = Response({
-            "access": str(refresh.access_token),
             "user": UserSerializer(user).data
         })
-
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="Lax",
-            max_age=60 * 60 * 24 * 7,
-        )
-
+        set_auth_cookies(response, access, refresh_token)
         return response
