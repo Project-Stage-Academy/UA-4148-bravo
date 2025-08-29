@@ -18,9 +18,9 @@ class IsInvestor(permissions.BasePermission):
         """
         if not request.user or not request.user.is_authenticated:
             return False
-        
+
         is_investor = Investor.objects.filter(user=request.user).exists()
-        
+
         if is_investor:
             logger.debug(
                 "Permission granted for user %s as investor for view %s.",
@@ -76,6 +76,7 @@ class IsStartupUser(permissions.BasePermission):
 
         logger.warning(f"Object-level permission denied for user {request.user.id} on object {obj.pk}.")
         return False
+
 
 class CanCreateCompanyPermission(permissions.BasePermission):
     """

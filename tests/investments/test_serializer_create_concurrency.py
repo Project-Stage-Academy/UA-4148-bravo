@@ -82,13 +82,19 @@ class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
         )
 
     def get_subscription_data(self, investor, project, amount):
+        """
+        Return subscription data for the serializer.
+        Only 'amount' is passed in data; project and investor are provided via context.
+        """
         return {
-            "investor": investor.pk,
-            "project": project.pk,
             "amount": amount
         }
 
     def test_concurrent_subscriptions(self):
+        """
+        Test that concurrent subscription attempts do not exceed the project's funding goal.
+        One of the subscriptions should fail with a "funding goal exceeded" error.
+        """
         amount1 = Decimal("600.00")
         amount2 = Decimal("500.00")
 
@@ -98,14 +104,19 @@ class SubscriptionSerializerConcurrencyTests(TransactionTestCase):
             close_old_connections()
             time.sleep(delay)
             data = self.get_subscription_data(investor, self.project1, amount)
-            serializer = SubscriptionCreateSerializer(data=data)
+            class DummyRequest:
+                def __init__(self, user):
+                    self.user = user
+    
+            serializer = SubscriptionCreateSerializer(
+                data=data,
+                context={'request': DummyRequest(investor.user), 'project': self.project1}
+            )
+    
             try:
+                serializer.is_valid(raise_exception=True)
                 with transaction.atomic():
-                    from projects.models import Project
-                    Project.objects.select_for_update().get(pk=self.project1.pk)
-
-                    if serializer.is_valid(raise_exception=True):
-                        serializer.save()
+                    serializer.save() 
             except serializers.ValidationError as e:
                 errors.append(e.detail)
 

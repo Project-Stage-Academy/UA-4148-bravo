@@ -1,9 +1,9 @@
 from rest_framework.generics import CreateAPIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 import logging
 
+from rest_framework.permissions import IsAuthenticated
 from .models import Subscription
 from projects.models import Project
 from investments.serializers.subscription_create import SubscriptionCreateSerializer
@@ -24,19 +24,28 @@ class SubscriptionCreateView(CreateAPIView):
     permission_classes = [IsAuthenticated, IsInvestor]
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        project_id = self.kwargs["project_id"]
+        try:
+            self.project = Project.objects.get(pk=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {"project": "Project does not exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = self.get_serializer(data=request.data, context={"request": request, "project": self.project})
         serializer.is_valid(raise_exception=True)
         try:
             self.perform_create(serializer)
             subscription = serializer.instance
 
-            project = Project.objects.select_related('startup', 'category').get(pk=subscription.project_id)
-            remaining_funding = project.funding_goal - project.current_funding
+            self.project.current_funding += subscription.amount
+            self.project.save()
+            remaining_funding = self.project.funding_goal - self.project.current_funding
             project_status = "Fully funded" if remaining_funding <= 0 else "Partially funded"
 
             logger.info(
                 "Subscription created successfully for project %s by user %s",
-                project.id,
+                self.project.id,
                 request.user.id,
             )
 
@@ -54,3 +63,16 @@ class SubscriptionCreateView(CreateAPIView):
                 {"detail": "Failed to create subscription. Please try again."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        
+    def perform_create(self, serializer):
+        """
+        Persist a new subscription instance.
+
+        - Retrieves the target project using the `project_id` from the URL.
+        - Associates the subscription with the authenticated investor (`request.user.investor`).
+        - Saves the subscription via the serializer.
+        """
+        serializer.save(
+            investor=self.request.user.investor,
+            project=getattr(self, 'project', None)
+        )

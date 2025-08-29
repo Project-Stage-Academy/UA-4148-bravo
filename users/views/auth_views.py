@@ -6,7 +6,6 @@ from urllib.parse import urljoin
 # Django imports
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -40,6 +39,7 @@ class UserRegistrationView(APIView):
     Handle user registration with email verification.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     serializer_class = CustomUserCreateSerializer
 
     def _generate_verification_token(self):
