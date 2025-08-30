@@ -2,6 +2,7 @@ import "./panel.css";
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import { Link } from 'react-router-dom';
+import React from 'react';
 
 /**
  * Panel component to wrap content with a styled container.
@@ -87,13 +88,13 @@ PanelBodyTitle.propTypes = {
  * @param className - Additional style settings
  * @returns {JSX.Element}
  */
-function PanelBodyBottomLink({ linkText, to, className }) {
+const PanelBodyBottomLink = React.memo(function PanelBodyBottomLink({ linkText, to, className }) {
     return (
         <Link to={to} className={clsx('text-underline', 'text-bold', 'content__link-container', className)}>
             { linkText }
         </Link>
     );
-}
+});
 
 PanelBodyBottomLink.propTypes = {
     linkText: PropTypes.string.isRequired,

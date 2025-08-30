@@ -11,7 +11,7 @@ import HiddenInput from '../../components/HiddenInput/hiddenInput';
 import Button from '../../components/Button/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { Validator } from '../../utils/validation/validate';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import bruteForce from "../../utils/bruteForce/bruteForce";
 
@@ -25,9 +25,6 @@ function LogInPage() {
     // Simple brute force protection
     const [attempts, setAttempts] = useState(0);
     const [isLocked, setIsLocked] = useState(false);
-
-    // Visualisation of valid data
-    const [valid, isValid] = useState(false);
 
     // Hook to navigate programmatically
     const navigate = useNavigate();
@@ -43,9 +40,18 @@ function LogInPage() {
     // State to hold validation errors
     const [errors, setErrors] = useState({});
 
+    // Visualisation of valid data
+    const isDisabled = useMemo(() => {
+        return Object.entries(formData).some(
+            ([key, value]) => key !== "unexpected" && !value.trim()
+        ) || Object.keys(errors).some(
+            (key) => key !== "unexpected" && errors[key]
+        );
+    }, [formData, errors]);
+
     // Function to handle server-side errors
     const handleError = (error) => {
-        if (error?.response && error?.status === 401) {
+        if (error?.response && error?.response?.status === 404) {
             setErrors(prev => ({
                 ...prev,
                 unexpected: Validator.serverSideErrorMessages.noUserFoundByProvidedData
@@ -67,9 +73,7 @@ function LogInPage() {
         );
         setErrors(validationErrors);
 
-        isValid(Object.values(validationErrors).every(value => value === null));
-
-        if (valid) {
+        if (Object.values(validationErrors).every(value => value === null)) {
             login(formData.email, formData.password)
                 .then(() => navigate('/'))
                 .catch((error) => bruteForce(error, {
@@ -85,14 +89,7 @@ function LogInPage() {
 
     // Function to handle input changes
     const handleChange = (e) => {
-        const res = Validator.handleChange(
-            e,
-            formData,
-            setFormData,
-            setErrors
-        );
-        isValid(res);
-        return res;
+        Validator.handleChange(e, formData, setFormData, setErrors);
     };
 
     return (
@@ -189,7 +186,7 @@ function LogInPage() {
                 <PanelNavigation>
                     <Button
                         onClick={handleSubmit}
-                        disabled={(!valid) || isLocked}
+                        disabled={isDisabled || isLocked}
                         className={'button__padding panel--button'}
                         type="submit"
                     >

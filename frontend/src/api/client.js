@@ -1,26 +1,6 @@
 import axios from "axios";
 import Cookies from "js-cookie";
-import { CSRF_COOKIE_NAME } from './csrfService';
-
-/**
- * Access token is used to keep user session active
- * @type {string|null}
- */
-let accessToken = null;
-
-/**
- * Setter for access token
- * @param {string|null} value
- */
-export const setAccessToken = (value) => {
-    accessToken = value;
-}
-
-/**
- * Getter for access token
- * @returns {string|null}
- */
-export const getAccessToken = () => accessToken
+import { CSRF_COOKIE_NAME, fetchCsrfToken } from './csrfService';
 
 /**
  * Creates an isolated API instance with support for single-flight refresh
@@ -40,7 +20,7 @@ function createApiClient() {
     const refreshAccess = async () => {
         try {
             const res = await axios.post(
-                `${process.env.REACT_APP_API_URL}/auth/jwt/refresh/`
+                `${process.env.REACT_APP_API_URL}/api/v1/auth/jwt/refresh/`
             );
 
             if (res.data && typeof res.data.access === "string" && res.data.access.trim() !== "") {
@@ -61,14 +41,52 @@ function createApiClient() {
         withCredentials: true
     });
 
-    // Request interceptor
-    instance.interceptors.request.use((cfg) => {
-        if (accessToken) cfg.headers.Authorization = `Bearer ${accessToken}`;
-        return cfg;
-    });
-
-    // Response interceptor
+    // 401 handler (access token refresh)
     instance.interceptors.response.use(
+        r => r,
+        async (err) => {
+            const original = err.config;
+
+            if (err.response?.status === 401 && !original._retryAuth) {
+                original._retryAuth = true;
+                console.error("[refreshAccess] Refreshing access token", err);
+                refreshing ??= refreshAccess().finally(() => (refreshing = null));
+
+                const newAccess = await refreshing;
+
+                if (newAccess) {
+                    return instance(original);
+                }
+            }
+
+            return Promise.reject(err);
+        }
+    );
+
+    // 403 handler (CSRF refresh)
+    instance.interceptors.response.use(
+        r => r,
+        async (err) => {
+            const original = err.config;
+
+            if (err.response?.status === 403 && !original._retryCsrf) {
+                original._retryCsrf = true;
+                console.error("[refreshAccess] Refreshing CSRF", err);
+                refreshing ??= fetchCsrfToken().finally(() => (refreshing = null));
+
+                const newCsrf = await refreshing;
+
+                if (newCsrf) {
+                    return instance(original);
+                }
+            }
+
+            return Promise.reject(err);
+        }
+    );
+
+    // CSRF set header if needed
+    instance.interceptors.request.use(
         (config) => {
             const method = config.method?.toUpperCase();
             if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
@@ -77,27 +95,9 @@ function createApiClient() {
                     config.headers["X-CSRFToken"] = csrfToken;
                 }
             }
-
-            config.withCredentials = true;
             return config;
         },
-        async (err) => {
-            const original = err.config;
-
-            if (err.response?.status === 401 && !original._retry) {
-                original._retry = true;
-                refreshing ??= refreshAccess().finally(() => (refreshing = null));
-
-                const newAccess = await refreshing;
-
-                if (newAccess) {
-                    setAccessToken(newAccess);
-                    return instance(original);
-                }
-            }
-
-            return Promise.reject(err);
-        }
+        error => Promise.reject(error)
     );
 
     return instance;

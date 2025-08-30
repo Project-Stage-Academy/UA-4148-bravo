@@ -11,8 +11,8 @@ export const CSRF_REFRESH_THRESHOLD_MINUTES = 5;
  */
 function needsCsrfRefresh() {
     const token = Cookies.get(CSRF_COOKIE_NAME);
-    if (!token) return true; // there is no token at all
-    return false; // no need to refresh
+    if (!token) return true; // token is expired
+    return false; // token is fine
 }
 
 /**
@@ -20,10 +20,12 @@ function needsCsrfRefresh() {
  * URL: /api/v1/csrf
  * Req: {  }
  * Res: 200 { csrfToken }
+ * @returns {Promise<string>} csrfToken
  */
 export async function fetchCsrfToken() {
     try {
-        await api.get("/api/v1/auth/csrf");
+        const { data } = await api.get("/api/v1/auth/csrf");
+        return data?.csrfToken;
     } catch (err) {
         console.error("Error when requesting a CSRF token:", err);
     }
