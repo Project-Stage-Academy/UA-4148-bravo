@@ -99,6 +99,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          
+      - name: Run Security Scan (Bandit)
+        run: |
+          pip install bandit
+          bandit -r ./chat -f html -o bandit_report.html || true
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit_report.html
 
       - name: Wait for Elasticsearch
         run: |
