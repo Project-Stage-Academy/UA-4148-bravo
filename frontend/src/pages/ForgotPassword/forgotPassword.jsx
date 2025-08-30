@@ -1,12 +1,12 @@
 import './forgotPassword.css';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import Button from '../../components/Button/button';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import TextInput from '../../components/TextInput/textInput';
 import { Validator } from '../../utils/validation/validate';
-import { useState } from 'react';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import bruteForce from '../../utils/bruteForce/bruteForce';
+import { useFormWithProtection } from '../../hooks/useFormWithProtection/useFormWithProtection';
 
 /**
  * ForgotPassword component
@@ -15,29 +15,22 @@ import bruteForce from '../../utils/bruteForce/bruteForce';
 function ForgotPassword() {
     const { requestReset } = useAuthContext();
 
-    // Simple brute force protection
-    const [attempts, setAttempts] = useState(0);
-    const [isLocked, setIsLocked] = useState(false);
+    // Form with protection hook
+    const {
+        formData, setFormData,
+        errors, setErrors,
+        attempts, setAttempts,
+        isLocked, setIsLocked,
+        isDisabled, navigate,
+    } = useFormWithProtection({
+        email: "",
+        unexpected: "",
+    });
 
-    // Visualisation of valid data
-    const [valid, isValid] = useState(false);
-
-    // Hook to navigate programmatically
-    const navigate = useNavigate();
-
-    // State to hold form data
-    const [formData, setFormData] = useState(
-        {
-            email: "",
-            unexpected: ""
-        });
-
+    // Override message for email error
     const errorValidationMessage = {
         email: 'Введіть адресу електронної пошти у форматі name@example.com'
     };
-
-    // State to hold validation errors
-    const [errors, setErrors] = useState({});
 
     // Function to handle server-side errors
     const handleError = (error) => {
@@ -57,15 +50,14 @@ function ForgotPassword() {
     // Function to handle form submission
     const handleSubmit = () => {
         if (isLocked) return;
+        setIsLocked(true);
 
         const validationErrors = Validator.validate(
             formData
         );
         setErrors(validationErrors);
 
-        isValid(Object.values(validationErrors).every(value => value === null));
-
-        if (valid) {
+        if (Object.values(validationErrors).every(value => value === null)) {
             requestReset(formData.email)
                 .then(() => navigate('/auth/forgot/done'))
                 .catch((error) => bruteForce(error, {
@@ -77,20 +69,14 @@ function ForgotPassword() {
         } else {
             console.log("Errors:", validationErrors);
         }
+        setIsLocked(false);
     }
 
     // Function to handle input changes
     const handleChange = (e) => {
-        const res = Validator.handleChange(
-            e,
-            formData,
-            setFormData,
-            setErrors,
-            Validator.errorZeroLengthMessages,
-            errorValidationMessage,
+        Validator.handleChange(e, formData, setFormData, setErrors,
+            Validator.errorZeroLengthMessages, errorValidationMessage,
         );
-        isValid(res);
-        return res;
     };
 
     return (
@@ -163,7 +149,7 @@ function ForgotPassword() {
                     <Button
                         onClick={handleSubmit}
                         className={'button__padding panel--button'}
-                        disabled={!valid||isLocked}
+                        disabled={isDisabled || isLocked}
                         type="submit"
                     >
                         Відновити пароль
