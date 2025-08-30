@@ -37,13 +37,13 @@ Authorization: Bearer <your_access_token>
 
 - `POST /api/v1/auth/jwt/create/`
   Authenticates a user and issues JWT tokens.
-  - Sets both access_token and refresh_token in secure HttpOnly cookies.
-  - Returns only minimal user info in response body (no tokens).
+    - Sets both access_token and refresh_token in secure HttpOnly cookies.
+    - Returns only minimal user info in response body (no tokens).
 
 ### Request Example
 
 - POST /api/v1/auth/jwt/create/
-    Headers:
+  Headers:
     - Content-Type: application/json
     - X-CSRFToken: <csrf_token>
 
@@ -63,6 +63,7 @@ Authorization: Bearer <your_access_token>
   "user_id": 42
 }
 ```
+
 The access_token and refresh_token are stored in HttpOnly cookies and are not returned in the response body.
 
 #### 3. JWT Refresh
@@ -74,8 +75,8 @@ The access_token and refresh_token are stored in HttpOnly cookies and are not re
 ### Request Example
 
 - POST /api/v1/auth/jwt/refresh/
-    Headers:    
-    - Content-Type: application/json    
+  Headers:
+    - Content-Type: application/json
     - X-CSRFToken: <csrf_token>
 
 ### Example Response
@@ -85,6 +86,7 @@ The access_token and refresh_token are stored in HttpOnly cookies and are not re
   "detail": "Token refreshed"
 }
 ```
+
 The new access token is available only in the HttpOnly cookie.
 
 #### 4. JWT Logout
@@ -95,7 +97,7 @@ The new access token is available only in the HttpOnly cookie.
 ### Request Example
 
 - POST /api/v1/auth/logout/
-    Headers:
+  Headers:
     - Content-Type: application/json
     - X-CSRFToken: <csrf_token>
 
@@ -313,7 +315,7 @@ JWT tokens and returns user information.
 
 **Status codes:**
 
-|    Status Code    |                 Description                  |
+| Status Code       | Description                                  |
 |-------------------|----------------------------------------------|
 | `400 Bad Request` | Invalid request parameters or malformed data |
 | `403 Forbidden`   | Authenticated but insufficient permissions   |
@@ -459,5 +461,177 @@ registration. Users can either bind to an existing company or create a new one.
   "message": "Successfully bound to existing startup: Tech Innovations Inc.",
   "company_type": "startup",
   "company_id": 1
+}
+```
+
+## Chat API
+
+### Endpoints
+
+#### 1. Create Private Conversation (Room)
+
+- `POST /api/v1/chat/conversations/`
+  Creates a private Room between exactly 2 participants: one Investor and one Startup.
+
+### Request Example
+
+- POST /api/v1/chat/conversations/
+  Headers:    
+  Content-Type: application/json        
+  Cookie: access_token=<JWT_TOKEN>
+
+```json
+{
+  "name": "investor_startup_chat",
+  "participants": [
+    "investor@example.com",
+    "startup@example.com"
+  ]
+}
+```
+
+### Example Response
+
+```json
+{
+  "name": "investor_startup_chat",
+  "participants": [
+    "investor@example.com",
+    "startup@example.com"
+  ],
+  "created_at": "2025-08-30T09:00:00Z",
+  "updated_at": "2025-08-30T09:00:00Z"
+}
+```
+
+### Error Responses
+
+- 400 Bad Request
+
+```json
+{
+  "error": "Private room must have exactly 2 participants."
+}
+```
+
+- 401 Unauthorized
+
+```json
+{
+  "detail": "Authentication credentials were not provided."
+}
+```
+
+#### 2. Send Message in a Conversation
+
+- `POST /api/v1/chat/messages/`
+  Sends a message inside a private Room.
+  Automatically creates the Room if it does not exist.
+
+### Request Example
+
+- POST /api/v1/chat/messages/
+  Headers:    
+  Content-Type: application/json    
+  Cookie: access_token=<JWT_TOKEN>
+
+```json
+{
+  "room": "investor_startup_chat",
+  "sender_email": "investor@example.com",
+  "receiver_email": "startup@example.com",
+  "text": "Hello!"
+}
+```
+
+### Example Response
+
+```json
+{
+  "room": "investor_startup_chat",
+  "sender_email": "investor@example.com",
+  "receiver_email": "startup@example.com",
+  "text": "Hello!",
+  "timestamp": "2025-08-30T09:00:00Z",
+  "is_read": false
+}
+```
+
+### Error Responses
+
+400 Bad Request – invalid data or room creation failed
+
+```json
+{
+  "error": "Private room must have exactly 2 participants."
+}
+```
+
+403 Forbidden – sender is not a participant of the room
+
+```json
+{
+  "error": "You are not a participant of this room."
+}
+```
+
+500 Internal Server Error – unexpected save error
+
+```json
+{
+  "error": "Failed to save message: <error details>"
+}
+```
+
+#### 3. List Messages in a Conversation
+
+- `GET /api/v1/chat/conversations/{room_name}/messages/`
+  Retrieves all messages from a specific Room.
+  Only participants of the Room can access messages.
+
+### Request Example
+
+- GET /api/v1/chat/conversations/investor_startup_chat/messages/
+  Headers:    
+  Cookie: access_token=<JWT_TOKEN>
+
+### Example Response
+
+```json
+[
+  {
+    "room": "investor_startup_chat",
+    "sender_email": "investor@example.com",
+    "receiver_email": "startup@example.com",
+    "text": "Hello!",
+    "timestamp": "2025-08-30T09:00:00Z",
+    "is_read": false
+  },
+  {
+    "room": "investor_startup_chat",
+    "sender_email": "startup@example.com",
+    "receiver_email": "investor@example.com",
+    "text": "Hi there!",
+    "timestamp": "2025-08-30T09:01:00Z",
+    "is_read": false
+  }
+]
+```
+
+### Error Responses
+
+- 401 Unauthorized
+
+```json
+{
+  "detail": "Authentication credentials were not provided."
+}
+```
+
+- 404 Not Found – room does not exist or user not participant
+
+```json
+{
+  "detail": "Room 'investor_startup_chat' does not exist."
 }
 ```
