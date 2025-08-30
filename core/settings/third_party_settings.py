@@ -68,6 +68,10 @@ REST_FRAMEWORK: dict[str, Any] = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "users.cookie_jwt.CookieJWTAuthentication",
     ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "users.permissions.IsAuthenticatedOr401",
+    ),
+    "UNAUTHENTICATED_USER": None,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.UserRateThrottle",
         "rest_framework.throttling.AnonRateThrottle",

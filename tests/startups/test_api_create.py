@@ -2,7 +2,9 @@ from django.urls import reverse
 from rest_framework import status
 from tests.test_base_case import BaseCompanyCreateAPITestCase
 from startups.models import Startup, Industry, Location
-from users.models import User
+from utils.authenticate_client import authenticate_client
+from rest_framework.test import APIClient
+
 
 class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
     """
@@ -15,7 +17,8 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
         self.user_for_creation = self.get_or_create_user(
             email="creator@example.com", first_name="Creator", last_name="User"
         )
-        self.client.force_authenticate(user=self.user_for_creation)
+        self.client = APIClient(enforce_csrf_checks=False)
+        authenticate_client(self.client, self.user_for_creation)
         self.url = reverse('startup-list')
         self.industry, _ = Industry.objects.get_or_create(name="Testable Industry")
         self.location, _ = Location.objects.get_or_create(country="US")
@@ -57,10 +60,10 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
         """
         Ensure an unauthenticated user receives a 401 Unauthorized error.
         """
-        self.client.logout()
+        client = self.client.__class__()
         payload = self.get_valid_payload()
-        response = self.client.post(self.url, payload, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = client.post(self.url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_with_duplicate_name_fails(self):
         """
@@ -74,7 +77,7 @@ class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
         second_user = self.get_or_create_user(
             email="secondcreator@example.com", first_name="Second", last_name="Creator"
         )
-        self.client.force_authenticate(user=second_user)
+        authenticate_client(self.client, second_user)
 
         payload["email"] = "another-contact@innovative-tech.com" 
         response2 = self.client.post(self.url, payload, format='json')

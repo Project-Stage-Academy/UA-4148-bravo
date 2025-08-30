@@ -5,14 +5,15 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
 from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
-from users.permissions import IsInvestor, CanCreateCompanyPermission
+from users.cookie_jwt import CookieJWTAuthentication
+from users.permissions import IsInvestor, CanCreateCompanyPermission, IsAuthenticatedOr401
 from startups.models import Startup
+from users.views.base_protected_view import CookieJWTProtectedView
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +25,10 @@ class InvestorViewSet(viewsets.ModelViewSet):
     """
     queryset = Investor.objects.select_related("user", "industry", "location")
     serializer_class = InvestorSerializer
-
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes_by_action = {
-        "create": [IsAuthenticated, CanCreateCompanyPermission],
-        "default": [IsAuthenticated],
+        "create": [IsAuthenticatedOr401, CanCreateCompanyPermission],
+        "default": [IsAuthenticatedOr401],
     }
 
     def get_permissions(self):
@@ -51,7 +52,8 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
     ViewSet for managing SavedStartup instances.
     Only authenticated investors who own the SavedStartup can modify/delete it.
     """
-    permission_classes = [IsAuthenticated, IsInvestor, IsSavedStartupOwner]
+    permission_classes = [IsAuthenticatedOr401, IsInvestor, IsSavedStartupOwner]
+    authentication_classes = [CookieJWTAuthentication]
     serializer_class = SavedStartupSerializer
 
     def get_queryset(self):
@@ -210,8 +212,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
         )
         super().perform_destroy(instance)
 
-class SaveStartupView(APIView):
-    permission_classes = [IsAuthenticated]
+class SaveStartupView(CookieJWTProtectedView):
 
     def post(self, request, startup_id: int):
         """
