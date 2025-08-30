@@ -115,10 +115,11 @@ class TestSubscriptionCreateAPI(TestCase):
         self.assertEqual(Subscription.objects.count(), 0)
 
     def test_unauthenticated_user_cannot_subscribe(self):
-        """Test that an unauthenticated user cannot invest."""
+        """Ensure unauthenticated user cannot subscribe -> 401."""
+        client = APIClient()
         url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
         payload = {"amount": 200}
-        response = self.client.post(url, payload, format="json")
+        response = client.post(url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Subscription.objects.count(), 0)

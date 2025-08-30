@@ -13,6 +13,7 @@ from tests.factories import (
 from users.models import User
 from startups.models import Startup, Industry, Location, Stage
 from investors.models import Investor
+from rest_framework_simplejwt.tokens import AccessToken
 
 User = get_user_model()
 
@@ -63,6 +64,9 @@ class CompanyBindingViewTests(APITestCase):
             'company_type': 'startup'
         }
 
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         response = self.client.post(self.url, data, format='json')
         print("Startup response:", response.data)
 
@@ -85,8 +89,11 @@ class CompanyBindingViewTests(APITestCase):
             'company_type': 'investor'
         }
 
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         response = self.client.post(self.url, data, format='json')
-        print("Investor response:", response.data)  # Debug
+        print("Investor response:", response.data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['company_type'], 'investor')
@@ -98,19 +105,20 @@ class CompanyBindingViewTests(APITestCase):
         self.assertEqual(new_investor.email, self.user.email)
         self.assertEqual(new_investor.stage, Stage.MVP)
         self.assertEqual(new_investor.fund_size, 0)
-
         self.assertEqual(new_investor.industry.name, "Unknown")
         self.assertEqual(new_investor.location.city, "Unknown")
 
     def test_bind_to_existing_company_with_different_user(self):
         """Test binding to existing company that has a different user"""
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         data = {
             'company_name': 'Existing Startup',
             'company_type': 'startup'
         }
 
         response = self.client.post(self.url, data, format='json')
-
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
         self.assertIn('company_name', response.data['error'])
@@ -128,6 +136,9 @@ class CompanyBindingViewTests(APITestCase):
             team_size=5,
             stage=Stage.IDEA
         )
+
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
 
         data = {
             'company_name': 'Another Company',
@@ -153,6 +164,9 @@ class CompanyBindingViewTests(APITestCase):
             fund_size=500000
         )
 
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         data = {
             'company_name': 'Another Company',
             'company_type': 'investor'
@@ -170,6 +184,9 @@ class CompanyBindingViewTests(APITestCase):
             'company_type': 'invalid_type'
         }
 
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         response = self.client.post(self.url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -180,6 +197,9 @@ class CompanyBindingViewTests(APITestCase):
         data = {
             'company_type': 'startup'
         }
+
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
 
         response = self.client.post(self.url, data, format='json')
 
@@ -209,6 +229,9 @@ class CompanyBindingViewTests(APITestCase):
             'company_type': 'startup'
         }
 
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         response = self.client.post(self.url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -224,6 +247,9 @@ class CompanyBindingViewTests(APITestCase):
             'company_type': 'investor'
         }
 
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         response = self.client.post(self.url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -238,6 +264,9 @@ class CompanyBindingViewTests(APITestCase):
             'company_name': 'New Test Company',
             'company_type': 'startup'
         }
+
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
 
         response = self.client.post(self.url, data, format='json')
 
@@ -272,6 +301,9 @@ class CompanyBindingViewTests(APITestCase):
                 'company_type': 'startup'
             }
 
+            token = str(AccessToken.for_user(self.user))
+            self.client.cookies['access_token'] = token
+
             response = self.client.post(self.url, data, format='json')
 
             self.assertEqual(Startup.objects.count(), original_startup_count)
@@ -283,6 +315,10 @@ class CompanyBindingViewTests(APITestCase):
             'company_name': 'Unique Company',
             'company_type': 'startup'
         }
+
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         response1 = self.client.post(self.url, data1, format='json')
         self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
 
@@ -292,7 +328,9 @@ class CompanyBindingViewTests(APITestCase):
             first_name='Another',
             last_name='User'
         )
-        self.client.force_authenticate(user=another_user)
+
+        token2 = str(AccessToken.for_user(another_user))
+        self.client.cookies['access_token'] = token2
 
         data2 = {
             'company_name': 'Unique Company',
@@ -311,6 +349,9 @@ class CompanyBindingViewTests(APITestCase):
 
     def test_email_uniqueness_enforcement(self):
         """Test that email uniqueness is enforced separately"""
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         data1 = {
             'company_name': 'First Company',
             'company_type': 'startup'
@@ -324,7 +365,9 @@ class CompanyBindingViewTests(APITestCase):
             first_name='Another',
             last_name='User'
         )
-        self.client.force_authenticate(user=another_user)
+
+        token2 = str(AccessToken.for_user(another_user))
+        self.client.cookies['access_token'] = token2
 
         data2 = {
             'company_name': 'Second Company',
@@ -348,6 +391,9 @@ class CompanyBindingViewTests(APITestCase):
             stage=Stage.IDEA
         )
 
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         data = {
             'company_name': 'test company',
             'company_type': 'startup'
@@ -358,6 +404,9 @@ class CompanyBindingViewTests(APITestCase):
 
     def test_user_cannot_have_both_startup_and_investor(self):
         """Test that user cannot be bound to both startup and investor"""
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
         data1 = {
             'company_name': 'TechNova',
             'company_type': 'startup'

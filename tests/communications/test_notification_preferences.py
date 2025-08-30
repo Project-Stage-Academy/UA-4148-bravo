@@ -165,28 +165,19 @@ class NotificationPreferencesTestCase(APITestCase):
 
         list_url = reverse('communications:user-notification-preference-list')
         response = client.get(list_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
-                        'List endpoint should require authentication')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        detail_url = reverse(
-            'communications:user-notification-preference-detail',
-            kwargs={'pk': self.user.pk}
-        )
+        detail_url = reverse('communications:user-notification-preference-detail', kwargs={'pk': self.user.pk})
         response = client.get(detail_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
-                       'Detail endpoint should require authentication')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
         response = client.patch(detail_url, {}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
-                       'Update endpoint should require authentication')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        type_pref_url = reverse(
-            'communications:user-notification-preference-update-type-preference',
-            kwargs={'pk': self.user.pk}
-        )
+        type_pref_url = reverse('communications:user-notification-preference-update-type-preference',
+                                kwargs={'pk': self.user.pk})
         response = client.patch(type_pref_url, {}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
-                       'Type preference update should require authentication')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_initial_preferences_created(self):
         """Test that initial preferences are created for new users."""

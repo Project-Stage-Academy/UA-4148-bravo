@@ -3,7 +3,7 @@ from django.contrib.auth.hashers import make_password
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-
+from rest_framework.test import APIClient
 from investors.models import Investor, SavedStartup
 from startups.models import Startup, Industry, Location
 from users.models import UserRole
@@ -102,12 +102,11 @@ class SavedStartupsEndpointsTests(APITestCase):
 
     def test_auth_required(self):
         """Both list and unsave require authentication -> 401 when anonymous."""
-        self.client.force_authenticate(user=None)
-
-        r1 = self.client.get(self.list_url)
+        client = APIClient()
+        r1 = client.get(self.list_url)
         self.assertEqual(r1.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        r2 = self.client.delete(self.unsave_url_1)
+        r2 = client.delete(self.unsave_url_1)
         self.assertEqual(r2.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_list_requires_investor_profile(self):

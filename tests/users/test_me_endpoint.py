@@ -56,7 +56,7 @@ class MeEndpointTests(APITestCase):
         and does not expose the password.
         """
         token = self.get_token_for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        self.client.cookies['access_token'] = token
         resp = self.client.get(self.url)
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -85,7 +85,7 @@ class MeEndpointTests(APITestCase):
         self.user.save()
 
         token = self.get_token_for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        self.client.cookies['access_token'] = token
         resp = self.client.get(self.url)
 
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)

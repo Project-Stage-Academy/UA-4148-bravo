@@ -155,7 +155,8 @@ class AuthCookieTests(APITestCase):
             HTTP_X_CSRFTOKEN=csrf_token
         )
         access_token = login_resp.cookies["access_token"].value
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+        self.client.cookies["access_token"] = access_token
         response = self.client.get(self.protected_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 

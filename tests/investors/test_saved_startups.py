@@ -3,7 +3,7 @@ from django.contrib.auth.hashers import make_password
 from django.test import TransactionTestCase
 from django.db import IntegrityError
 from rest_framework import status
-
+from rest_framework.test import APIClient
 from investors.models import Investor, SavedStartup
 from startups.models import Startup
 from users.models import User, UserRole
@@ -102,13 +102,13 @@ class SavedStartupAPITests(BaseInvestorTestCase):
         self.assertIn("you do not have permission to perform this action.", str(res.data['detail']).lower())
 
     def test_auth_required_on_list(self):
-        self.client.force_authenticate(user=None)
-        res = self.client.get(self.list_url)
+        client = APIClient()
+        res = client.get(self.list_url)
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_auth_required_on_create(self):
-        self.client.force_authenticate(user=None)
-        res = self.client.post(self.list_url, {"startup": self.startup.id}, format="json")
+        client = APIClient()
+        res = client.post(self.list_url, {"startup": self.startup.id}, format="json")
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_list_only_current_investor(self):
