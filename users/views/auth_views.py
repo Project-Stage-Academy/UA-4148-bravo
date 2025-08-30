@@ -18,6 +18,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from users.cookie_jwt import CookieJWTAuthentication
+from users.permissions import IsAuthenticatedWithCookieJWT
 # Local application imports
 from users.serializers.user_serializers import CurrentUserSerializer
 from users.serializers.user_serializers import CustomUserCreateSerializer
@@ -152,7 +154,8 @@ User = get_user_model()
 )
 class MeView(APIView):
     """Returns profile info of the currently authenticated user."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedWithCookieJWT]
+    authentication_classes = [CookieJWTAuthentication]
 
     def get(self, request):
         serializer = CurrentUserSerializer(request.user)
