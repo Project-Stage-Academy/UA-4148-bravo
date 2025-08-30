@@ -71,6 +71,7 @@ export class Validator {
     static serverSideErrorMessages = {
         emailAlreadyExist: "Ця електронна пошта вже зареєстрована",
         companyAlreadyExist: "Компанія з такою назвою вже зареєстрована",
+        noUserFoundByProvidedData: "Облікового запис за вказаними обліковими даними не знайдено",
         unexpected: "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз пізніше"
     }
 
@@ -168,6 +169,7 @@ export class Validator {
         const { name, value, type, checked } = e.target;
         const realValue = type === "checkbox" ? checked : value;
 
+        let argKey, argValue;
         if (name.includes(".")) {
             const [group, field] = name.split(".");
 
@@ -181,38 +183,28 @@ export class Validator {
                 [group]: updatedGroup
             }));
 
-            const error = Validator.validateField(group, updatedGroup, {
-                ...formData,
-                [group]: updatedGroup
-            }, errorZeroLengthMessages, errorValidationMessages, validators);
-
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                if (!error) {
-                    delete newErrors[group];
-                } else {
-                    newErrors[group] = error;
-                }
-                return newErrors;
-            });
-
+            argKey = group;
+            argValue = updatedGroup;
         } else {
             setFormData(prev => ({ ...prev, [name]: realValue }));
 
-            const error = Validator.validateField(name, realValue, {
-                ...formData,
-                [name]: realValue
-            }, errorZeroLengthMessages, errorValidationMessages, validators);
-
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                if (!error) {
-                    delete newErrors[name];
-                } else {
-                    newErrors[name] = error;
-                }
-                return newErrors;
-            });
+            argKey = name;
+            argValue = realValue;
         }
+
+        const error = Validator.validateField(argKey, argValue, {
+            ...formData,
+            [name]: realValue
+        }, errorZeroLengthMessages, errorValidationMessages, validators);
+
+        setErrors(prev => {
+            const newErrors = { ...prev };
+            if (!error) {
+                delete newErrors[name];
+            } else {
+                newErrors[name] = error;
+            }
+            return newErrors;
+        });
     };
 }
