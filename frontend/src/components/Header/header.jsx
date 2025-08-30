@@ -37,7 +37,7 @@ function Header({ show, hide, toggle, visible }) {
                     </Link>
                     <Search className={'nav-panel--search'} />
                 </div>
-                {user ? (
+                {(user && user.isAuthorized) ? (
                     <div className={'nav-panel--set'}>
                         <Link
                             to={'/profile/user/edit'}

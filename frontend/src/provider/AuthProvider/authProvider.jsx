@@ -2,12 +2,12 @@ import {
     createContext,
     useCallback,
     useContext,
+    useEffect,
     useMemo,
     useState,
 } from 'react';
 import { api } from '../../api/client';
 import PropTypes from 'prop-types';
-import Cookies from "js-cookie";
 
 /**
  * @typedef {Object} User - Represents a user in the application
@@ -16,6 +16,7 @@ import Cookies from "js-cookie";
  * @property {string} last_name - Last name of the user
  * @property {string} email - Email of the user
  * @property {string | null} role - Role of the user (e.g., 'admin', 'user')
+ * @property {boolean} isAuthorized - Defines if user is authorized for visual context
  */
 
 /**
@@ -141,6 +142,37 @@ function AuthProvider({ children }) {
     }, []);
 
     /**
+     * Me
+     * URL: /api/v1/auth/me/
+     * Req: {  }
+     * Res: 200 { id, email, role, ... }
+     *
+     * @returns {Promise<void>}
+     */
+    const loadUser = useCallback(async () => {
+        const { data } = await api.get('/api/v1/auth/me/')
+            .then(() => {
+                const newUser = {
+                    id: data.id,
+                    first_name: "",
+                    last_name: "",
+                    email: data.email,
+                    role: data.role,
+                    isAuthorized: true,
+                }
+
+                setUser(newUser);
+            })
+            .catch((err) => {
+                if (err.response?.status === 404) {
+                    setUser(null);
+                } else {
+                    throw err;
+                }
+            });
+    }, []);
+
+    /**
      * Create
      * URL: /api/v1/auth/jwt/create/
      * Req: { email, password }
@@ -161,34 +193,9 @@ function AuthProvider({ children }) {
                 throw err;
             });
 
-        /*
-        TODO
         await loadUser();
-        */
         return res;
-    }, []);
-
-    /**
-     * Me
-     * URL: /api/v1/auth/me/
-     * Req: {  }
-     * Res: 200 { id, email, role, ... }
-     *
-     * @returns {Promise<void>}
-     */
-    const loadUser = useCallback(async () => {
-        const { data } = await api.get('/api/v1/auth/me/')
-            .then(() => {
-                setUser(data);
-            })
-            .catch((err) => {
-                if (err.response?.status === 404) {
-                    setUser(null);
-                } else {
-                    throw err;
-                }
-            });
-    }, []);
+    }, [loadUser]);
 
     /**
      * Logout
@@ -197,10 +204,12 @@ function AuthProvider({ children }) {
      * Res: 205
      */
     const logout = useCallback(async () => {
-        await api.post('/api/v1/auth/logout/').catch(() => {
-            console.log('Logout');
-        });
-        setUser(null);
+        await api.post('/api/v1/auth/logout/')
+            .catch((err) => {
+                console.log('Logout error\n', err);
+            }).finally(() => {
+                setUser(null);
+            });
     }, []);
 
     /**
@@ -242,6 +251,62 @@ function AuthProvider({ children }) {
                 console.error(err);
             });
     }, []);
+
+    /**
+     * Refresh
+     * URL: /api/v1/auth/jwt/refresh/
+     * Req: {  }
+     * Res: 200 {  }
+     */
+    const refreshToken = useCallback(async () => {
+        try {
+            await api.post('/api/v1/auth/jwt/refresh/');
+        } catch (err) {
+            if (err.response) {
+                console.log(
+                    'Refresh token missing or invalid:',
+                    err.response.status
+                );
+
+                if (err.response?.status === 500) {
+                    console.log("Server do not know this token [500]");
+                    await logout();
+                }
+
+                if (err.response?.status === 404) {
+                    console.log("Server do not know this token [404]");
+                    await logout();
+                }
+            } else {
+                console.error(err);
+            }
+            throw err;
+        }
+    }, [loadUser, logout]);
+
+    // useEffect(() => {
+    //     fetch('/api/v1/auth/me/', {
+    //         method: 'GET',
+    //         credentials: 'include'
+    //     })
+    //         .then(res => res.json())
+    //         .then(data => {
+    //             console.log('User info:', data);
+    //             // Set user data in state/context
+    //         })
+    //         .catch(err => console.error('Error fetching user:', err));
+    // }, []);
+
+    // useEffect(() => {
+    //     (async () => {
+    //         try {
+    //             await refreshToken();
+    //             await loadUser();
+    //         } catch {
+    //             await logout();
+    //         }
+    //     })();
+    // }, [logout]);
 
     return (
         <AuthCtx.Provider
