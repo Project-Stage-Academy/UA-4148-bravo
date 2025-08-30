@@ -1,6 +1,5 @@
 import './registration.css';
-import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Validator } from '../../utils/validation/validate';
 import Button from '../../components/Button/button';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
@@ -8,6 +7,7 @@ import TextInput from '../../components/TextInput/textInput';
 import HiddenInput from '../../components/HiddenInput/hiddenInput';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import bruteForce from '../../utils/bruteForce/bruteForce';
+import { useFormWithProtection } from '../../hooks/useFormWithProtection/useFormWithProtection';
 
 /**
  * Registration component handles user registration.
@@ -22,26 +22,21 @@ function Registration() {
     // This component handles user registration
     const { setUser, register } = useAuthContext();
 
-    // Simple brute force protection
-    const [attempts, setAttempts] = useState(0);
-    const [isLocked, setIsLocked] = useState(false);
-
-    // Hook to navigate programmatically
-    const navigate = useNavigate();
-
-    // State to hold form data
-    const [formData, setFormData] = useState(
-        {
-            email: "",
-            password: "",
-            confirmPassword: "",
-            lastName: "",
-            firstName: "",
-            unexpected: ""
-        });
-
-    // State to hold validation errors
-    const [errors, setErrors] = useState({});
+    // Form with protection hook
+    const {
+        formData, setFormData,
+        errors, setErrors,
+        attempts, setAttempts,
+        isLocked, setIsLocked,
+        navigate,
+    } = useFormWithProtection({
+        email: "",
+        password: "",
+        confirmPassword: "",
+        lastName: "",
+        firstName: "",
+        unexpected: "",
+    });
 
     // Function to handle server-side errors
     const handleError = (error) => {
@@ -61,6 +56,7 @@ function Registration() {
     // Function to handle form submission
     const handleSubmit = () => {
         if (isLocked) return;
+        setIsLocked(true);
 
         const validationErrors = Validator.validate(
             formData
@@ -92,6 +88,7 @@ function Registration() {
         } else {
             console.warn('Errors:', validationErrors);
         }
+        setIsLocked(false);
     };
 
     // Function to handle input changes

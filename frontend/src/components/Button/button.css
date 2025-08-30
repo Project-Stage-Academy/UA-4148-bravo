@@ -24,6 +24,7 @@
 .button__primary-color:disabled {
     background-color: var(--primary-btn-bcg-color-inactive);
     color: var(--primary-btn-text-color-inactive);
+    cursor: not-allowed;
 }
 
 .button__secondary-color {
@@ -40,6 +41,7 @@
 .button__secondary-color:disabled {
     background-color: var(--secondary-btn-bcg-color-inactive);
     color: var(--secondary-btn-text-color-inactive);
+    cursor: not-allowed;
 }
 
 .button__danger-color {
@@ -55,6 +57,7 @@
 .button__danger-color:disabled {
     background-color: var(--danger-btn-bcg-color-inactive);
     color: var(--danger-btn-text-color-inactive);
+    cursor: not-allowed;
 }
 
 .button__outline-color {

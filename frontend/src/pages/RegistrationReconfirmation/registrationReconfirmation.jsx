@@ -5,6 +5,7 @@ import Button from '../../components/Button/button';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import TextInput from '../../components/TextInput/textInput';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
+import { useFormWithProtection } from '../../hooks/useFormWithProtection/useFormWithProtection';
 
 /**
  * Component for reconfirming user registration by resending the activation email.
@@ -18,18 +19,16 @@ import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 function RegistrationReconfirmation() {
     const { user, setUser, resendRegisterEmail } = useAuthContext();
 
-    // Hook to navigate programmatically
-    const navigate = useNavigate();
-
-    // State to hold form data
-    const [formData, setFormData] = useState(
-        {
-            email: "",
-            unexpected: ""
-        });
-
-    // State to hold validation errors
-    const [errors, setErrors] = useState({});
+    // Form with protection hook
+    const {
+        formData, setFormData,
+        errors, setErrors,
+        isLocked, setIsLocked,
+        navigate,
+    } = useFormWithProtection({
+        email: "",
+        unexpected: "",
+    });
 
     // Function to handle server-side errors
     const handleError = (error) => {
@@ -48,6 +47,9 @@ function RegistrationReconfirmation() {
 
     // Function to handle form submission
     const handleSubmit = () => {
+        if (isLocked) return;
+        setIsLocked(true);
+
         const validationErrors = Validator.validate(formData);
         setErrors(validationErrors);
 
@@ -64,6 +66,7 @@ function RegistrationReconfirmation() {
         } else {
             console.log("Errors:", validationErrors);
         }
+        setIsLocked(false);
     }
 
     // Function to handle cancellation
@@ -146,6 +149,7 @@ function RegistrationReconfirmation() {
                 <Button
                     variant="secondary"
                     onClick={handleCancel}
+                    disabled={isLocked}
                     className={'button__padding panel--button'}
                 >
                     Скасувати

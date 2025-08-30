@@ -23,6 +23,7 @@ import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/email
 import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
 import RegistrationUserRepresent from '../../pages/RegistrationUserRepresent/registrationUserRepresent';
 import RegistrationCompleted from '../../pages/RegistrationCompleted/registrationCompleted';
+import ForgotPasswordDone from '../../pages/ForgotPasswordDone/forgotPasswordDone';
 
 /**
  * Main application component that sets up routing and provider providers.
@@ -80,6 +81,7 @@ function App() {
 
                             {/* Forgot password */}
                             <Route path="forgot" element={<ForgotPassword />} />
+                            <Route path="forgot/done" element={<ForgotPasswordDone />} />
 
                             {/* Restore password */}
                             <Route path="restore-password" element={<RestorePassword />} />
