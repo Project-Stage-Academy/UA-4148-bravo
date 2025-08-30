@@ -7,6 +7,7 @@ import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '.
 import TextInput from '../../components/TextInput/textInput';
 import HiddenInput from '../../components/HiddenInput/hiddenInput';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
+import bruteForce from '../../utils/bruteForce/bruteForce';
 
 /**
  * Registration component handles user registration.
@@ -82,33 +83,12 @@ function Registration() {
 
                     navigate('/auth/register/confirm');
                 })
-                .catch((error) => {
-                    setAttempts(() => {
-                        const next = attempts + 1;
-                        console.log(next);
-
-                        if (next >= 5) {
-                            setIsLocked(true);
-                            setErrors(prevErrors => ({
-                                ...prevErrors,
-                                unexpected: "Повторіть спробу через 30 секунд"
-                            }));
-
-                            setTimeout(() => {
-                                setAttempts(0);
-                                setErrors(prevErrors => ({
-                                    ...prevErrors,
-                                    unexpected: null
-                                }));
-                                setIsLocked(false);
-                            }, 30000);
-                        } else {
-                            handleError(error);
-                        }
-
-                        return next;
-                    });
-                });
+                .catch((error) => bruteForce(error, {
+                    attempts,
+                    setAttempts,
+                    setIsLocked,
+                    handleError
+                }));
         } else {
             console.warn('Errors:', validationErrors);
         }
@@ -300,6 +280,11 @@ function Registration() {
                     {!isLocked && attempts >= 3 - 1 && (
                         <p className={'content--text'}>
                             Залишилося спроб: {5 - attempts}
+                        </p>
+                    )}
+                    {isLocked && (
+                        <p className={'panel--danger-text'}>
+                            Повторіть спробу через 30 секунд
                         </p>
                     )}
                     {errors['unexpected'] && (
