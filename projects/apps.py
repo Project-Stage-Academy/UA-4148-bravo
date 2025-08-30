@@ -5,3 +5,4 @@ class ProjectsConfig(AppConfig):
 
     def ready(self):
         import startups.signals, projects.documents
+        import projects.signals

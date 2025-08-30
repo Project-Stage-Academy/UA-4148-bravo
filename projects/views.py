@@ -64,6 +64,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return ProjectReadSerializer
         return ProjectWriteSerializer
+    
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        serializer.instance._pre_save_instance = Project.objects.get(pk=instance.pk)
+        
+        serializer.instance._last_editor = self.request.user
+        serializer.save()
 
     def partial_update(self, request, *args, **kwargs):
         """
