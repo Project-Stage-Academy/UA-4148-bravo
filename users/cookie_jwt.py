@@ -2,7 +2,6 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework import exceptions
 from users.models import User
 import logging
-
 from validation.validate_token import safe_decode
 
 logger = logging.getLogger(__name__)
@@ -40,7 +39,7 @@ class CookieJWTAuthentication(BaseAuthentication):
                 raise exceptions.AuthenticationFailed("Token payload missing user_id")
 
             try:
-                user = User.objects.get(id=user_id, is_active=True)
+                user = User.objects.get(user_id=user_id, is_active=True)
             except User.DoesNotExist:
                 raise exceptions.AuthenticationFailed("User not found or inactive")
 

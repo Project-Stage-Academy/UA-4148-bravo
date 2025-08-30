@@ -5,6 +5,7 @@ from tests.test_base_case import BaseAPITestCase
 from unittest.mock import patch
 from rest_framework.test import APIClient
 from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework_simplejwt.tokens import AccessToken
 
 
 class StartupAPITests(BaseAPITestCase):
@@ -12,8 +13,14 @@ class StartupAPITests(BaseAPITestCase):
     Test suite for Startup API endpoints, including creation and retrieval of startups.
     """
 
+    def authenticate_client(self):
+        """Set access_token cookie in client for authentication"""
+        token = str(AccessToken.for_user(self.user))
+        self.client.cookies['access_token'] = token
+
     def setUp(self):
         super().setUp()
+        self.client = APIClient()
         self.startup_data = {
             'company_name': 'Great',
             'team_size': 25,
@@ -32,6 +39,7 @@ class StartupAPITests(BaseAPITestCase):
         Test that a startup can be successfully created via POST request to the startup-list endpoint.
         Verifies that the response status is HTTP 201 Created and the returned data matches the input.
         """
+        self.authenticate_client()
         response = self.client.post(self.url, self.startup_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -52,6 +60,7 @@ class StartupAPITests(BaseAPITestCase):
         including at least one startup created in the test setup.
         Verifies response status is HTTP 200 OK and that at least one startup is returned.
         """
+        self.authenticate_client()
         self.get_or_create_startup(
             user=self.user,
             company_name='ListStartup',
@@ -70,6 +79,7 @@ class StartupAPITests(BaseAPITestCase):
         Ensure that creating a startup with invalid data (empty company_name)
         returns HTTP 400 Bad Request and includes the relevant validation error.
         """
+        self.authenticate_client()
         data = self.startup_data.copy()
         data['company_name'] = ''
         response = self.client.post(self.url, data, format='json')
@@ -83,6 +93,7 @@ class StartupAPITests(BaseAPITestCase):
         Verify that the industry filter correctly returns startups only
         within the specified industry and excludes others.
         """
+        self.authenticate_client()
         startup1 = self.get_or_create_startup(
             user=self.user, industry=self.industry, location=self.location,
             company_name='IndustryA'
@@ -107,6 +118,7 @@ class StartupAPITests(BaseAPITestCase):
         """
         Ensure that searching by a partial company name returns the matching startups.
         """
+        self.authenticate_client()
         self.get_or_create_startup(
             user=self.user, company_name='Searchable Startup',
             industry=self.industry, location=self.location
@@ -122,6 +134,7 @@ class StartupAPITests(BaseAPITestCase):
         Verify that retrieving a single startup by its ID returns
         the correct details and HTTP 200 OK.
         """
+        self.authenticate_client()
         startup = self.get_or_create_startup(
             user=self.user, company_name='DetailStartup',
             industry=self.industry, location=self.location
@@ -138,6 +151,7 @@ class StartupAPITests(BaseAPITestCase):
         Ensure that a full update (PUT) to a startup works and
         returns HTTP 200 OK with the updated data.
         """
+        self.authenticate_client()
         startup = self.get_or_create_startup(
             user=self.user, company_name='OldName',
             industry=self.industry, location=self.location
@@ -163,6 +177,7 @@ class StartupAPITests(BaseAPITestCase):
         Ensure that a partial update (PATCH) to a startup works and
         returns HTTP 200 OK with the updated field.
         """
+        self.authenticate_client()
         startup = self.get_or_create_startup(
             user=self.user, company_name='PartialUpdate',
             industry=self.industry, location=self.location
@@ -180,6 +195,7 @@ class StartupAPITests(BaseAPITestCase):
         Verify that updating a startup with invalid data
         (empty company_name) returns HTTP 400 Bad Request with errors.
         """
+        self.authenticate_client()
         startup = self.get_or_create_startup(
             user=self.user, company_name='ValidName',
             industry=self.industry, location=self.location
@@ -197,6 +213,7 @@ class StartupAPITests(BaseAPITestCase):
         Ensure that deleting a startup works, returns HTTP 204 No Content,
         and removes the object from the database.
         """
+        self.authenticate_client()
         startup = self.get_or_create_startup(
             user=self.user, company_name='ToDelete',
             industry=self.industry, location=self.location
@@ -213,6 +230,7 @@ class StartupAPITests(BaseAPITestCase):
         Even if a different user ID is passed in request,
         Startup should be created with request.user.
         """
+        self.authenticate_client()
         other_user = self.get_or_create_user("fake@example.com", "Fake", "User")
         data = self.startup_data.copy()
         data['user'] = other_user.pk
@@ -229,6 +247,7 @@ class StartupAPITests(BaseAPITestCase):
         Simulate model validation error during creation.
         Should return HTTP 400.
         """
+        self.authenticate_client()
         response = self.client.post(self.url, self.startup_data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -239,8 +258,9 @@ class StartupAPITests(BaseAPITestCase):
         """
         Unauthenticated request should return HTTP 401.
         """
-        client = APIClient()
-        response = client.get(self.url)
+        self.client.cookies.clear()
+
+        response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
@@ -249,6 +269,7 @@ class StartupAPITests(BaseAPITestCase):
         """
         After update, API should return all updated fields correctly.
         """
+        self.authenticate_client()
         startup = self.get_or_create_startup(
             user=self.user,
             company_name='InitialName',
