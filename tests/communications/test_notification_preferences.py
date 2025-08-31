@@ -2,7 +2,6 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
-from rest_framework.authtoken.models import Token
 from communications.models import NotificationType, UserNotificationPreference
 import ddt
 from tests.factories import UserFactory
@@ -34,7 +33,6 @@ class NotificationPreferencesTestCase(APITestCase):
         self.notification_type2 = NotificationTypeFactory(default_frequency='daily_digest')
 
         self.user = UserFactory()
-        self.token = Token.objects.create(user=self.user)
         authenticate_client(self.client, self.user)
 
     def test_get_notification_types(self):

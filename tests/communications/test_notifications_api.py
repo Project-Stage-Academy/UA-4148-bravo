@@ -2,7 +2,6 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
-from rest_framework.authtoken.models import Token
 from django.utils import timezone
 
 from communications.models import Notification, NotificationPriority
@@ -20,7 +19,6 @@ class NotificationsApiTestCase(APITestCase):
         self.other_user = UserFactory()
 
         # Auth as self.user (same pattern as other tests)
-        self.token = Token.objects.create(user=self.user)
         authenticate_client(self.client, self.user)
 
         # Notification types

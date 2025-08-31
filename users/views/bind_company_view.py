@@ -12,7 +12,6 @@ from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from users.serializers.company_bind_serializer import CompanyBindingSerializer
 from django_countries.fields import Country
-
 from users.views.base_protected_view import CookieJWTProtectedView
 
 logger = logging.getLogger(__name__)
