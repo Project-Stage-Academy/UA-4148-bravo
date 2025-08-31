@@ -21,8 +21,8 @@ class SearchTests(APITestCase):
         # Create industry (required for Startup)
         self.industry = Industry.objects.create(name="Healthcare")
 
-        # Create location (required for Startup)
-        self.location = Location.objects.create(city="Kyiv", country="Ukraine")
+        # Create location (required for Startup) using ISO code
+        self.location = Location.objects.create(city="Kyiv", country="UA")
 
         # Create startup with all required fields
         self.startup = Startup.objects.create(
