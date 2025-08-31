@@ -4,8 +4,10 @@ from django.dispatch import receiver
 from projects.models import Project, ProjectHistory
 from projects.documents import ProjectDocument
 
+import logging
 from investments.models import Subscription
 from communications.services import create_in_app_notification
+from elasticsearch.exceptions import ConnectionError, NotFoundError
 
 TRACKED_FIELDS = ['title', 'description', 'funding_goal', 'status', 'website', 'technologies_used', 'milestones']
 
@@ -66,10 +68,15 @@ def handle_project_updates(sender, instance, created, **kwargs):
                 title=title,
                 message=message,
                 related_project_id=instance.id,
-                triggered_by_user=getattr(instance.startup, 'user', None),
+                triggered_by_user=getattr(instance, '_last_editor', None),
                 triggered_by_type='startup'
             )
 
 @receiver(post_delete, sender=Project)
 def delete_project(sender, instance, **kwargs):
-    ProjectDocument().delete(instance)
+    try:
+        ProjectDocument().delete(instance, raise_on_error=False)
+    except (ConnectionError, NotFoundError) as e:
+        logger.error(
+            f"Failed to delete project {instance.id} from Elasticsearch: {e}"
+        )
