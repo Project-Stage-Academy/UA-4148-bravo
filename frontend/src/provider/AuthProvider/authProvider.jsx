@@ -222,10 +222,11 @@ function AuthProvider({ children }) {
      * @returns {Promise<void>}
      */
     const requestReset = useCallback(async (email) => {
-        await api
+        return await api
             .post('/api/v1/auth/password/reset/', { email })
             .catch((err) => {
                 console.error(err);
+                // throw err;
             });
     }, []);
 

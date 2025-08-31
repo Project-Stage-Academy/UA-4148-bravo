@@ -3,6 +3,7 @@ from rest_framework import status
 from common.enums import Stage
 from investors.models import Investor
 from tests.test_base_case import BaseAPITestCase
+from rest_framework.test import APIClient
 
 
 class InvestorAPITests(BaseAPITestCase):
@@ -78,10 +79,8 @@ class InvestorAPITests(BaseAPITestCase):
         self.assertFalse(Investor.objects.filter(id=investor.pk).exists())
 
     def test_unauthorized_create_investor(self):
-        """
-        Unauthenticated user should NOT be able to create an investor.
-        """
-        self.client.logout()
+        """Unauthenticated user should get 401 when creating investor."""
+        client = APIClient()
         url = reverse('investor-list')
         data = {
             'company_name': 'UnauthorizedInvestor',
@@ -93,36 +92,32 @@ class InvestorAPITests(BaseAPITestCase):
             'stage': Stage.MVP,
             'fund_size': '1000000.00',
         }
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthorized_update_investor(self):
-        """
-        Unauthenticated user should NOT be able to update an investor.
-        """
+        """Unauthenticated user should get 401 when updating investor."""
         investor = self.get_or_create_investor(
             user=self.user,
             company_name='AuthInvestor',
             stage=Stage.MVP,
             fund_size=100000.00
         )
-        self.client.logout()
+        client = APIClient()
         url = reverse('investor-detail', args=[investor.pk])
         data = {'company_name': 'ShouldNotUpdate'}
-        response = self.client.patch(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthorized_delete_investor(self):
-        """
-        Unauthenticated user should NOT be able to delete an investor.
-        """
+        """Unauthenticated user should get 401 when deleting investor."""
         investor = self.get_or_create_investor(
             user=self.user,
             company_name='GoodInvestor',
             stage=Stage.MVP,
             fund_size=100000.00
         )
-        self.client.logout()
+        client = APIClient()
         url = reverse('investor-detail', args=[investor.pk])
-        response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

@@ -7,6 +7,7 @@ from django.conf import settings
 from rest_framework.test import APITestCase
 from unittest.mock import patch
 from users.models import User, UserRole
+from utils.authenticate_client import authenticate_client
 
 logger = logging.getLogger(__name__)
 DEBUG_LOGS = os.environ.get("DEBUG_TEST_LOGS") == "1"
@@ -55,7 +56,7 @@ class ResendEmailTests(APITestCase):
 
         return response
 
-    @patch('users.views.email_views.ResendEmailView.throttle_classes', [])
+    @patch('users.views.email_views.ResendEmailView.throttle_classes', new=[])
     @patch('users.views.email_views.send_mail')
     @patch('users.views.email_views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
     def test_resend_email_scenarios(self, mock_make_token, mock_send_mail):
@@ -134,6 +135,7 @@ class ResendEmailTests(APITestCase):
     def test_throttling_with_limit(self, mock_make_token, mock_send_mail):
         url = reverse('resend-email')
         data = {'user_id': self.user.user_id}
+        authenticate_client(self.client, self.user)
 
         for i in range(ALLOWED_THROTTLE_REQUESTS):
             with self.subTest(request_number=i + 1):

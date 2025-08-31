@@ -28,6 +28,7 @@ class UserFactory(factory.django.DjangoModelFactory):
     last_name = "Doe"
     email = factory.Sequence(lambda n: f"user{n}@example.com")
     password = factory.PostGenerationMethodCall('set_password', 'password123')
+    is_active = True
 
 
 class IndustryFactory(factory.django.DjangoModelFactory):
