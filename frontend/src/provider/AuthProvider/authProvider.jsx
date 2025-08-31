@@ -7,7 +7,6 @@ import {
 } from 'react';
 import { api } from '../../api/client';
 import PropTypes from 'prop-types';
-import Cookies from "js-cookie";
 
 /**
  * @typedef {Object} User - Represents a user in the application
@@ -176,6 +175,7 @@ function AuthProvider({ children }) {
      *
      * @returns {Promise<void>}
      */
+    // eslint-disable-next-line
     const loadUser = useCallback(async () => {
         const { data } = await api.get('/api/v1/auth/me/')
             .then(() => {
