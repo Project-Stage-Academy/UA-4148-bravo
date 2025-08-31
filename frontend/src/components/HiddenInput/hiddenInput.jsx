@@ -57,7 +57,7 @@ function HiddenInput({
                 value={value}
                 placeholder={placeholder}
                 onChange={onChange}
-                className={`input input-text input__width hidden-input ${className}`}
+                className={`input input-text input__width ${className}`}
             />
             <div
                 className="toggle-hidden"

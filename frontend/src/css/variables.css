@@ -54,6 +54,7 @@
     /* hr colors */
     --light-gray-hr-color: #EDEDED;
     --panel-hr-color: #F0F0F0;
+    --panel-hr-reverse-color: #9d9d9d;
 
     /* header */
     --yellow-bcg-color: #F9F5EC;

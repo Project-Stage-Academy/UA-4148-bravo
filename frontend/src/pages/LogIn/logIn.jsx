@@ -2,7 +2,7 @@ import './logIn.css';
 import Panel, {
     PanelBody,
     PanelBodyBottomLink,
-    PanelBodyTitle,
+    PanelBodyTitle, PanelHrOr,
     PanelNavigation,
     PanelTitle,
 } from '../../components/Panel/panel';
@@ -14,6 +14,7 @@ import { Validator } from '../../utils/validation/validate';
 import { useMemo, useState } from 'react';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import bruteForce from "../../utils/bruteForce/bruteForce";
+import OAuthNavigation from '../../components/OAuthNavigation/oAuthNavigation';
 
 /**
  * LogInPage component
@@ -184,16 +185,20 @@ function LogInPage() {
                     )}
                 </PanelBody>
                 <PanelNavigation>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={isDisabled || isLocked}
-                        className={'button__padding panel--button'}
-                        type="submit"
-                    >
-                        Увійти
-                    </Button>
+                    <div>
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={isDisabled || isLocked}
+                            className={'button__padding panel--button'}
+                            type="submit"
+                        >
+                            Увійти
+                        </Button>
+                    </div>
                 </PanelNavigation>
             </Panel>
+            <PanelHrOr />
+            <OAuthNavigation className={'oauth__container--margin'} />
             <div className={'panel--under-panel'}>
                 <span>Вперше на нашому сайті?</span>
                 <Link className={'text-underline text-bold'} to={'/auth/register'}>

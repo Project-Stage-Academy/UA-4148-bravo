@@ -23,6 +23,7 @@ import EmailConfirmationHandler from '../../pages/EmailConfirmationHandler/email
 import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePasswordDone';
 import RegistrationUserRepresent from '../../pages/RegistrationUserRepresent/registrationUserRepresent';
 import RegistrationCompleted from '../../pages/RegistrationCompleted/registrationCompleted';
+import OAutchCallback from '../../pages/OAuthCallback/oAutchCallback';
 
 /**
  * Main application component that sets up routing and provider providers.
@@ -85,6 +86,9 @@ function App() {
                             <Route path="restore-password" element={<RestorePassword />} />
                             <Route path="restore-password/done" element={<RestorePasswordDone />} />
                         </Route>
+
+                        {/* OAuth callback */}
+                        <Route path={"oauth/callback/:provider"} element={<OAutchCallback />} />
 
                         {/* Profile */}
                         <Route path="profile">

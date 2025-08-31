@@ -105,15 +105,26 @@ PanelBodyBottomLink.propTypes = {
 /**
  * PanelNavigation component to wrap navigation elements within the panel.
  * It is typically used to display navigation links or buttons related to the panel's content.
+ * @param ClassName - Additional CSS class names to apply to the panel navigation.
  * @param children - The navigation elements to be displayed inside the panel navigation.
  * @returns {JSX.Element}
  */
-function PanelNavigation({ children }) {
-    return <div className={"panel--navigation"}>{ children }</div>;
+function PanelNavigation({ className, children }) {
+    return <div className={clsx("panel__navigation", className)}>{ children }</div>;
 }
 
 PanelNavigation.propTypes = {
     children: PropTypes.node.isRequired
+}
+
+function PanelHrOr({ className }) {
+    return (
+        <div className={"panel__hr-or-container"}>
+            <p className={clsx('panel__hr-or-text', className)}>
+                or
+            </p>
+        </div>
+    );
 }
 
 /**
@@ -128,5 +139,5 @@ function Panel({ className, children }) {
     return <div className={clsx('panel', 'panel__margin', className)}>{children}</div>;
 }
 
-export { PanelTitle, PanelBody, PanelBodyTitle, PanelBodyBottomLink, PanelNavigation };
+export { PanelTitle, PanelBody, PanelBodyTitle, PanelBodyBottomLink, PanelNavigation, PanelHrOr };
 export default Panel;

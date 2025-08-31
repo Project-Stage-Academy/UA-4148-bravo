@@ -1,0 +1,14 @@
+.oauth__panel {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.oauth-icon {
+    width: 24px;
+}
+
+.oauth__btn {
+    line-height: 0;
+    padding: 8px;
+}
