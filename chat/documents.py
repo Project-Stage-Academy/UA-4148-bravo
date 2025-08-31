@@ -9,11 +9,10 @@ from mongoengine import (
     DateTimeField, BooleanField, ValidationError
 )
 from core.settings.constants import FORBIDDEN_WORDS_SET
-from users.models import User
 from utils.encrypt import EncryptedStringField
+from utils.get_user_or_raise import get_user_or_raise
 from utils.sanitize import sanitize_message
 import sentry_sdk
-
 from utils.save_documents import log_and_capture
 
 logger = logging.getLogger(__name__)
@@ -53,16 +52,9 @@ class Room(Document):
             sentry_sdk.capture_message(msg, level="warning")
             raise ValidationError(msg)
 
-        try:
-            user1 = User.objects.get(email=self.participants[0])
-            user2 = User.objects.get(email=self.participants[1])
-        except User.DoesNotExist:
-            msg = "One or both participants do not exist."
-            logger.error("[ROOM_VALIDATION] %s | room=%s", msg, self.name)
-            sentry_sdk.capture_message(msg, level="error")
-            raise ValidationError(msg)
+        users = [get_user_or_raise(email, self.name) for email in self.participants]
 
-        roles = {user1.role.role if user1.role else None, user2.role.role if user2.role else None}
+        roles = {user.role.role if user.role else None for user in users}
         if roles != {"Investor", "Startup"}:
             msg = "Room must have exactly one Investor and one Startup."
             logger.warning("[ROOM_VALIDATION] %s | participants=%s", msg, self.participants)

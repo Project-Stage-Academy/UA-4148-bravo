@@ -17,6 +17,8 @@ def check_user_in_room(user: User, room: Room) -> bool:
     """
     if not user or not user.is_authenticated:
         return False
+    if not room or not getattr(room, "participants", None):
+        return False
     return user.email in room.participants
 
 
@@ -39,9 +41,10 @@ class IsOwnerOrRecipient(BasePermission):
             bool: True if the requesting user is either the sender or the recipient
                   of the message, and is a participant of the corresponding room.
         """
-        if not obj.room:
+        if not check_user_in_room(request.user, getattr(obj, "room", None)):
             return False
+
         return (
-                obj.sender_email == request.user.email or
-                obj.receiver_email == request.user.email
-        ) and check_user_in_room(request.user, obj.room)
+                obj.sender_email == request.user.email
+                or obj.receiver_email == request.user.email
+        )
