@@ -1,10 +1,12 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import Button from '../../components/Button/button';
-import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import HiddenInput from '../../components/HiddenInput/hiddenInput';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
+import { useFormWithProtection } from '../../hooks/useFormWithProtection/useFormWithProtection';
+import bruteForce from '../../utils/bruteForce/bruteForce';
+import { useEffect } from 'react';
 
 /**
  * RestorePassword component handles the user password restoration process.
@@ -15,21 +17,34 @@ import { useAuthContext } from '../../provider/AuthProvider/authProvider';
  * @returns {JSX.Element}
  */
 function RestorePassword() {
-    // This component handles user registration
-    const navigate = useNavigate();
-
     const { confirmReset } = useAuthContext();
 
-    // State to hold form data
-    const [formData, setFormData] = useState(
-        {
-            password: "",
-            confirmPassword: "",
-            unexpected: ""
-        });
+    // Form with protection hook
+    const {
+        formData, setFormData,
+        errors, setErrors,
+        attempts, setAttempts,
+        isLocked, setIsLocked,
+        isDisabled, navigate,
+    } = useFormWithProtection({
+        password: "",
+        confirmPassword: "",
+        unexpected: "",
+    });
 
-    // State to hold validation errors
-    const [errors, setErrors] = useState({});
+    const location = useLocation();
+
+    useEffect(() => {
+        if (!location.state) console.log("state is empty");
+        else {
+            if (!location.state.user_id) console.log("user_id is missing");
+            if (!location.state.token) console.log("token is missing");
+        }
+        if (!location.state
+            ||!location.state.user_id
+            || !location.state.token
+        ) navigate('/404');
+    }, [location.state, navigate]);
 
     // Function to handle server-side errors
     const handleError = () => {
@@ -41,38 +56,46 @@ function RestorePassword() {
 
     // Function to handle form submission
     const handleSubmit = () => {
+        if (isLocked) return;
+        setIsLocked(true);
+
         const validationErrors = Validator.validate(
             formData
         );
         setErrors(validationErrors);
 
         if (Object.values(validationErrors).every(value => value === null)) {
-            // TODO
-            // confirmReset(formData)
-            //     .then(() => navigate('/restore-password/done'))
-            //     .catch(handleError);
+            confirmReset(location.state.user_id, location.state.token,formData.password)
+                .then(() => navigate('/auth/restore-password/done'))
+                .catch((error) => bruteForce(error, {
+                    attempts,
+                    setAttempts,
+                    setIsLocked,
+                    handleError
+                }));
         } else {
             console.log('Errors:', validationErrors);
         }
+        setIsLocked(false);
     };
 
     // Function to handle input changes
     const handleChange = (e) => {
-        return Validator.handleChange(
-            e,
-            formData,
-            setFormData,
-            setErrors
-        );
+        Validator.handleChange(e, formData, setFormData, setErrors);
     };
 
     return (
         <>
-            <Panel>
-                <PanelTitle>Відновлення паролю</PanelTitle>
+            <Panel aria-labelledby="restore-password-form-title">
+                <PanelTitle id="restore-password-form-title">Відновлення паролю</PanelTitle>
                 <PanelBody>
                     <div>
-                        <PanelBodyTitle title={'Пароль'} className={'content--text-container__margin'}>
+                        <PanelBodyTitle
+                            id="restore-password-label"
+                            title={'Пароль'}
+                            className={'content--text-container__margin'}
+                            required={false}
+                        >
                             Пароль повинен мати 8+ символів, містити принаймні велику, малу літеру (A..Z, a..z) та цифру (0..9).
                         </PanelBodyTitle>
                         <HiddenInput
@@ -83,12 +106,29 @@ function RestorePassword() {
                             value={formData.password}
                             onChange={handleChange}
                             className={errors['password'] && 'input__error-border-color'}
+                            aria-labelledby="restore-password-label"
+                            aria-describedby={errors['password'] ? 'password-error' : undefined}
+                            aria-invalid={!!errors['password']}
+                            aria-required="true"
                         />
-                        { errors['password'] && <p className={"panel--danger-text"}>{ errors['password'] }</p> }
+                        {errors['password'] && (
+                            <p id="password-error"
+                               className={'panel--danger-text'}
+                               role="alert"
+                            >
+                                {errors['password']}
+                            </p>
+                        )}
                     </div>
                     <div>
-                        <PanelBodyTitle title={'Повторіть пароль'} className={'content--text-container__margin'} />
+                        <PanelBodyTitle
+                            id="confirm-password-label"
+                            title={'Повторіть пароль'}
+                            className={'content--text-container__margin'}
+                            required={false}
+                        />
                         <HiddenInput
+                            id="confirmPassword"
                             name="confirmPassword"
                             autoComplete="off"
                             autoCorrect="off"
@@ -96,15 +136,28 @@ function RestorePassword() {
                             value={formData.confirmPassword}
                             onChange={handleChange}
                             className={errors['confirmPassword'] && 'input__error-border-color'}
+                            aria-labelledby="confirm-password-label"
+                            aria-describedby={errors['confirmPassword'] ? 'confirm-password-error' : undefined}
+                            aria-invalid={!!errors['confirmPassword']}
+                            aria-required="true"
                         />
-                        { errors['confirmPassword'] && <p className={"panel--danger-text"}>{ errors["confirmPassword"] }</p> }
+                        {errors['confirmPassword'] && (
+                            <p id="confirm-password-error"
+                               className={'panel--danger-text'}
+                               role="alert"
+                            >
+                                {errors['confirmPassword']}
+                            </p>
+                        )}
                     </div>
                     { errors['unexpected'] && <p className={"panel--danger-text"}>{ errors['unexpected'] }</p>}
                 </PanelBody>
                 <PanelNavigation>
                     <Button
                         onClick={handleSubmit}
+                        disabled={isDisabled || isLocked}
                         className={'button__padding panel--button'}
+                        type="submit"
                     >
                         Зберегти пароль
                     </Button>

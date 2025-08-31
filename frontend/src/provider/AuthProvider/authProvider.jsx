@@ -7,7 +7,6 @@ import {
 } from 'react';
 import { api } from '../../api/client';
 import PropTypes from 'prop-types';
-import Cookies from "js-cookie";
 
 /**
  * @typedef {Object} User - Represents a user in the application

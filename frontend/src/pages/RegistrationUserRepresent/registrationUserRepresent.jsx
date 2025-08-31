@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import Panel, {
     PanelBody,
     PanelBodyTitle,
@@ -8,7 +7,6 @@ import Panel, {
 import Button from '../../components/Button/button';
 import Checkbox from '../../components/Checkbox/checkbox';
 import TextInput from '../../components/TextInput/textInput';
-import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import { useFormWithProtection } from '../../hooks/useFormWithProtection/useFormWithProtection';
