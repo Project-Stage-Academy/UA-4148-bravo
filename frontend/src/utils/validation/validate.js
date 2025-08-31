@@ -156,7 +156,7 @@ export class Validator {
      * @param errorZeroLengthMessages - Error messages for fields that have zero length.
      * @param errorValidationMessages - Error messages for fields that do not pass validation.
      * @param validators - An object containing validation functions for each field.
-     * @return {boolean} - True if the form is valid, false if there are errors.
+     * @return {void}
      */
     static handleChange(
         e,
@@ -170,9 +170,7 @@ export class Validator {
         const { name, value, type, checked } = e.target;
         const realValue = type === "checkbox" ? checked : value;
 
-        let currentError = null;
-        let updatedFormData;
-
+        let argKey, argValue;
         if (name.includes(".")) {
             const [group, field] = name.split(".");
 
@@ -181,61 +179,33 @@ export class Validator {
                 [field]: realValue
             };
 
-            updatedFormData = {
-                ...formData,
+            setFormData(prev => ({
+                ...prev,
                 [group]: updatedGroup
-            };
+            }));
 
-            setFormData(updatedFormData);
-
-            currentError = Validator.validateField(
-                group,
-                updatedGroup,
-                updatedFormData,
-                errorZeroLengthMessages,
-                errorValidationMessages,
-                validators
-            );
-
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                if (!currentError) {
-                    delete newErrors[group];
-                } else {
-                    newErrors[group] = currentError;
-                }
-                return newErrors;
-            });
-
+            argKey = group;
+            argValue = updatedGroup;
         } else {
-            updatedFormData = {
-                ...formData,
-                [name]: realValue
-            };
+            setFormData(prev => ({ ...prev, [name]: realValue }));
 
-            setFormData(updatedFormData);
-
-            currentError = Validator.validateField(
-                name,
-                realValue,
-                updatedFormData,
-                errorZeroLengthMessages,
-                errorValidationMessages,
-                validators
-            );
-
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                if (!currentError) {
-                    delete newErrors[name];
-                } else {
-                    newErrors[name] = currentError;
-                }
-                return newErrors;
-            });
+            argKey = name;
+            argValue = realValue;
         }
 
-        const hasErrors = !!currentError;
-        return !hasErrors;
+        const error = Validator.validateField(argKey, argValue, {
+            ...formData,
+            [name]: realValue
+        }, errorZeroLengthMessages, errorValidationMessages, validators);
+
+        setErrors(prev => {
+            const newErrors = { ...prev };
+            if (!error) {
+                delete newErrors[name];
+            } else {
+                newErrors[name] = error;
+            }
+            return newErrors;
+        });
     };
 }

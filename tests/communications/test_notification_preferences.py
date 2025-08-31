@@ -7,7 +7,7 @@ from communications.models import NotificationType, UserNotificationPreference
 import ddt
 from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
-
+from rest_framework.test import APIClient
 import logging
 
 User = get_user_model()
@@ -39,7 +39,7 @@ class NotificationPreferencesTestCase(APITestCase):
         """Test retrieving notification types."""
         url = reverse('communications:notification-type-list')
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data, list)
         codes = [item['code'] for item in response.data]
@@ -50,39 +50,39 @@ class NotificationPreferencesTestCase(APITestCase):
         """Test retrieving user notification preferences."""
         url = reverse('communications:user-notification-preference-list')
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data, list)
         self.assertTrue(len(response.data) > 0)
-        
+
         user_prefs = response.data[0]
         self.assertTrue('user_id' in user_prefs)
         self.assertEqual(user_prefs['user_id'], self.user.pk)
         self.assertTrue('enable_in_app' in user_prefs)
         self.assertTrue('enable_email' in user_prefs)
         self.assertTrue('enable_push' in user_prefs)
-        
+
         self.assertIn('type_preferences', user_prefs)
         self.assertIsInstance(user_prefs['type_preferences'], list)
 
     def test_update_user_preferences(self):
         """Test updating user notification preferences."""
         pref = UserNotificationPreference.objects.get(user=self.user)
-        url = reverse('communications:user-notification-preference-detail', 
+        url = reverse('communications:user-notification-preference-detail',
                      kwargs={'pk': self.user.pk})
-        
+
         data = {
             'enable_in_app': True,
             'enable_email': False,
             'enable_push': True
         }
         response = self.client.patch(url, data, format='json')
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['enable_in_app'])
         self.assertFalse(response.data['enable_email'])
         self.assertTrue(response.data['enable_push'])
-        
+
         pref.refresh_from_db()
         self.assertTrue(pref.enable_in_app)
         self.assertFalse(pref.enable_email)
@@ -95,21 +95,21 @@ class NotificationPreferencesTestCase(APITestCase):
         """
         pref = UserNotificationPreference.objects.get(user=self.user)
         type_pref = pref.type_preferences.first()
-        
+
         url = reverse(
             'communications:user-notification-preference-update-type-preference',
             kwargs={'pk': self.user.pk}
         )
-        
+
         data = {
             'notification_type_id': type_pref.notification_type.id,
             'frequency': frequency,
         }
         response = self.client.patch(url, data, format='json')
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['frequency'], frequency)
-        
+
         type_pref.refresh_from_db()
         self.assertEqual(type_pref.frequency, frequency)
 
@@ -161,14 +161,13 @@ class NotificationPreferencesTestCase(APITestCase):
 
     def test_unauthorized_access(self):
         """Test that unauthorized users can't access preferences."""
-        from rest_framework.test import APIClient
         client = APIClient()
-        
+
         list_url = reverse('communications:user-notification-preference-list')
         response = client.get(list_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED, 
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
                         'List endpoint should require authentication')
-        
+
         detail_url = reverse(
             'communications:user-notification-preference-detail',
             kwargs={'pk': self.user.pk}
@@ -176,11 +175,11 @@ class NotificationPreferencesTestCase(APITestCase):
         response = client.get(detail_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
                        'Detail endpoint should require authentication')
-        
+
         response = client.patch(detail_url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
                        'Update endpoint should require authentication')
-        
+
         type_pref_url = reverse(
             'communications:user-notification-preference-update-type-preference',
             kwargs={'pk': self.user.pk}
@@ -197,7 +196,7 @@ class NotificationPreferencesTestCase(APITestCase):
             first_name='New',
             last_name='User'
         )
-        
+
         self.assertTrue(hasattr(new_user, 'notification_preferences'))
         self.assertEqual(
             new_user.notification_preferences.type_preferences.count(),

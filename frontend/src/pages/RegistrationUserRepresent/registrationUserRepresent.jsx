@@ -11,6 +11,7 @@ import TextInput from '../../components/TextInput/textInput';
 import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
+import { useFormWithProtection } from '../../hooks/useFormWithProtection/useFormWithProtection';
 
 /**
  * Registration page that asks the user to select
@@ -21,25 +22,22 @@ import { useAuthContext } from '../../provider/AuthProvider/authProvider';
  * @returns {JSX.Element}
  */
 function RegistrationUserRepresent() {
-    // This component handles user registration
-    const navigate = useNavigate();
-
-    // Bind user to company
     const { bindCompanyToUser } = useAuthContext();
 
-    // State to hold form data
-    const [formData, setFormData] = useState(
-        {
-            companyName: "",
-            representation: {
-                company: false,
-                startup: false
-            },
-            unexpected: ""
-        });
-
-    // State to hold validation errors
-    const [errors, setErrors] = useState({});
+    // Form with protection hook
+    const {
+        formData, setFormData,
+        errors, setErrors,
+        isLocked, setIsLocked,
+        navigate,
+    } = useFormWithProtection({
+        companyName: "",
+        representation: {
+            company: false,
+            startup: false
+        },
+        unexpected: "",
+    });
 
     // Function to handle server-side errors
     const handleError = (error) => {
@@ -59,6 +57,9 @@ function RegistrationUserRepresent() {
 
     // Function to handle form submission
     const handleSubmit = () => {
+        if (isLocked) return;
+        setIsLocked(true);
+
         const validationErrors = Validator.validate(
             formData
         );
@@ -74,6 +75,7 @@ function RegistrationUserRepresent() {
         } else {
             console.warn('Errors:', validationErrors);
         }
+        setIsLocked(false);
     };
 
     // Function to handle input changes
@@ -164,6 +166,7 @@ function RegistrationUserRepresent() {
                 <Button
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
+                    disabled={isLocked}
                     type="submit"
                 >
                     Продовжити

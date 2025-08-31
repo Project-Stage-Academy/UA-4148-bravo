@@ -1,6 +1,7 @@
 import logging
 from rest_framework import permissions
 from startups.models import Startup
+from investors.models import Investor
 
 logger = logging.getLogger(__name__)
 
@@ -11,18 +12,30 @@ class IsInvestor(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        user = request.user
-
-        if not getattr(user, 'is_authenticated', False):
-            logger.warning(f"Permission denied: Unauthenticated user tried to access {view.__class__.__name__}.")
+        """
+        Checks if the request.user is authenticated and linked to an Investor profile.
+        Logs a warning if the user is not an investor.
+        """
+        if not request.user or not request.user.is_authenticated:
             return False
 
-        if hasattr(user, 'investor'):
-            logger.debug(f"Permission granted for user {user.id} as investor.")
-            return True
+        is_investor = Investor.objects.filter(user=request.user).exists()
 
-        logger.warning(f"Permission denied for user {user.id}: Not an investor.")
-        return False
+        if is_investor:
+            logger.debug(
+                "Permission granted for user %s as investor for view %s.",
+                request.user.pk,
+                view.__class__.__name__
+            )
+            return True
+        else:
+            logger.warning(
+                "Permission denied for user %s: Not an investor for view %s.",
+                request.user.pk,
+                view.__class__.__name__,
+                extra={"user_id": request.user.pk, "view": view.__class__.__name__}
+            )
+            return False
 
 
 class IsStartupUser(permissions.BasePermission):
@@ -63,3 +76,26 @@ class IsStartupUser(permissions.BasePermission):
 
         logger.warning(f"Object-level permission denied for user {request.user.id} on object {obj.pk}.")
         return False
+
+
+class CanCreateCompanyPermission(permissions.BasePermission):
+    """
+    Permission to check if a user can create a new Startup or Investor profile.
+    Denies permission if the user already owns a Startup or an Investor profile.
+    """
+    message = "You have already created a company profile (Startup or Investor) and cannot create another."
+
+    def has_permission(self, request, view):
+        """
+        Check if the user is authenticated and does not already have a company.
+        """
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        has_startup = Startup.objects.filter(user=request.user).exists()
+        has_investor = Investor.objects.filter(user=request.user).exists()
+
+        if has_startup or has_investor:
+            return False
+
+        return True

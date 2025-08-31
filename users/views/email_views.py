@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 class VerifyEmailView(APIView):
     """Handle email verification."""
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def get(self, request, user_id, token):
         """Handle email verification link."""
@@ -136,6 +137,7 @@ class ResendEmailView(APIView):
         throttle_classes (list): List of throttling classes applied to the view.
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_scope = "resend_email"
     throttle_classes = [ScopedRateThrottle]
     serializer_class = ResendEmailSerializer

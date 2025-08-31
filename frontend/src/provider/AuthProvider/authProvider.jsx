@@ -151,15 +151,10 @@ function AuthProvider({ children }) {
      * @returns {Promise<AxiosResponse<any>>}
      */
     const login = useCallback(async (email, password) => {
-        const csrfToken = Cookies.get("csrftoken");
         const res = await api
             .post('/api/v1/auth/jwt/create/', {
                 email,
                 password,
-            }, {
-                headers: {
-                    "X-CSRFToken": csrfToken,
-                }
             })
             .catch((err) => {
                 console.error(err);
@@ -181,30 +176,28 @@ function AuthProvider({ children }) {
      *
      * @returns {Promise<void>}
      */
-    // eslint-disable-next-line
     const loadUser = useCallback(async () => {
-        try {
-            const { data } = await api.get('/api/v1/auth/me/').catch((err) => {
-                console.error(err);
+        const { data } = await api.get('/api/v1/auth/me/')
+            .then(() => {
+                setUser(data);
+            })
+            .catch((err) => {
+                if (err.response?.status === 404) {
+                    setUser(null);
+                } else {
+                    throw err;
+                }
             });
-            setUser(data);
-        } catch (err) {
-            if (err.response?.status === 404) {
-                setUser(null);
-            } else {
-                throw err;
-            }
-        }
     }, []);
 
     /**
      * Logout
-     * URL: /api/v1/auth/jwt/logout/
+     * URL: /api/v1/auth/logout/
      * Req: {  }
      * Res: 205
      */
     const logout = useCallback(async () => {
-        await api.post('/api/v1/auth/jwt/logout/').catch(() => {
+        await api.post('/api/v1/auth/logout/').catch(() => {
             console.log('Logout');
         });
         setUser(null);

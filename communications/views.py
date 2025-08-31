@@ -2,11 +2,11 @@ import logging
 
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from rest_framework import viewsets, status, permissions, mixins
+from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-
+from rest_framework.permissions import IsAuthenticated
 from .models import (
     Notification,
     UserNotificationPreference,
@@ -37,7 +37,7 @@ class NotificationViewSet(
     ViewSet for managing user notifications.
     """
     serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     lookup_field = 'notification_id'
     http_method_names = ['get', 'post', 'delete', 'head', 'options']
     pagination_class = DefaultPageNumberPagination
@@ -196,7 +196,7 @@ class NotificationTypeViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = NotificationType.objects.filter(is_active=True)
     serializer_class = NotificationTypeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     pagination_class = None
 
 
@@ -205,7 +205,7 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
     API endpoint that allows users to view and update their notification preferences.
     """
     serializer_class = UserNotificationPreferenceSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'patch', 'head', 'options']
 
     def get_queryset(self):
