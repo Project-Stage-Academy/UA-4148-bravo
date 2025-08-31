@@ -678,13 +678,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedUserNotificationPreferenceRequest'
+              $ref: '#/components/schemas/UserNotificationTypePreferenceRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedUserNotificationPreferenceRequest'
+              $ref: '#/components/schemas/UserNotificationTypePreferenceRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedUserNotificationPreferenceRequest'
+              $ref: '#/components/schemas/UserNotificationTypePreferenceRequest'
       security:
       - bearerAuth: []
       responses:
@@ -692,7 +692,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserNotificationPreference'
+                $ref: '#/components/schemas/UserNotificationTypePreference'
           description: ''
   /api/v1/communications/preferences/{id}/update_type_preference/:
     patch:
@@ -2248,6 +2248,247 @@ paths:
               schema:
                 $ref: '#/components/schemas/StartupDocument'
           description: ''
+  /api/v1/startups/preferences/:
+    get:
+      operationId: startups_preferences_retrieve
+      description: Get current startup user's notification channel preferences.
+      tags:
+      - startups
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNotificationPreference'
+              example:
+                user_id: 42
+                enable_in_app: true
+                enable_email: true
+                enable_push: false
+                type_preferences:
+                - id: 1
+                  notification_type:
+                    id: 3
+                    code: message_received
+                    name: Message Received
+                    description: New message received
+                    is_active: true
+                  frequency: immediate
+                  created_at: '2025-01-01T12:00:00Z'
+                  updated_at: '2025-01-01T12:00:00Z'
+                - id: 2
+                  notification_type:
+                    id: 4
+                    code: activity_summarized
+                    name: Activity Summarized
+                    description: Weekly summary of activity
+                    is_active: true
+                  frequency: weekly_summary
+                  created_at: '2025-01-01T12:00:00Z'
+                  updated_at: '2025-01-01T12:00:00Z'
+          description: ''
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+              example:
+                detail: Authentication credentials were not provided.
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+              example:
+                detail: You do not have permission to perform this action.
+    patch:
+      operationId: startups_preferences_partial_update
+      description: Update current startup user's notification channel preferences.
+      tags:
+      - startups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserNotificationPreferenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserNotificationPreferenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserNotificationPreferenceRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNotificationPreference'
+              example:
+                user_id: 42
+                enable_in_app: true
+                enable_email: false
+                enable_push: false
+                type_preferences:
+                - id: 1
+                  notification_type:
+                    id: 3
+                    code: message_received
+                    name: Message Received
+                    description: New message received
+                    is_active: true
+                  frequency: immediate
+                  created_at: '2025-01-01T12:00:00Z'
+                  updated_at: '2025-01-08T12:00:00Z'
+          description: ''
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+              example:
+                enable_email:
+                - Must be a valid boolean.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+              example:
+                detail: Authentication credentials were not provided.
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+              example:
+                detail: You do not have permission to perform this action.
+  /api/v1/startups/preferences/update_type/:
+    patch:
+      operationId: startups_preferences_update_type_partial_update
+      description: |-
+        Update the frequency for a specific notification type for the current startup user.
+        Expected payload: {"notification_type_id": 1, "frequency": "immediate"}
+        Errors: 400 (validation), 404 (preference not found)
+      tags:
+      - startups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserNotificationTypePreferenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserNotificationTypePreferenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserNotificationTypePreferenceRequest'
+        required: true
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNotificationTypePreference'
+              example:
+                id: 10
+                notification_type:
+                  id: 4
+                  code: activity_summarized
+                  name: Activity Summarized
+                  description: Weekly summary of activity
+                  is_active: true
+                frequency: weekly_summary
+                created_at: '2025-01-01T12:00:00Z'
+                updated_at: '2025-01-08T12:00:00Z'
+          description: ''
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+              example:
+                frequency:
+                - "'monthly' is not a valid choice."
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+              example:
+                detail: Authentication credentials were not provided.
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+              example:
+                detail: You do not have permission to perform this action.
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+              example:
+                detail: Preference not found.
 components:
   schemas:
     Category:
