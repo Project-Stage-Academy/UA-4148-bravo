@@ -3,6 +3,7 @@ from elasticsearch_dsl import Index
 from rest_framework import status
 from projects.documents import ProjectDocument
 from tests.elasticsearch.setup_tests_data import BaseElasticsearchAPITestCase
+from rest_framework.test import APIClient
 
 
 class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
@@ -121,14 +122,11 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_permission_denied_for_unauthenticated_user_access(self):
-        """
-        Test that unauthenticated users cannot access the project list,
-        receiving HTTP 401 Unauthorized.
-        """
-        self.client.force_authenticate(user=None)
+        """Unauthenticated user should get 401 when accessing project list."""
+        client = APIClient(enforce_csrf_checks=False)
         url = reverse('project-list')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_funding_goal_edge_case_large_value(self):
         """

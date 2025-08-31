@@ -46,8 +46,6 @@ INSTALLED_APPS = [
     'dashboard',
     'investments',
     'rest_framework',
-    'rest_framework_simplejwt.token_blacklist',
-    'rest_framework.authtoken',
     'djoser',
     'django_filters',
     'corsheaders',

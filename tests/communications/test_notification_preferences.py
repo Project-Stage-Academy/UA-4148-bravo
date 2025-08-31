@@ -2,13 +2,14 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
-from rest_framework.authtoken.models import Token
 from communications.models import NotificationType, UserNotificationPreference
 import ddt
 from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from rest_framework.test import APIClient
 import logging
+
+from utils.authenticate_client import authenticate_client
 
 User = get_user_model()
 
@@ -32,8 +33,7 @@ class NotificationPreferencesTestCase(APITestCase):
         self.notification_type2 = NotificationTypeFactory(default_frequency='daily_digest')
 
         self.user = UserFactory()
-        self.token = Token.objects.create(user=self.user)
-        self.client.force_authenticate(user=self.user, token=self.token)
+        authenticate_client(self.client, self.user)
 
     def test_get_notification_types(self):
         """Test retrieving notification types."""
@@ -165,28 +165,19 @@ class NotificationPreferencesTestCase(APITestCase):
 
         list_url = reverse('communications:user-notification-preference-list')
         response = client.get(list_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
-                        'List endpoint should require authentication')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        detail_url = reverse(
-            'communications:user-notification-preference-detail',
-            kwargs={'pk': self.user.pk}
-        )
+        detail_url = reverse('communications:user-notification-preference-detail', kwargs={'pk': self.user.pk})
         response = client.get(detail_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
-                       'Detail endpoint should require authentication')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         response = client.patch(detail_url, {}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
-                       'Update endpoint should require authentication')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        type_pref_url = reverse(
-            'communications:user-notification-preference-update-type-preference',
-            kwargs={'pk': self.user.pk}
-        )
+        type_pref_url = reverse('communications:user-notification-preference-update-type-preference',
+                                kwargs={'pk': self.user.pk})
         response = client.patch(type_pref_url, {}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
-                       'Type preference update should require authentication')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_initial_preferences_created(self):
         """Test that initial preferences are created for new users."""

@@ -4,6 +4,7 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.test import APIClient
 
 User = get_user_model()
 
@@ -56,7 +57,7 @@ class MeEndpointTests(APITestCase):
         and does not expose the password.
         """
         token = self.get_token_for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        self.client.cookies['access_token'] = token
         resp = self.client.get(self.url)
 
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -70,22 +71,19 @@ class MeEndpointTests(APITestCase):
         self.assertNotIn("password", body)
 
     def test_me_requires_auth(self):
-        """
-        Ensure that the 'me' endpoint requires authentication and returns 401 if no token is provided.
-        """
-        resp = self.client.get(self.url)
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        """Ensure 'me' endpoint requires authentication -> 401."""
+        client = APIClient(enforce_csrf_checks=False)
+        resp = client.get(self.url)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_me_inactive_user(self):
-        """
-        Ensure that inactive users cannot access the 'me' endpoint.
-        DRF returns 401 Unauthorized for inactive users by default.
-        """
+        """Inactive users cannot access 'me' endpoint."""
         self.user.is_active = False
         self.user.save()
 
         token = self.get_token_for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-        resp = self.client.get(self.url)
+        client = APIClient(enforce_csrf_checks=False)
 
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        client.cookies['access_token'] = token
+        resp = client.get(self.url)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)

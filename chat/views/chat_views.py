@@ -7,8 +7,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from chat.documents import Room, Message
 from chat.permissions import IsOwnerOrRecipient
+from chat.views.base_protected_view import ChatCookieJWTProtectedView
 from users.cookie_jwt import CookieJWTAuthentication
-from chat.views.base_protected_view import CookieJWTProtectedView
 from chat.serializers import RoomSerializer, MessageSerializer
 from rest_framework.pagination import LimitOffsetPagination
 from mongoengine.errors import ValidationError as MongoValidationError
@@ -151,7 +151,7 @@ class ConversationCreateView(generics.CreateAPIView):
         ),
     },
 )
-class SendMessageView(CookieJWTProtectedView):
+class SendMessageView(ChatCookieJWTProtectedView):
     """
     Send a new message within a conversation and broadcast it via WebSocket.
 

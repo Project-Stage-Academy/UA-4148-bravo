@@ -84,7 +84,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
         access_token = res.cookies.get("access_token").value
         print(access_token)
         client = APIClient()
-        client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+        client.cookies['access_token'] = access_token
         protected_response = client.get('/api/v1/auth/me/')
         self.assertEqual(protected_response.status_code, 200)
 
