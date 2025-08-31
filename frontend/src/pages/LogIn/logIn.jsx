@@ -9,9 +9,8 @@ import Panel, {
 import TextInput from '../../components/TextInput/textInput';
 import HiddenInput from '../../components/HiddenInput/hiddenInput';
 import Button from '../../components/Button/button';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Validator } from '../../utils/validation/validate';
-import { useMemo, useState } from 'react';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import bruteForce from "../../utils/bruteForce/bruteForce";
 import { useFormWithProtection } from '../../hooks/useFormWithProtection/useFormWithProtection';

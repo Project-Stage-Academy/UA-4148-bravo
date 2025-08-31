@@ -24,6 +24,7 @@ import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePassword
 import RegistrationUserRepresent from '../../pages/RegistrationUserRepresent/registrationUserRepresent';
 import RegistrationCompleted from '../../pages/RegistrationCompleted/registrationCompleted';
 import ForgotPasswordDone from '../../pages/ForgotPasswordDone/forgotPasswordDone';
+import PasswordResetHandler from '../../pages/PasswordResetHandler/passwordResetHandler';
 
 /**
  * Main application component that sets up routing and provider providers.
@@ -98,6 +99,9 @@ function App() {
                                 <Route path="edit" element={<ProfileEditing />} />
                             </Route>
                         </Route>
+
+                        {/* Redirect password reset */}
+                        <Route path="/password/reset/confirm/:user_id/:token/" element={<PasswordResetHandler />} />
 
                         {/* Page not found */}
                         <Route path="*" element={<NotFound />} />
