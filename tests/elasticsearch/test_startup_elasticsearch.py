@@ -43,7 +43,7 @@ class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
         """
         Ensure that an empty search query returns all startups in the index.
         """
-        url = reverse('startup-list')
+        url = reverse('startups:startups-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
@@ -54,7 +54,7 @@ class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
         """
         Ensure that searching for a non-existent company name returns no results.
         """
-        url = reverse('startup-list')
+        url = reverse('startups:startups-list')
         response = self.client.get(url, {'search': 'Nonexistent Company'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
@@ -65,7 +65,7 @@ class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
         """
         Ensure that filtering by stage and location returns the correct startup.
         """
-        url = reverse('startup-list')
+        url = reverse('startups:startups-list')
         response = self.client.get(url, {
             'stage': Stage.MVP,
             'location.country': 'DE'
