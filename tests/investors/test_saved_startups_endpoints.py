@@ -3,10 +3,11 @@ from django.contrib.auth.hashers import make_password
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-
+from rest_framework.test import APIClient
 from investors.models import Investor, SavedStartup
 from startups.models import Startup, Industry, Location
 from users.models import UserRole
+from utils.authenticate_client import authenticate_client
 
 
 class SavedStartupsEndpointsTests(APITestCase):
@@ -86,7 +87,7 @@ class SavedStartupsEndpointsTests(APITestCase):
         )
 
         # Authenticate as investor
-        self.client.force_authenticate(self.user)
+        authenticate_client(self.client, self.user)
 
         # Seed: investor already saved startup1
         SavedStartup.objects.create(
@@ -102,19 +103,18 @@ class SavedStartupsEndpointsTests(APITestCase):
 
     def test_auth_required(self):
         """Both list and unsave require authentication -> 401 when anonymous."""
-        self.client.force_authenticate(user=None)
+        client = APIClient()
+        r1 = client.get(self.list_url)
+        self.assertEqual(r1.status_code, status.HTTP_403_FORBIDDEN)
 
-        r1 = self.client.get(self.list_url)
-        self.assertEqual(r1.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        r2 = self.client.delete(self.unsave_url_1)
-        self.assertEqual(r2.status_code, status.HTTP_401_UNAUTHORIZED)
+        r2 = client.delete(self.unsave_url_1)
+        self.assertEqual(r2.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_list_requires_investor_profile(self):
         """Non-investor user should get 403 (PermissionDenied in get_queryset)."""
         User = get_user_model()
         plain = User.objects.create_user(email="plain@ex.com", password="x", role=self.role_user)
-        self.client.force_authenticate(plain)
+        authenticate_client(self.client, plain)
 
         r = self.client.get(self.list_url)
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)

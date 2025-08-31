@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from chat.documents import Room, Message
 from users.cookie_jwt import CookieJWTAuthentication
-from chat.views.base_protected_view import CookieJWTProtectedView
+from users.views.base_protected_view import CookieJWTProtectedView
 from chat.serializers import RoomSerializer, MessageSerializer
 from rest_framework.pagination import LimitOffsetPagination
 

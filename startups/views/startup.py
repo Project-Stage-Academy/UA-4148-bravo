@@ -1,6 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,7 +8,8 @@ from startups.models import Startup
 from startups.serializers.startup_full import StartupSerializer
 from startups.serializers.startup_create import StartupCreateSerializer
 from startups.views.startup_base import BaseValidatedModelViewSet
-from users.permissions import IsStartupUser, CanCreateCompanyPermission
+from users.cookie_jwt import CookieJWTAuthentication
+from users.permissions import IsStartupUser, CanCreateCompanyPermission, IsAuthenticatedOr401
 from communications.serializers import (
     UserNotificationPreferenceSerializer,
     UserNotificationTypePreferenceSerializer,
@@ -22,7 +22,8 @@ class StartupViewSet(BaseValidatedModelViewSet):
         .prefetch_related('projects')
     
     serializer_class = StartupSerializer
-    permission_classes = [IsAuthenticated, IsStartupUser]
+    permission_classes = [IsAuthenticatedOr401, IsStartupUser]
+    authentication_classes = [CookieJWTAuthentication]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['industry', 'stage', 'location__country']
     search_fields = ['company_name', 'user__first_name', 'user__last_name', 'email']
@@ -178,8 +179,8 @@ class StartupViewSet(BaseValidatedModelViewSet):
         Instantiates and returns the list of permissions that this view requires.
         """
         if self.action == 'create':
-            return [IsAuthenticated(), CanCreateCompanyPermission()]
-        return [IsAuthenticated(), IsStartupUser()]
+            return [IsAuthenticatedOr401(), CanCreateCompanyPermission()]
+        return [IsAuthenticatedOr401(), IsStartupUser()]
 
     def get_serializer_class(self):
         """

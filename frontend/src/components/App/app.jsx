@@ -75,6 +75,9 @@ function App() {
                             <Route path="register/user-represent" element={<RegistrationUserRepresent />} />
                             <Route path="register/completed" element={<RegistrationCompleted />} />
 
+                            {/* Email verificator */}
+                            <Route path="verify-email/:user_id/:token" element={<EmailConfirmationHandler />} />
+
                             {/* Forgot password */}
                             <Route path="forgot" element={<ForgotPassword />} />
 
@@ -93,9 +96,6 @@ function App() {
                                 <Route path="edit" element={<ProfileEditing />} />
                             </Route>
                         </Route>
-
-                        {/* Email verificator */}
-                        <Route path="api/v1/auth/verify-email/:user_id/:token" element={<EmailConfirmationHandler />} />
 
                         {/* Page not found */}
                         <Route path="*" element={<NotFound />} />
