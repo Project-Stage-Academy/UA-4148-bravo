@@ -20,6 +20,10 @@ startup_preferences_update = StartupViewSet.as_view({
     'patch': 'preferences',
 })
 
+startup_update_type_preference = StartupViewSet.as_view({
+    'patch': 'update_type_preference',
+})
+
 startup_email_preferences_get = StartupViewSet.as_view({
     'get': 'get_email_preferences',
 })
@@ -32,6 +36,7 @@ startup_email_preferences_update = StartupViewSet.as_view({
 urlpatterns += [
     path('preferences/', startup_viewset, name='preferences'),
     path('preferences/update/', startup_preferences_update, name='preferences-update'),
+    path('preferences/update-type/', startup_update_type_preference, name='preferences-update-type'),
     path('preferences/email/', startup_email_preferences_get, name='email-preferences-get'),
     path('preferences/email/update/', startup_email_preferences_update, name='email-preferences-update'),
 ]
