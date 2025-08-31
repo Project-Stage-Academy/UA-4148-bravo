@@ -1,102 +1,103 @@
 from unittest import mock
 from django.urls import reverse
 from rest_framework.test import APITestCase
-from startups.models import Startup, Location, Industry
-from projects.models import Project, Category
+from startups.models import Startup, Industry, Location
+from projects.models import Project
 from users.models import User, UserRole
 
 
 class SearchTests(APITestCase):
     def setUp(self):
-        """
-        Setup test data for search tests:
-        - Create role and user
-        - Create location and industry
-        - Create startup
-        - Create project and category
-        """
-
-        # Ensure USER role exists
+        # Create user role
         role, _ = UserRole.objects.get_or_create(role=UserRole.Role.USER)
 
-        # Create test user
+        # Create user
         self.user = User.objects.create_user(
             email="test@example.com",
-            password="pass1234",
-            first_name="Test",
-            last_name="User",
-            role=role
+            password="password123",
+            role=role,
         )
 
-        # Create a location (required for Startup)
-        self.location = Location.objects.create(
-            country="US",
-            region="California",
-            city="San Francisco"
-        )
+        # Create industry (required for Startup)
+        self.industry = Industry.objects.create(name="Healthcare")
 
-        # Create an industry for the startup (required for Startup)
-        self.industry = Industry.objects.create(
-            name="AI",
-            description="Artificial Intelligence"
-        )
+        # Create location (required for Startup)
+        self.location = Location.objects.create(city="Kyiv", country="Ukraine")
 
-        # Create a startup associated with user, industry, and location
+        # Create startup with all required fields
         self.startup = Startup.objects.create(
             user=self.user,
             company_name="Test Startup",
-            description="AI powered solution",
+            description="AI Startup in healthcare",
             stage="seed",
-            website="https://startup.com",
-            founded_year=2023,
+            founded_year=2020,
             industry=self.industry,
-            location=self.location
+            location=self.location,
         )
 
-        # Create a category for the project
-        self.category, _ = Category.objects.get_or_create(
-            name="AI",
-            defaults={"description": "AI related projects"}
-        )
-
-        # Create a project under the startup
+        # Create project linked to startup
         self.project = Project.objects.create(
             startup=self.startup,
-            title="AI Platform",
-            description="Project about machine learning",
+            title="Health AI",
+            description="AI project for healthcare",
             status="active",
-            funding_goal=100000,
-            current_funding=5000,
-            category=self.category,
-            email="project@example.com",
-            website="https://project.com",
-            is_active=True,
-            is_participant=True
+            funding_goal=10000,
         )
 
     @mock.patch("search.views.StartupDocument.search")
     def test_startup_search_mocked(self, mock_search):
-        """Test mocked search for startups."""
-        mock_search.return_value = [mock.Mock(id=self.startup.id)]
+        """Test startup search with mocked Elasticsearch"""
 
+        # Prepare mock search result
+        mock_execute = mock.Mock()
+        mock_execute.__iter__ = lambda s: iter([mock.Mock(id=self.startup.id)])
+        mock_search.return_value.execute.return_value = mock_execute
+
+        # Call API
         url = reverse("startup-search")
         response = self.client.get(url, {"q": "AI"})
 
+        # Assertions
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["company_name"], "Test Startup")
 
     @mock.patch("search.views.ProjectDocument.search")
     def test_project_search_mocked(self, mock_search):
-        """Test mocked search for projects."""
-        mock_search.return_value = [mock.Mock(id=self.project.id)]
+        """Test project search with mocked Elasticsearch"""
 
+        # Prepare mock search result
+        mock_execute = mock.Mock()
+        mock_execute.__iter__ = lambda s: iter([mock.Mock(id=self.project.id)])
+        mock_search.return_value.execute.return_value = mock_execute
+
+        # Call API
         url = reverse("project-search")
         response = self.client.get(url, {"q": "AI"})
 
+        # Assertions
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["title"], "AI Platform")
+        self.assertEqual(response.data[0]["title"], "Health AI")
+
+    def test_startup_search_empty_query(self):
+        """Test empty query for startups should return empty list"""
+        url = reverse("startup-search")
+        response = self.client.get(url, {"q": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+    def test_project_search_empty_query(self):
+        """Test empty query for projects should return empty list"""
+        url = reverse("project-search")
+        response = self.client.get(url, {"q": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+
+
+
+
 
 
 
