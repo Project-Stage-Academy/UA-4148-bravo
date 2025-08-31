@@ -193,3 +193,145 @@ class NotificationPreferencesTestCase(APITestCase):
             new_user.notification_preferences.type_preferences.count(),
             NotificationType.objects.count()
         )
+
+    def test_get_email_preferences(self):
+        """Test retrieving user email notification preferences."""
+        url = reverse('communications:user-notification-preference-email-preferences')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('enable_email', response.data)
+        self.assertIn('notification_types', response.data)
+        self.assertIsInstance(response.data['notification_types'], list)
+
+        if len(response.data['notification_types']) > 0:
+            type_data = response.data['notification_types'][0]
+            self.assertIn('id', type_data)
+            self.assertIn('code', type_data)
+            self.assertIn('name', type_data)
+            self.assertIn('frequency', type_data)
+            self.assertIn('is_active', type_data)
+
+    def test_update_email_preferences(self):
+        """Test updating user email notification preferences."""
+        pref = UserNotificationPreference.objects.get(user=self.user)
+        url = reverse('communications:user-notification-preference-update-email-preferences',
+                     kwargs={'pk': pref.pk})
+        
+        notification_types = list(NotificationType.objects.all()[:2])
+        
+        data = {
+            'enable_email': True,
+            'type_preferences': [
+                {
+                    'notification_type_id': notification_types[0].id,
+                    'frequency': 'immediate'
+                },
+                {
+                    'notification_type_id': notification_types[1].id,
+                    'frequency': 'daily_digest'
+                }
+            ]
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['enable_email'])
+        
+        self.assertIn('type_preferences', response.data)
+        self.assertIn('updated_types', response.data)
+        self.assertEqual(len(response.data['updated_types']), 2)
+        self.assertIn(notification_types[0].id, response.data['updated_types'])
+        self.assertIn(notification_types[1].id, response.data['updated_types'])
+        
+        pref.refresh_from_db()
+        self.assertTrue(pref.enable_email)
+        
+        type_pref = pref.type_preferences.get(notification_type=notification_types[0])
+        self.assertEqual(type_pref.frequency, 'immediate')
+        
+        type_pref = pref.type_preferences.get(notification_type=notification_types[1])
+        self.assertEqual(type_pref.frequency, 'daily_digest')
+
+    def test_update_email_preferences_partial(self):
+        """Test updating only some email preferences."""
+        pref = UserNotificationPreference.objects.get(user=self.user)
+        url = reverse('communications:user-notification-preference-update-email-preferences',
+                     kwargs={'pk': pref.pk})
+        
+        data = {
+            'enable_email': False
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['enable_email'])
+        
+        pref.refresh_from_db()
+        self.assertFalse(pref.enable_email)
+
+    def test_update_email_preferences_invalid_frequency(self):
+        """Test updating email preferences with invalid frequency."""
+        pref = UserNotificationPreference.objects.get(user=self.user)
+        url = reverse('communications:user-notification-preference-update-email-preferences',
+                     kwargs={'pk': pref.pk})
+        
+        # Get a notification type to update
+        notification_type = NotificationType.objects.first()
+        
+        data = {
+            'enable_email': True,
+            'type_preferences': [
+                {
+                    'notification_type_id': notification_type.id,
+                    'frequency': 'invalid_frequency'
+                }
+            ]
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('type_preferences', response.data)
+
+    def test_update_email_preferences_invalid_type_id(self):
+        """Test updating email preferences with invalid notification type ID."""
+        pref = UserNotificationPreference.objects.get(user=self.user)
+        url = reverse('communications:user-notification-preference-update-email-preferences',
+                     kwargs={'pk': pref.pk})
+        
+        invalid_id = 99999
+        
+        data = {
+            'enable_email': True,
+            'type_preferences': [
+                {
+                    'notification_type_id': invalid_id,
+                    'frequency': 'immediate'
+                }
+            ]
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+        self.assertIn('not found', response.data['error'])
+
+    def test_email_preferences_unauthorized(self):
+        """Test that unauthorized users can't access email preferences."""
+        client = APIClient()
+        
+        get_url = reverse('communications:user-notification-preference-email-preferences')
+        response = client.get(get_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
+                        'Email preferences GET endpoint should require authentication')
+        
+        pref = UserNotificationPreference.objects.get(user=self.user)
+        update_url = reverse('communications:user-notification-preference-update-email-preferences',
+                           kwargs={'pk': pref.pk})
+        response = client.patch(update_url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED,
+                        'Email preferences PATCH endpoint should require authentication')

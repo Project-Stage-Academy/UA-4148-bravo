@@ -31,3 +31,13 @@ app_name = 'communications'
 urlpatterns = [
     path('', include(router.urls)),
 ]
+
+urlpatterns += [
+    path('preferences/email-preferences/', 
+         UserNotificationPreferenceViewSet.as_view({'get': 'get_email_preferences'}), 
+         name='user-notification-preference-email-preferences'),
+         
+    path('preferences/<int:pk>/email-preferences/', 
+         UserNotificationPreferenceViewSet.as_view({'patch': 'update_email_preferences'}), 
+         name='user-notification-preference-update-email-preferences'),
+]

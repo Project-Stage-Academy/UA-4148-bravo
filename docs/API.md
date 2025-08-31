@@ -149,6 +149,8 @@ All endpoints require authentication and the Startup role. Base path: `/api/v1/s
 - `GET /api/v1/startups/preferences/` — Get the current startup user's notification channel preferences. If preferences do not exist, defaults are created and per-type preferences are seeded for all active notification types.
 - `PATCH /api/v1/startups/preferences/` — Update channel toggles (`enable_in_app`, `enable_email`, `enable_push`). Partial updates supported.
 - `PATCH /api/v1/startups/preferences/update_type/` — Update the frequency for a specific notification type. Payload requires `notification_type_id` (int) and `frequency` (one of `immediate`, `daily_digest`, `weekly_summary`, `disabled`).
+- `GET /api/v1/startups/preferences/email-preferences/` — Get the current startup user's email notification preferences specifically formatted for easy management.
+- `PATCH /api/v1/startups/preferences/email-preferences/` — Update email notification preferences with option to toggle global email settings and modify individual notification type frequencies.
 
 #### Example: GET /api/v1/startups/preferences/
 
@@ -174,15 +176,51 @@ Response 200
 }
 ```
 
-#### Example: PATCH /api/v1/startups/preferences/
+#### Example: GET /api/v1/startups/preferences/email-preferences/
+
+Response 200
+
+```json
+{
+  "enable_email": true,
+  "notification_types": [
+    {
+      "id": 1,
+      "code": "new_follower",
+      "name": "New Follower",
+      "description": "When someone follows your startup",
+      "frequency": "immediate",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "code": "message_received",
+      "name": "Message Received",
+      "description": "A new message was received",
+      "frequency": "daily_digest",
+      "is_active": true
+    }
+  ]
+}
+```
+
+#### Example: PATCH /api/v1/startups/preferences/email-preferences/
 
 Request
 
 ```json
 {
-  "enable_in_app": true,
-  "enable_email": false,
-  "enable_push": true
+  "enable_email": true,
+  "type_preferences": [
+    {
+      "notification_type_id": 1,
+      "frequency": "immediate"
+    },
+    {
+      "notification_type_id": 2,
+      "frequency": "disabled"
+    }
+  ]
 }
 ```
 
@@ -192,67 +230,64 @@ Response 200
 {
   "user_id": 12,
   "enable_in_app": true,
-  "enable_email": false,
-  "enable_push": true,
-  "type_preferences": [ /* ... */ ]
-}
-```
-
-#### Example: PATCH /api/v1/startups/preferences/update_type/
-
-Request
-
-```json
-{
-  "notification_type_id": 3,
-  "frequency": "daily_digest"
-}
-```
-
-Response 200
-
-```json
-{
-  "id": 101,
-  "notification_type": { "id": 3, "code": "message_received", "name": "Message Received", "description": "A new message was received", "is_active": true },
-  "frequency": "daily_digest",
+  "enable_email": true,
+  "enable_push": false,
+  "type_preferences": [
+    {
+      "id": 101,
+      "notification_type": { "id": 1, "code": "new_follower", "name": "New Follower", "description": "When someone follows your startup", "is_active": true },
+      "frequency": "immediate",
+      "created_at": "2025-08-05T12:00:00Z",
+      "updated_at": "2025-08-31T14:05:00Z"
+    },
+    {
+      "id": 102,
+      "notification_type": { "id": 2, "code": "message_received", "name": "Message Received", "description": "A new message was received", "is_active": true },
+      "frequency": "disabled",
+      "created_at": "2025-08-05T12:00:00Z",
+      "updated_at": "2025-08-31T14:05:00Z"
+    }
+  ],
+  "updated_types": [1, 2],
   "created_at": "2025-08-05T12:00:00Z",
-  "updated_at": "2025-08-05T12:05:00Z"
+  "updated_at": "2025-08-31T14:05:00Z"
 }
 ```
 
-Error responses
+Error Responses for email preferences endpoints
 
-- 400 Missing fields
+- 400 Invalid request format:
 
 ```json
 {
-  "notification_type_id": ["This field is required."],
-  "frequency": ["This field is required."]
+  "error": "enable_email must be a boolean value"
 }
 ```
 
-- 400 Invalid notification_type_id (non-integer)
+- 400 Invalid type preferences format:
 
 ```json
 {
-  "notification_type_id": ["A valid integer is required."]
+  "error": "type_preferences must be a list",
+  "errors": [
+    {
+      "index": 0,
+      "error": "notification_type_id must be an integer"
+    }
+  ]
 }
 ```
 
-- 400 Invalid frequency value
+- 404 Notification type not found:
 
 ```json
 {
-  "frequency": ["\"invalid_freq\" is not a valid choice."]
-}
-```
-
-- 404 Notification type preference not found
-
-```json
-{
-  "error": "Notification type preference not found"
+  "errors": [
+    {
+      "index": 0,
+      "error": "Notification type preference with id 999 not found"
+    }
+  ]
 }
 ```
 
@@ -540,6 +575,105 @@ Creation of notifications via public API is disabled.
 - `POST /notifications/mark_all_as_read/` → `{ "status": "marked <n> notifications as read" }`
 - `POST /notifications/mark_all_as_unread/` → `{ "status": "marked <n> notifications as unread" }`
 - `GET /notifications/{id}/resolve/` → `{ "redirect": { ... } }`
+
+### Notification Preferences API
+
+All endpoints require authentication and are available under the base path: `/api/v1/communications/`.
+
+#### Notification Channels and Types
+
+- `GET /preferences/` — Get the current user's notification preferences. If preferences don't exist, defaults are created.
+- `PATCH /preferences/` — Update channel preferences (`enable_in_app`, `enable_email`, `enable_push`). Partial updates supported.
+- `GET /preferences/options/` — Get available notification preference options (frequencies).
+
+#### Email Notification Preferences
+
+- `GET /preferences/email-preferences/` — Get the current user's email notification preferences specifically formatted for easy management.
+- `PATCH /preferences/{id}/email-preferences/` — Update email notification preferences with option to toggle global email settings and modify individual notification type frequencies.
+
+#### Type-Specific Preferences
+
+- `PATCH /preferences/{id}/update_type_preference/` — Update a single notification type preference. 
+
+### Example: GET /preferences/email-preferences/
+
+Response 200
+
+```json
+{
+  "enable_email": true,
+  "notification_types": [
+    {
+      "id": 1,
+      "code": "new_follower",
+      "name": "New Follower",
+      "description": "When someone follows your startup",
+      "frequency": "immediate",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "code": "message_received",
+      "name": "Message Received",
+      "description": "A new message was received",
+      "frequency": "daily_digest",
+      "is_active": true
+    }
+  ]
+}
+```
+
+### Example: PATCH /preferences/{id}/email-preferences/
+
+Request
+
+```json
+{
+  "enable_email": true,
+  "type_preferences": [
+    {
+      "notification_type_id": 1,
+      "frequency": "immediate"
+    },
+    {
+      "notification_type_id": 2,
+      "frequency": "disabled"
+    }
+  ]
+}
+```
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "enable_in_app": true,
+  "enable_email": true,
+  "enable_push": false,
+  "type_preferences": [
+    {
+      "id": 101,
+      "notification_type": { "id": 1, "code": "new_follower", "name": "New Follower", "description": "When someone follows your startup", "is_active": true },
+      "frequency": "immediate",
+      "created_at": "2025-08-05T12:00:00Z",
+      "updated_at": "2025-08-31T14:05:00Z"
+    },
+    {
+      "id": 102,
+      "notification_type": { "id": 2, "code": "message_received", "name": "Message Received", "description": "A new message was received", "is_active": true },
+      "frequency": "disabled",
+      "created_at": "2025-08-05T12:00:00Z",
+      "updated_at": "2025-08-31T14:05:00Z"
+    }
+  ],
+  "updated_types": [1, 2],
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-31T14:05:00Z"
+}
+```
+
+Error responses follow standard validation formats as seen in other API endpoints.
 
 # Company Binding API
 
