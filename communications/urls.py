@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     NotificationViewSet,
     NotificationTypeViewSet,
-    UserNotificationPreferenceViewSet
+    UserNotificationPreferenceViewSet,
 )
 
 router = DefaultRouter()

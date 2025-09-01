@@ -47,10 +47,12 @@ DEFAULT_SCHEMA_CLASS = 'drf_spectacular.openapi.AutoSchema'
 
 REST_FRAMEWORK: dict[str, Any] = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
         "users.cookie_jwt.CookieJWTAuthentication",
     ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "users.permissions.IsAuthenticatedOr401",
+    ),
+    "UNAUTHENTICATED_USER": None,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.UserRateThrottle",
         "rest_framework.throttling.AnonRateThrottle",
@@ -112,7 +114,7 @@ SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,
 
     # Cookie settings
-    "AUTH_COOKIE": "refresh_token",
+    "AUTH_COOKIE": "access_token",
     "AUTH_COOKIE_DOMAIN": None,
     "AUTH_COOKIE_SECURE": not DEBUG,
     "AUTH_COOKIE_HTTP_ONLY": True,
@@ -123,6 +125,7 @@ SIMPLE_JWT = {
 # CSRF
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -204,6 +207,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+]
+
+# CSRF configuration for local development
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
 CORS_ALLOW_CREDENTIALS = True

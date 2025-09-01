@@ -4,7 +4,6 @@ from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
 from elasticsearch_dsl import Q
-from rest_framework.permissions import IsAuthenticated
 from projects.models import Project
 
 from django_elasticsearch_dsl_drf.viewsets import DocumentViewSet
@@ -14,7 +13,8 @@ from django_elasticsearch_dsl_drf.filter_backends import (
     SearchFilterBackend,
 )
 
-
+from users.cookie_jwt import CookieJWTAuthentication
+from users.permissions import IsAuthenticatedOr401
 from .documents import ProjectDocument
 from .permissions import IsOwnerOrReadOnly
 from .serializers import ProjectDocumentSerializer, ProjectReadSerializer, ProjectWriteSerializer
@@ -44,7 +44,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
         - Only the owner can modify or delete their projects.
     """
     queryset = Project.objects.select_related('startup', 'category').all()
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedOr401, IsOwnerOrReadOnly]
+    authentication_classes = [CookieJWTAuthentication]
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['status', 'category', 'startup']
@@ -82,7 +83,8 @@ class ProjectDocumentView(DocumentViewSet):
     Elasticsearch-backed viewset for Project documents.
     Supports filtering, ordering, and full-text search with robust error handling.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOr401]
+    authentication_classes = [CookieJWTAuthentication]
     document = ProjectDocument
     serializer_class = ProjectDocumentSerializer
 

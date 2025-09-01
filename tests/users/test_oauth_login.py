@@ -59,6 +59,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(res.data['error'], "Unsupported OAuth provider")
 
+
     @patch('users.pipelines.create_or_update_user')  
     @patch('users.views.oauth_view.load_backend')
     def test_google_oauth_sets_user_active_based_on_email_verified(self, mock_load_backend, mock_create_or_update_user):
@@ -83,7 +84,6 @@ class OAuthTokenObtainPairViewTests(TestCase):
         self.assertTrue(user.is_active)
 
         access_token = res.cookies.get("access_token").value
-        print(access_token)
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
         protected_response = client.get('/api/v1/auth/me/')
@@ -97,7 +97,6 @@ class OAuthTokenObtainPairViewTests(TestCase):
         mock_backend = MagicMock()
         mock_backend.do_auth.return_value = inactive_user
         mock_load_backend.return_value = mock_backend
-
 
         res = self.client.post(self.auth_url, {'provider': self.GITHUB_PROVIDER, 'access_token': 'token'}, format='json')
 
@@ -237,7 +236,6 @@ class OAuthTokenObtainPairViewTests(TestCase):
     def test_jwt_response_sets_cookie(self, mock_load_backend):
         """Test that JWT response properly sets refresh token cookie"""
         mock_backend = MagicMock()
-
         active_user = self.oauth_user
         mock_backend.do_auth.return_value = active_user
         mock_load_backend.return_value = mock_backend

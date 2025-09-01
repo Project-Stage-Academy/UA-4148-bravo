@@ -41,16 +41,15 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
     """
     Extended token authentication endpoint that supports both traditional email/password
     and OAuth provider authentication (Google/GitHub).
-
+    
     Inherits from Djoser's TokenObtainPairView to maintain all standard functionality
     while adding OAuth support through a unified authentication endpoint.
-
-    Endpoint: users/oauth/login/
+    
+    Endpoint: api/v1/auth/oauth/login/
     Methods: POST
-
+    
     Request Formats:
         - OAuth: {"provider": "google|github", "access_token": "oauth_token"}
-        - Password: {"email": "user@example.com", "password": "password123"}
     """
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -201,4 +200,5 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
             "user": UserSerializer(user).data
         })
         set_auth_cookies(response, access, refresh_token)
+        
         return response

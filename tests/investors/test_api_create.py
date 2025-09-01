@@ -3,6 +3,7 @@ from rest_framework import status
 from tests.test_base_case import BaseCompanyCreateAPITestCase
 from investors.models import Investor
 from startups.models import Industry, Location
+from utils.authenticate_client import authenticate_client
 
 
 class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
@@ -16,7 +17,7 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         self.user_for_creation = self.get_or_create_user(
             email="investor-creator@example.com", first_name="Creator", last_name="User"
         )
-        self.client.force_authenticate(user=self.user_for_creation)
+        authenticate_client(self.client, self.user_for_creation)
         self.url = reverse('investor-list')
         self.industry, _ = Industry.objects.get_or_create(name="Testable Industry")
         self.location, _ = Location.objects.get_or_create(country="US")
@@ -62,7 +63,7 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         self.client.logout()
         payload = self.get_valid_payload()
         response = self.client.post(self.url, payload, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_with_duplicate_name_fails(self):
         """
@@ -75,7 +76,7 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         second_user = self.get_or_create_user(
             email="second-investor-creator@example.com", first_name="Second", last_name="Creator"
         )
-        self.client.force_authenticate(user=second_user)
+        authenticate_client(self.client, second_user)
 
         payload["email"] = "another-contact@capitalventures.com"
         response2 = self.client.post(self.url, payload, format='json')

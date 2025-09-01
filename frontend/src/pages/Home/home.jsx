@@ -3,7 +3,7 @@ import Button from '../../components/Button/button';
 import { Link, useNavigate } from 'react-router-dom';
 import ParticipantCard from '../../components/ParticipantCard/participantCard';
 import PropTypes from 'prop-types';
-import useIsMobile from '../../hooks/useIsMobile/useIsMobile';
+import useIsMobile from '../../hooks/useIsMobile';
 import GenericGrid from '../../components/GenericGrid/genericGrid';
 import clsx from 'clsx';
 
