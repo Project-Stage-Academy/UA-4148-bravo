@@ -70,6 +70,10 @@ REST_FRAMEWORK: dict[str, Any] = {
         "rest_framework.authentication.TokenAuthentication",
         "users.cookie_jwt.CookieJWTAuthentication",
     ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "users.permissions.IsAuthenticatedOr401",
+    ),
+    "UNAUTHENTICATED_USER": None,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.UserRateThrottle",
         "rest_framework.throttling.AnonRateThrottle",
@@ -77,7 +81,7 @@ REST_FRAMEWORK: dict[str, Any] = {
     "DEFAULT_THROTTLE_RATES": {
         "user": "10/minute",
         "anon": "5/minute",
-        "resend_email": "10/minute"
+        "resend_email": "5/minute"
     },
     "DEFAULT_SCHEMA_CLASS": 'drf_spectacular.openapi.AutoSchema'
 }
@@ -131,7 +135,7 @@ SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,
 
     # Cookie settings
-    "AUTH_COOKIE": "refresh_token",
+    "AUTH_COOKIE": "access_token",
     "AUTH_COOKIE_DOMAIN": None,
     "AUTH_COOKIE_SECURE": not DEBUG,
     "AUTH_COOKIE_HTTP_ONLY": True,
