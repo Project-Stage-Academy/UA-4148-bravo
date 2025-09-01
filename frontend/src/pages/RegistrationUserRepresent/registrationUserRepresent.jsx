@@ -8,9 +8,10 @@ import Panel, {
 import Button from '../../components/Button/button';
 import Checkbox from '../../components/Checkbox/checkbox';
 import TextInput from '../../components/TextInput/textInput';
-import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
+import { useFormWithProtection } from '../../hooks/useFormWithProtection';
+import { useFormWithServerErrors } from '../../hooks/useFormWithServerErrors';
 
 /**
  * Registration page that asks the user to select
@@ -21,70 +22,48 @@ import { useAuthContext } from '../../provider/AuthProvider/authProvider';
  * @returns {JSX.Element}
  */
 function RegistrationUserRepresent() {
-    // This component handles user registration
-    const navigate = useNavigate();
-
-    // Bind user to company
     const { bindCompanyToUser } = useAuthContext();
 
-    // State to hold form data
-    const [formData, setFormData] = useState(
-        {
-            companyName: "",
-            representation: {
-                company: false,
-                startup: false
-            },
-            unexpected: ""
-        });
+    // Hook to navigate programmatically
+    const navigate = useNavigate();
 
-    // State to hold validation errors
-    const [errors, setErrors] = useState({});
+    // Form with protection hook
+    const form = useFormWithProtection({
+        companyName: "",
+        representation: {
+            company: false,
+            startup: false
+        },
+        unexpected: "",
+    });
 
     // Function to handle server-side errors
-    const handleError = (error) => {
+    const extractError = (error) => {
         // TODO
-        if (error.response && error.response.status === 401) {
-            setErrors(prev => ({
-                ...prev,
-                companyName: Validator.serverSideErrorMessages.companyAlreadyExist
-            }));
+        if (error.response.status === 401) {
+            return { email: Validator.serverSideErrorMessages.companyAlreadyExist };
         } else {
-            setErrors(prev => ({
-                ...prev,
-                unexpected: Validator.serverSideErrorMessages.unexpected
-            }));
+            return { unexpected: Validator.serverSideErrorMessages.unexpected };
         }
     };
 
-    // Function to handle form submission
-    const handleSubmit = () => {
-        const validationErrors = Validator.validate(
-            formData
-        );
-        setErrors(validationErrors);
-
-        if (Object.values(validationErrors).every(value => value === null)) {
-            // TODO
-            bindCompanyToUser(formData.companyName, formData.representation.company ? 'investor' : 'startup')
-                .then(() => {
-                    navigate('/auth/register/completed');
-                })
-                .catch(handleError);
-        } else {
-            console.warn('Errors:', validationErrors);
-        }
+    // Function to handle form submission with brute force protection
+    const doSubmit = ({ form, handleError }) => {
+        // TODO
+        bindCompanyToUser(form.data.companyName, form.data.representation.company ? 'investor' : 'startup')
+            .then(() => {
+                navigate('/auth/register/completed');
+            })
+            .catch(handleError)
+            .finally(() => form.setIsLocked(false));
     };
 
-    // Function to handle input changes
-    const handleChange = (e) => {
-        return Validator.handleChange(
-            e,
-            formData,
-            setFormData,
-            setErrors
-        );
-    };
+    const { handleSubmit, handleChange } = useFormWithServerErrors({
+        form,
+        navigate,
+        extractError,
+        doSubmit,
+    });
 
     return (
         <Panel aria-labelledby="registrationUserRepresent-title"
@@ -103,21 +82,21 @@ function RegistrationUserRepresent() {
                         autoComplete="off"
                         autoCorrect="off"
                         spellCheck="false"
-                        value={formData.companyName}
+                        value={form.data.companyName}
                         onChange={handleChange}
                         placeholder={'Введіть назву вашої компанії'}
-                        className={errors['companyName'] && 'input__error-border-color'}
+                        className={form.errors['companyName'] && 'input__error-border-color'}
                         aria-labelledby="companyName-label"
-                        aria-describedby={errors['companyName'] ? 'companyName-error' : undefined}
-                        aria-invalid={!!errors['companyName']}
+                        aria-describedby={form.errors['companyName'] ? 'companyName-error' : undefined}
+                        aria-invalid={!!form.errors['companyName']}
                         aria-required="true"
                     />
-                    {errors['companyName'] && (
+                    { form.errors['companyName'] && (
                         <p id="companyName-error"
                            className={'panel--danger-text'}
                            role="alert"
                         >
-                            {errors['companyName']}
+                            {form.errors['companyName']}
                         </p>
                     )}
                 </div>
@@ -129,34 +108,34 @@ function RegistrationUserRepresent() {
                     />
                     <Checkbox
                         groupKey={"representation"}
-                        values={formData.representation}
+                        values={form.data.representation}
                         labels={{
                             company: "Зареєстрована компанія",
                             startup: "Стартап проєкт, який шукає інвестиції"
                         }}
-                        errors={errors}
+                        errors={form.errors}
                         handleChange={handleChange}
                         isGrouped={true}
                         aria-labelledby="representation-label"
-                        aria-describedby={errors['representation'] ? 'representation-error' : undefined}
-                        aria-invalid={!!errors['representation']}
+                        aria-describedby={form.errors['representation'] ? 'representation-error' : undefined}
+                        aria-invalid={!!form.errors['representation']}
                         aria-required="true"
                     />
-                    {errors['representation'] && (
+                    {form.errors['representation'] && (
                         <p id="representation-error"
                            className={'panel--danger-text'}
                            role="alert"
                         >
-                            {errors['representation']}
+                            {form.errors['representation']}
                         </p>
                     )}
                 </div>
-                { errors['unexpected'] && (
+                { form.errors['unexpected'] && (
                     <p id="unexpected-error"
                        className={"panel--danger-text"}
                        role="alert"
                     >
-                        { errors['unexpected'] }
+                        { form.errors['unexpected'] }
                     </p>)
                 }
             </PanelBody>
@@ -164,6 +143,7 @@ function RegistrationUserRepresent() {
                 <Button
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
+                    disabled={form.isLocked}
                     type="submit"
                 >
                     Продовжити
