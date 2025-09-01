@@ -1,5 +1,6 @@
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
+from django.contrib.auth import get_user_model
 
 from projects.models import Project, ProjectHistory
 from projects.documents import ProjectDocument
@@ -56,7 +57,7 @@ def handle_project_updates(sender, instance, created, **kwargs):
         )
 
         investor_user_ids = Subscription.objects.filter(project=instance).values_list('investor__user_id', flat=True).distinct()
-        investor_users = get_user_model().objects.filter(user_id__in=investor_user_ids)
+        investor_users = get_user_model().objects.filter(id__in=investor_user_ids)
         
         for user in investor_users:
             title = f"Project '{getattr(instance, 'title', 'N/A')}' has been updated"
@@ -76,7 +77,7 @@ def handle_project_updates(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Project)
 def delete_project(sender, instance, **kwargs):
     try:
-        ProjectDocument().delete(instance, raise_on_error=False)
+        ProjectDocument().delete(id=instance.id, raise_on_error=False)
     except (ConnectionError, NotFoundError) as e:
         logger.error(
             f"Failed to delete project {instance.id} from Elasticsearch: {e}"
