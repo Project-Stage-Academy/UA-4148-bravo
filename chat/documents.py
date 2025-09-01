@@ -9,6 +9,7 @@ from mongoengine import (
     DateTimeField, BooleanField, ValidationError
 )
 from core.settings.constants import FORBIDDEN_WORDS_SET
+from users.models import UserRole
 from utils.encrypt import EncryptedStringField
 from utils.get_user_or_raise import get_user_or_raise
 from utils.sanitize import sanitize_message
@@ -55,7 +56,7 @@ class Room(Document):
         users = [get_user_or_raise(email, self.name) for email in self.participants]
 
         roles = {user.role.role if user.role else None for user in users}
-        if roles != {"Investor", "Startup"}:
+        if roles != {UserRole.Role.INVESTOR, UserRole.Role.STARTUP}:
             msg = "Room must have exactly one Investor and one Startup."
             logger.warning("[ROOM_VALIDATION] %s | participants=%s", msg, self.participants)
             sentry_sdk.capture_message(msg, level="warning")
