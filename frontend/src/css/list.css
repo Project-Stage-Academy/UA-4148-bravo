@@ -1,0 +1,9 @@
+.ul {
+    padding-left: 24px;
+}
+
+.li {
+    font-family: var(--text-font), sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+}

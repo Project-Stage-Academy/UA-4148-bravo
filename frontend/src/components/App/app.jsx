@@ -54,9 +54,6 @@ function App() {
                         {/* Feedback form */}
                         <Route path="feedback" element={<FeedbackForm />} />
 
-                        {/* Policy */}
-                        <Route path="policy" element={<Policy />} />
-
                         {/* Who we are */}
                         <Route path="who-we-are" element={<WhoWeAre />} />
 
@@ -96,6 +93,9 @@ function App() {
                                 <Route path="edit" element={<ProfileEditing />} />
                             </Route>
                         </Route>
+
+                        {/* Privacy policy */}
+                        <Route path="privacy-policy" element={<Policy />} />
 
                         {/* Page not found */}
                         <Route path="*" element={<NotFound />} />
