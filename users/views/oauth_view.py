@@ -13,6 +13,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.utils import timezone
+from datetime import timedelta
 
 # Local application imports
 from users.models import User
@@ -21,6 +23,7 @@ from users.serializers.token_serializer import CustomTokenObtainPairSerializer
 from users.serializers.user_serializers import UserSerializer
 from users.tasks import send_welcome_oauth_email_task
 from utils.get_default_user_role import get_default_user_role
+from utils.cookies import set_auth_cookies
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +113,13 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         Authenticate user using social-auth-app-django backend.
         Raises ValueError if token is invalid or expired.
         """
+        PROVIDER_BACKEND_MAP = {
+            "google": "google-oauth2",
+            "github": "github",
+        }
+        provider_name = PROVIDER_BACKEND_MAP.get(provider)
         strategy = load_strategy()
-        backend = load_backend(strategy=strategy, name=provider, redirect_uri=None)
+        backend = load_backend(strategy=strategy, name=provider_name, redirect_uri=None)
 
         try:
             user = backend.do_auth(access_token)
@@ -121,19 +129,6 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
 
         if not user:
             raise ValueError("Invalid or expired token")
-
-        existing = User.objects.filter(email=user.email).first()
-        if existing:
-            updated = False
-            if user.first_name and user.first_name != existing.first_name:
-                existing.first_name = user.first_name
-                updated = True
-            if user.last_name and user.last_name != existing.last_name:
-                existing.last_name = user.last_name
-                updated = True
-            if updated:
-                existing.save()
-            user = existing
 
         if provider == "github" and not getattr(user, "email", None):
             try:
@@ -167,7 +162,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         """
         PROVIDER_MAP = {"google": "Google", "github": "GitHub"}
         provider_name = PROVIDER_MAP.get(provider, provider)
-        action = "registered" if not user.last_login else "logged in"
+        action = "registered" if timezone.now() - user.created_at < timedelta(seconds=5) else "logged in"
 
         subject = "Welcome to Forum — your space for innovation!"
         message = render_to_string(
@@ -193,9 +188,17 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 - access: JWT access token
                 - user: Serialized user data
         """
+        if not user.is_active:
+            return Response(
+                {"detail": "Account is not active. Please verify your email."},
+                status=403
+            )
+        
         refresh = RefreshToken.for_user(user)
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
+        refresh_token = str(refresh)
+        access = str(refresh.access_token)
+        response = Response({
             "user": UserSerializer(user).data
         })
+        set_auth_cookies(response, access, refresh_token)
+        return response
