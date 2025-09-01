@@ -1,4 +1,3 @@
-import datetime
 import logging
 import os
 from rest_framework import serializers
@@ -40,28 +39,37 @@ class MessageSerializer(serializers.Serializer):
     """
     Serializer for private chat messages exchanged between exactly two participants
     (Investor and Startup) in a Room.
-
-    Fields:
-        room (str): The name of the Room the message belongs to.
-        sender_email (str): Email of the sender.
-        receiver_email (str): Email of the receiver (required for private messages).
-        text (str): Message content (sanitized and validated).
-        timestamp (datetime): UTC timestamp of message creation (defaults to now).
-        is_read (bool): Indicates whether the message has been read by the receiver.
     """
 
-    room = serializers.CharField()
+    room_name = serializers.CharField(max_length=50)
     sender_email = serializers.EmailField(read_only=True)
     receiver_email = serializers.EmailField()
     text = serializers.CharField(
-        min_length=MIN_MESSAGE_LENGTH, max_length=MAX_MESSAGE_LENGTH
+        min_length=MIN_MESSAGE_LENGTH,
+        max_length=MAX_MESSAGE_LENGTH
     )
-    timestamp = serializers.DateTimeField(default=lambda: datetime.now(datetime.timezone.utc), read_only=True)
+    timestamp = serializers.DateTimeField(read_only=True)
     is_read = serializers.BooleanField(default=False)
 
     @log_and_capture("message")
     def create(self, validated_data):
-        room = validated_data.pop('room_instance')
-        msg = Message(room=room, **validated_data)
-        msg.save()
-        return msg
+        """
+        Create a Message instance.
+        sender_email must be passed via context.
+        """
+        sender_email = self.context.get("sender_email")
+        if not sender_email:
+            raise serializers.ValidationError("Sender email must be provided in context.")
+
+        room_name = validated_data.pop("room_name")
+        room = Room.objects(name=room_name).first()
+        if not room:
+            raise serializers.ValidationError(f"Room '{room_name}' does not exist.")
+
+        message = Message(
+            room=room,
+            sender_email=sender_email,
+            **validated_data
+        )
+        message.save()
+        return message

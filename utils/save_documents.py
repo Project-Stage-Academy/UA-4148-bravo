@@ -20,16 +20,12 @@ def log_and_capture(entity_name: str, exception_cls=Exception):
         def wrapper(self, *args, **kwargs):
             try:
                 result = func(self, *args, **kwargs)
-                # Determine identifier and extra info
-                if hasattr(result, 'name'):
-                    identifier = result.name
-                    extra = getattr(result, 'participants', '')
-                elif hasattr(result, 'sender_email'):
-                    identifier = getattr(result, 'sender_email', 'UNKNOWN')
-                    extra = f"{getattr(result, 'receiver_email', '')} | room={getattr(result.room, 'name', 'UNKNOWN')}"
-                else:
-                    identifier = 'UNKNOWN'
-                    extra = ''
+                identifier = getattr(result, "name", getattr(result, "sender_email", "UNKNOWN"))
+                extra = ""
+                if hasattr(result, "participants"):
+                    extra = result.participants
+                elif hasattr(result, "receiver_email"):
+                    extra = f"{result.receiver_email} | room={getattr(result.room, 'name', 'UNKNOWN')}"
                 logger.info("[%s_SAVE] Success | %s | %s", entity_name.upper(), identifier, extra)
                 return result
             except exception_cls as e:

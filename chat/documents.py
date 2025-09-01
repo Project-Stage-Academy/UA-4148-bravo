@@ -12,7 +12,7 @@ from core.settings.constants import FORBIDDEN_WORDS_SET
 from users.models import UserRole
 from utils.encrypt import EncryptedStringField
 from utils.get_user_or_raise import get_user_or_raise
-from utils.sanitize import sanitize_message
+from utils.sanitize import sanitize_message, sanitize_room_name
 import sentry_sdk
 from utils.save_documents import log_and_capture
 
@@ -28,7 +28,7 @@ class Room(Document):
     one Investor and one Startup.
     """
 
-    NAME_REGEX = r'^[a-zA-Z0-9_-]+$'
+    NAME_REGEX = r'^[a-zA-Z0-9_&;-]+$'
 
     name = StringField(
         required=True,
@@ -62,12 +62,11 @@ class Room(Document):
             sentry_sdk.capture_message(msg, level="warning")
             raise ValidationError(msg)
 
-        self.name = escape(self.name.strip())
+        self.name = sanitize_room_name(self.name)
 
     @log_and_capture("room", ValidationError)
     def save(self, *args, **kwargs):
         self.updated_at = datetime.now(timezone.utc)
-        self.clean()
         return super().save(*args, **kwargs)
 
 
@@ -156,5 +155,4 @@ class Message(Document):
     @log_and_capture("message", ValidationError)
     def save(self, *args, **kwargs):
         self.timestamp = datetime.now(timezone.utc)
-        self.clean()
         return super().save(*args, **kwargs)

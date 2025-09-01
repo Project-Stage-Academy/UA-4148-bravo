@@ -60,14 +60,16 @@ class EncryptedStringField(StringField):
 
     def to_python(self, value):
         """Decrypt the string when loading from MongoDB."""
-        if value is None:
-            return None
+        if value is None or value.strip() == "":
+            return ""
         try:
             raw = base64.urlsafe_b64decode(value.encode())
+            if len(raw) < 12:
+                return value
             nonce, ciphertext = raw[:12], raw[12:]
             return aesgcm.decrypt(nonce, ciphertext, None).decode()
-        except Exception as e:
-            raise ValueError(f"Decryption failed: {e}")
+        except Exception:
+            return value
 
     def validate(self, value):
         """Validate the field value as a string before encryption."""

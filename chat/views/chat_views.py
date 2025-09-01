@@ -53,33 +53,6 @@ class ConversationCreateView(generics.CreateAPIView):
     """
     Create a new private conversation (Room) between exactly 2 participants:
     one Investor and one Startup.
-
-    Endpoint:
-        POST api/v1/chat/conversations/
-
-    Request body example:
-        {
-            "name": "investor_startup_chat",
-            "participants": ["investor@example.com", "startup@example.com"]
-        }
-
-    Response example (201 Created):
-        {
-            "name": "investor_startup_chat",
-            "participants": ["investor@example.com", "startup@example.com"],
-            "created_at": "2025-08-30T09:00:00Z",
-            "updated_at": "2025-08-30T09:00:00Z"
-        }
-
-    Error responses:
-        400 Bad Request:
-            {
-                "error": "Private room must have exactly 2 participants."
-            }
-        401 Unauthorized:
-            {
-                "detail": "Authentication credentials were not provided."
-            }
     """
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -153,50 +126,11 @@ class ConversationCreateView(generics.CreateAPIView):
 )
 class SendMessageView(ChatCookieJWTProtectedView):
     """
-    Send a new message within a conversation and broadcast it via WebSocket.
-
-    Endpoint:
-        POST api/v1/chat/messages/
-
-    Request body example:
-        {
-            "room": "investor_startup_chat",
-            "sender_email": "investor@example.com",
-            "receiver_email": "startup@example.com",
-            "text": "Hello!"
-        }
-
-    Response example (201 Created):
-        {
-            "room": "investor_startup_chat",
-            "sender_email": "investor@example.com",
-            "receiver_email": "startup@example.com",
-            "text": "Hello!",
-            "timestamp": "2025-08-30T09:00:00Z",
-            "is_read": false
-        }
-
-    Error responses:
-        400 Bad Request: Invalid data
-        403 Forbidden: User not participant
-        500 Internal Server Error: Unexpected save error
+    Send a new message within a conversation.
     """
 
     def post(self, request, *args, **kwargs):
-        """
-        Send a new message within a private conversation. Automatically creates
-        the Room if it does not exist and ensures exactly 2 participants for
-        private chats.
-
-        Workflow:
-            1. Validate incoming message data.
-            2. Try to fetch the Room by name.
-                - If Room does not exist, create it with exactly 2 participants.
-            3. Ensure the sender is a participant of the Room.
-            4. Save the message linked to the Room.
-            5. Return serialized message data with HTTP 201 Created.
-        """
-        serializer = MessageSerializer(data=request.data)
+        serializer = MessageSerializer(data=request.data, context={"sender_email": request.user.email})
         try:
             serializer.is_valid(raise_exception=True)
         except DRFValidationError as e:
@@ -204,14 +138,12 @@ class SendMessageView(ChatCookieJWTProtectedView):
             sentry_sdk.capture_message(f"Message validation failed: {e}", level="warning")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        room_name = serializer.validated_data["room"]
-        sender_email = serializer.validated_data["sender_email"]
+        room_name = serializer.validated_data["room_name"]
+        sender_email = request.user.email
         receiver_email = serializer.validated_data["receiver_email"]
 
-        try:
-            room = Room.objects.get(name=room_name)
-            logger.debug("[MESSAGE_SEND] Found room: %s", room_name)
-        except Room.DoesNotExist:
+        room = Room.objects(name=room_name).first()
+        if not room:
             if len({sender_email, receiver_email}) != 2:
                 msg = "Private room must have exactly 2 participants."
                 logger.warning("[MESSAGE_SEND] %s | sender=%s receiver=%s", msg, sender_email, receiver_email)
@@ -235,10 +167,12 @@ class SendMessageView(ChatCookieJWTProtectedView):
             return Response({"error": msg}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-            message = serializer.save(room=room)
-            logger.info("[MESSAGE_SEND] Sent message | sender=%s receiver=%s room=%s text_preview=%s",
-                        sender_email, receiver_email, room_name,
-                        message.text[:50] + ("..." if len(message.text) > 50 else ""))
+            message = serializer.save()
+            logger.info(
+                "[MESSAGE_SEND] Sent message | sender=%s receiver=%s room=%s text_preview=%s",
+                sender_email, receiver_email, room_name,
+                message.text[:50] + ("..." if len(message.text) > 50 else "")
+            )
         except Exception as e:
             logger.error("[MESSAGE_SEND] Failed to save message | sender=%s receiver=%s room=%s error=%s",
                          sender_email, receiver_email, room_name, e)
@@ -285,31 +219,8 @@ class SendMessageView(ChatCookieJWTProtectedView):
 )
 class ConversationMessagesView(generics.ListAPIView):
     """
-    Retrieve the list of messages in a conversation.
-    Only participants of an existing Room can access messages.
-
-    Endpoint:
-        GET api/v1/chat/conversations/{room_name}/messages/
-
-    Path parameter:
-        room_name (str): Name of the conversation/room.
-
-    Request example:
-        GET api/v1/chat/conversations/friends_group/messages/
-        Headers:
-            Cookie: access_token=<JWT_TOKEN>
-
-    Response example:
-        [
-            {
-                "room": "friends_group",
-                "sender_email": "user1@example.com",
-                "receiver_email": "user2@example.com",
-                "text": "Hello everyone!",
-                "timestamp": "2025-08-25T20:00:00Z",
-                "is_read": false
-            }
-        ]
+    Retrieve messages for a conversation by room_name.
+    Only participants can access.
     """
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwnerOrRecipient]
@@ -317,13 +228,6 @@ class ConversationMessagesView(generics.ListAPIView):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        """
-        Retrieve messages for a specific existing conversation (Room)
-        that the authenticated user is a participant of.
-
-        Raises:
-            Http404: If the room does not exist or the user is not a participant.
-        """
         room_name = self.kwargs.get("room_name")
         user_email = getattr(self.request.user, "email", None)
 

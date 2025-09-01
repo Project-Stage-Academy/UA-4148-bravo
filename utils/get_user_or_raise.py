@@ -20,7 +20,7 @@ def get_user_or_raise(email, room_name):
         ValidationError: If no user with the given email exists.
     """
     try:
-        from users.models import User  # Adjust import to your project structure
+        from users.models import User
         return User.objects.get(email=email)
     except User.DoesNotExist:
         msg = f"User does not exist: {email}"
