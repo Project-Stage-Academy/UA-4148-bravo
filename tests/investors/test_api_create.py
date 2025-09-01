@@ -18,7 +18,7 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
             email="investor-creator@example.com", first_name="Creator", last_name="User"
         )
         authenticate_client(self.client, self.user_for_creation)
-        self.url = reverse('investor-list')
+        self.url = reverse('investor-list') + '/'
         self.industry, _ = Industry.objects.get_or_create(name="Testable Industry")
         self.location, _ = Location.objects.get_or_create(country="US")
 

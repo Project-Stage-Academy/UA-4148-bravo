@@ -39,7 +39,7 @@ class ResendEmailTests(APITestCase):
         )
 
     def perform_resend_email_test(self, target_user_id, expected_status=202, email=None, user_obj=None):
-        url = reverse('resend-email')
+        url = reverse('resend-email') + '/'
         data = {'user_id': target_user_id}
         if email:
             data['email'] = email
@@ -110,7 +110,7 @@ class ResendEmailTests(APITestCase):
             "user@domain com",
         ]
 
-        url = reverse('resend-email')
+        url = reverse('resend-email') + '/'
 
         for email in invalid_emails:
             with self.subTest(email=email):
@@ -133,7 +133,7 @@ class ResendEmailTests(APITestCase):
     @patch('users.views.email_views.send_mail')
     @patch('users.views.email_views.EMAIL_VERIFICATION_TOKEN.make_token', return_value='newtoken')
     def test_throttling_with_limit(self, mock_make_token, mock_send_mail):
-        url = reverse('resend-email')
+        url = reverse('resend-email') + '/'
         data = {'user_id': self.user.user_id}
         authenticate_client(self.client, self.user)
 

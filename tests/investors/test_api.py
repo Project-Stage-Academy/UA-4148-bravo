@@ -22,7 +22,7 @@ class InvestorAPITests(BaseAPITestCase):
             stage=Stage.SCALE,
             fund_size=250000.00
         )
-        url = reverse('investor-list')
+        url = reverse('investor-list') + '/'
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
@@ -39,7 +39,7 @@ class InvestorAPITests(BaseAPITestCase):
             stage=Stage.LAUNCH,
             fund_size=300000.00
         )
-        url = reverse('investor-detail', args=[investor.pk])
+        url = reverse('investor-detail', args=[investor.pk]) + '/'
         data = {'company_name': 'UpdatedName'}
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -57,7 +57,7 @@ class InvestorAPITests(BaseAPITestCase):
             stage=Stage.SCALE,
             fund_size=500000.00
         )
-        url = reverse('investor-detail', args=[investor.pk])
+        url = reverse('investor-detail', args=[investor.pk]) + '/'
         data = {'founded_year': 'invalid_year'}
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -73,7 +73,7 @@ class InvestorAPITests(BaseAPITestCase):
             stage=Stage.MVP,
             fund_size=100000.00
         )
-        url = reverse('investor-detail', args=[investor.pk])
+        url = reverse('investor-detail', args=[investor.pk]) + '/'
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Investor.objects.filter(id=investor.pk).exists())
@@ -81,7 +81,7 @@ class InvestorAPITests(BaseAPITestCase):
     def test_unauthorized_create_investor(self):
         """Unauthenticated user should get 401 when creating investor."""
         client = APIClient()
-        url = reverse('investor-list')
+        url = reverse('investor-list') + '/'
         data = {
             'company_name': 'UnauthorizedInvestor',
             'email': 'unauth@api.com',
@@ -104,7 +104,7 @@ class InvestorAPITests(BaseAPITestCase):
             fund_size=100000.00
         )
         client = APIClient()
-        url = reverse('investor-detail', args=[investor.pk])
+        url = reverse('investor-detail', args=[investor.pk]) + '/'
         data = {'company_name': 'ShouldNotUpdate'}
         response = client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -118,6 +118,6 @@ class InvestorAPITests(BaseAPITestCase):
             fund_size=100000.00
         )
         client = APIClient()
-        url = reverse('investor-detail', args=[investor.pk])
+        url = reverse('investor-detail', args=[investor.pk]) + '/'
         response = client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

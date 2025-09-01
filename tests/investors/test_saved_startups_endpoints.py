@@ -97,9 +97,9 @@ class SavedStartupsEndpointsTests(APITestCase):
         )
 
         # URLs
-        self.list_url = reverse("investor-saved-startups")
-        self.unsave_url_1 = reverse("startup-unsave", kwargs={"startup_id": self.startup1.id})
-        self.unsave_url_2 = reverse("startup-unsave", kwargs={"startup_id": self.startup2.id})
+        self.list_url = reverse("investor-saved-startups") + '/'
+        self.unsave_url_1 = reverse("startup-unsave", kwargs={"startup_id": self.startup1.id}) + '/'
+        self.unsave_url_2 = reverse("startup-unsave", kwargs={"startup_id": self.startup2.id}) + '/'
 
     def test_auth_required(self):
         """Both list and unsave require authentication -> 401 when anonymous."""

@@ -43,7 +43,7 @@ class SavedStartupAPITests(BaseInvestorTestCase):
             team_size=10,
             stage="mvp",
         )
-        self.list_url = reverse("saved-startup-list")
+        self.list_url = reverse("saved-startup-list") + '/'
 
     def test_investor_can_create_saved_startup(self):
         res = self.client.post(self.list_url, {"startup": self.startup.id, "status": "watching", "notes": "ok"}, format="json")
@@ -142,7 +142,7 @@ class SavedStartupAPITests(BaseInvestorTestCase):
 
     def test_get_detail_returns_expected_fields(self):
         obj = SavedStartup.objects.create(investor=self.investor, startup=self.startup, status="watching", notes="hi")
-        url = reverse("saved-startup-detail", args=[obj.id])
+        url = reverse("saved-startup-detail", args=[obj.id]) + '/'
         res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
         self.assertEqual(res.data["id"], obj.id)
@@ -156,7 +156,7 @@ class SavedStartupAPITests(BaseInvestorTestCase):
 
     def test_patch_status(self):
         obj = SavedStartup.objects.create(investor=self.investor, startup=self.startup, status="watching")
-        url = reverse("saved-startup-detail", args=[obj.id])
+        url = reverse("saved-startup-detail", args=[obj.id]) + '/'
         res = self.client.patch(url, {"status": "contacted"}, format="json")
         self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
         obj.refresh_from_db()
@@ -168,7 +168,7 @@ class SavedStartupAPITests(BaseInvestorTestCase):
 
     def test_delete_saved(self):
         obj = SavedStartup.objects.create(investor=self.investor, startup=self.startup, status="watching")
-        url = reverse("saved-startup-detail", args=[obj.id])
+        url = reverse("saved-startup-detail", args=[obj.id]) + '/'
         res = self.client.delete(url)
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT, res.data)
         self.assertFalse(SavedStartup.objects.filter(id=obj.id).exists())
@@ -194,7 +194,7 @@ class SavedStartupAPITests(BaseInvestorTestCase):
             fund_size="500000.00",
         )
         foreign_obj = SavedStartup.objects.create(investor=other_investor, startup=self.startup, status="watching")
-        url = reverse("saved-startup-detail", args=[foreign_obj.id])
+        url = reverse("saved-startup-detail", args=[foreign_obj.id]) + '/'
         res = self.client.patch(url, {"status": "contacted"}, format="json")
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND, res.data)
 
@@ -219,14 +219,14 @@ class SavedStartupAPITests(BaseInvestorTestCase):
             fund_size="500000.00",
         )
         foreign_obj = SavedStartup.objects.create(investor=other_investor, startup=self.startup, status="watching")
-        url = reverse("saved-startup-detail", args=[foreign_obj.id])
+        url = reverse("saved-startup-detail", args=[foreign_obj.id]) + '/'
         res = self.client.delete(url)
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND, res.data)
         self.assertTrue(SavedStartup.objects.filter(id=foreign_obj.id).exists())
 
     def test_cannot_change_investor_or_startup_via_patch(self):
         obj = SavedStartup.objects.create(investor=self.investor, startup=self.startup, status="watching")
-        url = reverse("saved-startup-detail", args=[obj.id])
+        url = reverse("saved-startup-detail", args=[obj.id]) + '/'
         payload = {"investor": 999999, "startup": 999999, "status": "contacted"}
         res = self.client.patch(url, payload, format="json")
         self.assertIn(res.status_code, (status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST), res.data)
@@ -242,7 +242,7 @@ class SavedStartupAPITests(BaseInvestorTestCase):
 
     def test_patch_notes_to_null_or_empty(self):
         obj = SavedStartup.objects.create(investor=self.investor, startup=self.startup, status="watching", notes="x")
-        url = reverse("saved-startup-detail", args=[obj.id])
+        url = reverse("saved-startup-detail", args=[obj.id]) + '/'
         res = self.client.patch(url, {"notes": None}, format="json")
         self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
         obj.refresh_from_db()
