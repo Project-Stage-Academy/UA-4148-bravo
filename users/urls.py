@@ -6,8 +6,8 @@ from users.views.oauth_view import OAuthTokenObtainPairView
 from users.views.password_views import CustomPasswordResetView, CustomPasswordResetConfirmView
 from users.views.token_views import (
     CustomTokenObtainPairView,
-    CookieTokenRefreshView,
-    JWTLogoutView,
+    CustomTokenRefreshView,
+    LogoutView,
     CSRFTokenView
 )
 
@@ -16,12 +16,12 @@ urlpatterns = [
     path('register/', UserRegistrationView.as_view(), name='user_register'),
 
     # For CSRF-cookie
-    path('csrf/', CSRFTokenView.as_view(), name='csrf-init'),
+    path('csrf/', CSRFTokenView.as_view(), name='csrf_init'),
 
     # JWT Auth
-    path('jwt/create/', CustomTokenObtainPairView.as_view(), name='jwt-create'),
-    path('jwt/refresh/', CookieTokenRefreshView.as_view(), name='jwt-refresh'),
-    path('jwt/logout/', JWTLogoutView.as_view(), name='jwt-logout'),
+    path('jwt/create/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('jwt/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
+    path('logout/', LogoutView.as_view(), name='logout'),
 
     # Password reset
     path('password/reset/', CustomPasswordResetView.as_view(), name='custom_reset_password'),
@@ -40,5 +40,5 @@ urlpatterns = [
     path('oauth/login/', OAuthTokenObtainPairView.as_view(), name='oauth_login'),
 
     # Bind company
-    path('bind-company/', CompanyBindingView.as_view(), name='bind-company'),
+    path('bind-company/', CompanyBindingView.as_view(), name='bind_company'),
 ]

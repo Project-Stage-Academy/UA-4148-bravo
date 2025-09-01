@@ -147,7 +147,6 @@ class ViewedStartup(models.Model):
     class Meta:
         verbose_name = "Startup view history"
         verbose_name_plural = "Startup view histories"
-        unique_together = ("investor", "startup")
         ordering = ["-viewed_at"]
 
     def __str__(self):
