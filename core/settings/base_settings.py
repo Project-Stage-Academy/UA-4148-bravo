@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'common',
+    'search',
 
     # API schema / docs
     'drf_spectacular',
