@@ -175,6 +175,7 @@ function AuthProvider({ children }) {
      *
      * @returns {Promise<void>}
      */
+    // eslint-disable-next-line
     const loadUser = useCallback(async () => {
         const { data } = await api.get('/api/v1/auth/me/')
             .then(() => {

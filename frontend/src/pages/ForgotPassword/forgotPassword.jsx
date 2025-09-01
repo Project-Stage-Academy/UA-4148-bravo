@@ -1,12 +1,13 @@
 import './forgotPassword.css';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import Button from '../../components/Button/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import TextInput from '../../components/TextInput/textInput';
 import { Validator } from '../../utils/validation/validate';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import bruteForce from '../../utils/bruteForce/bruteForce';
-import { useFormWithProtection } from '../../hooks/useFormWithProtection/useFormWithProtection';
+import { useFormWithProtection } from '../../hooks/useFormWithProtection';
+import { useFormWithServerErrors } from '../../hooks/useFormWithServerErrors';
 
 /**
  * ForgotPassword component
@@ -15,69 +16,61 @@ import { useFormWithProtection } from '../../hooks/useFormWithProtection/useForm
 function ForgotPassword() {
     const { requestReset } = useAuthContext();
 
+    // Hook to navigate programmatically
+    const navigate = useNavigate();
+
+    // Brute force max attempts constant
+    const MAX_ATTEMPTS = 5;
+
     // Form with protection hook
-    const {
-        formData, setFormData,
-        errors, setErrors,
-        attempts, setAttempts,
-        isLocked, setIsLocked,
-        isDisabled, navigate,
-    } = useFormWithProtection({
+    const form = useFormWithProtection({
         email: "",
         unexpected: "",
     });
 
     // Override message for email error
-    const errorValidationMessage = {
+    const errorValidationMessages = {
         email: 'Введіть адресу електронної пошти у форматі name@example.com'
     };
 
     // Function to handle server-side errors
-    const handleError = (error) => {
-        if (error?.response && error?.response?.data?.email) {
-            setErrors(prev => ({
-                ...prev,
-                email: Validator.serverSideErrorMessages.emailNotExists
-            }));
+    const extractError = (error) => {
+        if (error?.response?.data?.email) {
+            return { email: Validator.serverSideErrorMessages.emailNotExists };
         } else {
-            setErrors(prev => ({
-                ...prev,
-                unexpected: Validator.serverSideErrorMessages.unexpected
-            }));
+            return { unexpected: Validator.serverSideErrorMessages.unexpected };
         }
     };
 
-    // Function to handle form submission
-    const handleSubmit = () => {
-        if (isLocked) return;
-        setIsLocked(true);
-
-        const validationErrors = Validator.validate(
-            formData
-        );
-        setErrors(validationErrors);
-
-        if (Object.values(validationErrors).every(value => value === null)) {
-            requestReset(formData.email)
-                .then(() => navigate('/auth/forgot/done'))
-                .catch((error) => bruteForce(error, {
-                    attempts,
-                    setAttempts,
-                    setIsLocked,
-                    handleError
-                }));
-        } else {
-            console.log("Errors:", validationErrors);
-        }
-        setIsLocked(false);
-    }
-
-    // Function to handle input changes
-    const handleChange = (e) => {
-        Validator.handleChange(e, formData, setFormData, setErrors,
-            Validator.errorZeroLengthMessages, errorValidationMessage,
-        );
+    // Function to handle form submission with brute force protection
+    const doSubmit = ({ form, handleError }) => {
+        requestReset(form.data.email)
+            .then(() => navigate('/auth/forgot/done'))
+            .catch((error) => bruteForce(error, {
+                attempts: form.attempts,
+                setAttempts: form.setAttempts,
+                setIsLocked: form.setIsLocked,
+                handleError
+            }))
+            .finally(() => form.setIsLocked(false));
     };
+
+    const { handleSubmit, handleChange } = useFormWithServerErrors({
+        form,
+        navigate,
+        extractError,
+        doSubmit,
+        handleChangeCustom: (e, form) => {
+            Validator.handleChange(
+                e,
+                form.data,
+                form.setData,
+                form.setErrors,
+                Validator.errorZeroLengthMessages,
+                errorValidationMessages,
+            );
+        }
+    });
 
     return (
         <>
@@ -107,41 +100,41 @@ function ForgotPassword() {
                             autoComplete="off"
                             autoCorrect="off"
                             spellCheck="false"
-                            value={formData.email}
+                            value={form.data.email}
                             onChange={handleChange}
                             placeholder={'Введіть свою електронну пошту'}
-                            className={errors['email'] && 'input__error-border-color'}
+                            className={form.errors['email'] && 'input__error-border-color'}
                             aria-labelledby="email-label"
-                            aria-describedby={errors['email'] ? 'email-error' : undefined}
-                            aria-invalid={!!errors['email']}
+                            aria-describedby={form.errors['email'] ? 'email-error' : undefined}
+                            aria-invalid={!!form.errors['email']}
                             aria-required="true"
                         />
-                        {errors['email'] && (
+                        {form.errors['email'] && (
                             <p id="email-error"
                                className={'panel--danger-text'}
                                role="alert"
                             >
-                                {errors['email']}
+                                {form.errors['email']}
                             </p>
                         )}
                     </div>
-                    {!isLocked && attempts >= 3 - 1 && (
+                    {!form.isLocked && form.attempts >= (MAX_ATTEMPTS - 2 - 1) && (
                         <p className={'content--text'}
                            role="alert"
                         >
-                            Залишилося спроб: {5 - attempts}
+                            Залишилося спроб: {MAX_ATTEMPTS - form.attempts}
                         </p>
                     )}
-                    {isLocked && (
+                    {form.isLocked && form.attempts >= (MAX_ATTEMPTS + 1 - 1) && (
                         <p className={'panel--danger-text'}
                            role="alert"
                         >
                             Повторіть спробу через 30 секунд
                         </p>
                     )}
-                    {errors['unexpected'] && (
+                    {form.errors['unexpected'] && (
                         <p className={'panel--danger-text'}>
-                            {errors['unexpected']}
+                            {form.errors['unexpected']}
                         </p>
                     )}
                 </PanelBody>
@@ -149,7 +142,7 @@ function ForgotPassword() {
                     <Button
                         onClick={handleSubmit}
                         className={'button__padding panel--button'}
-                        disabled={isDisabled || isLocked}
+                        disabled={form.isDisabled || form.isLocked}
                         type="submit"
                     >
                         Відновити пароль
