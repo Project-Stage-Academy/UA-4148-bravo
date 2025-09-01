@@ -543,6 +543,94 @@ Creation of notifications via public API is disabled.
 - `POST /notifications/mark_all_as_unread/` → `{ "status": "marked <n> notifications as unread" }`
 - `GET /notifications/{id}/resolve/` → `{ "redirect": { ... } }`
 
+### Email Notification Preferences
+
+These endpoints manage email notification preferences for users:
+
+- `GET /email-preferences/` — Get the current user's email notification preferences.
+- `PATCH /email-preferences/` — Update email notification preferences. Partial updates supported.
+
+#### Example: GET /email-preferences/
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "types_enabled": [
+    {
+      "notification_type": {
+        "id": 1,
+        "code": "message_received", 
+        "name": "Message Received",
+        "description": "A new message was received"
+      },
+      "enabled": true
+    },
+    {
+      "notification_type": {
+        "id": 2,
+        "code": "project_update",
+        "name": "Project Update",
+        "description": "A project was updated"
+      },
+      "enabled": false
+    }
+  ],
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-05T12:00:00Z"
+}
+```
+
+#### Example: PATCH /email-preferences/
+
+Request
+
+```json
+{
+  "types_enabled": [
+    {
+      "notification_type_id": 1,
+      "enabled": false
+    },
+    {
+      "notification_type_id": 2,
+      "enabled": true
+    }
+  ]
+}
+```
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "types_enabled": [
+    {
+      "notification_type": {
+        "id": 1,
+        "code": "message_received", 
+        "name": "Message Received",
+        "description": "A new message was received"
+      },
+      "enabled": false
+    },
+    {
+      "notification_type": {
+        "id": 2,
+        "code": "project_update",
+        "name": "Project Update",
+        "description": "A project was updated"
+      },
+      "enabled": true
+    }
+  ],
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-15T14:30:00Z"
+}
+```
+
 # Company Binding API
 
 ## Overview
