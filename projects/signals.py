@@ -56,14 +56,15 @@ def handle_project_updates(sender, instance, created, **kwargs):
         )
 
         investor_user_ids = Subscription.objects.filter(project=instance).values_list('investor__user_id', flat=True).distinct()
+        investor_users = get_user_model().objects.filter(user_id__in=investor_user_ids)
         
-        for user_id in investor_user_ids:
+        for user in investor_users:
             title = f"Project '{getattr(instance, 'title', 'N/A')}' has been updated"
             startup_name = getattr(getattr(instance, 'startup', None), 'company_name', 'An anonymous startup')
             message = f"Startup '{startup_name}' has updated their project details."
             
             create_in_app_notification(
-                user_id=user_id,
+                user=user,
                 type_code='project_updated',
                 title=title,
                 message=message,
