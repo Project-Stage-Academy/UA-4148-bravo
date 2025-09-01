@@ -2,8 +2,9 @@ import logging
 from typing import Optional
 
 from django.contrib.auth import get_user_model
+from projects.models import Project
 
-from .models import (
+from communications.models import (
     Notification,
     NotificationType,
     UserNotificationPreference,
@@ -125,6 +126,14 @@ def create_in_app_notification(
             getattr(user, "id", None), ntype.code,
         )
         return None
+    
+    related_project = None
+    if related_project_id:
+        try:
+            related_project = Project.objects.get(id=related_project_id)
+        except Project.DoesNotExist:
+            logger.warning(f"Related project with ID {related_project_id} not found.")
+
 
     return Notification.objects.create(
         user=user,
@@ -133,7 +142,7 @@ def create_in_app_notification(
         message=message,
         priority=priority or Notification._meta.get_field("priority").get_default(),
         related_startup_id=related_startup_id,
-        related_project_id=related_project_id,
+        related_project=related_project,
         related_message_id=related_message_id,
         triggered_by_user=triggered_by_user,
         triggered_by_type=triggered_by_type,
