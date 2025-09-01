@@ -69,9 +69,6 @@ def handle_project_updates(sender, instance, created, **kwargs):
                 type_code='project_updated',
                 title=title,
                 message=message,
-                related_project=instance,
-                triggered_by_user=getattr(instance, '_last_editor', None),
-                triggered_by_type='startup'
             )
 
 @receiver(post_delete, sender=Project)
@@ -79,6 +76,6 @@ def delete_project(sender, instance, **kwargs):
     try:
         ProjectDocument().delete(id=instance.id)
     except (ConnectionError, NotFoundError) as e:
-        logger.error(
+        logging.error(
             f"Failed to delete project {instance.id} from Elasticsearch: {e}"
         )
