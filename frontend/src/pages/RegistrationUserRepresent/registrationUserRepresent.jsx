@@ -11,6 +11,7 @@ import { Validator } from '../../utils/validation/validate';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import { useFormWithProtection } from '../../hooks/useFormWithProtection';
 import { useFormWithServerErrors } from '../../hooks/useFormWithServerErrors';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Registration page that asks the user to select
