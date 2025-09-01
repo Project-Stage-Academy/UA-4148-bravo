@@ -57,7 +57,7 @@ def handle_project_updates(sender, instance, created, **kwargs):
         )
 
         investor_user_ids = Subscription.objects.filter(project=instance).values_list('investor__user_id', flat=True).distinct()
-        investor_users = get_user_model().objects.filter(id__in=investor_user_ids)
+        investor_users = get_user_model().objects.filter(user_id__in=investor_user_ids)
         
         for user in investor_users:
             title = f"Project '{getattr(instance, 'title', 'N/A')}' has been updated"
@@ -77,7 +77,7 @@ def handle_project_updates(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Project)
 def delete_project(sender, instance, **kwargs):
     try:
-        ProjectDocument().delete(id=instance.id, raise_on_error=False)
+        ProjectDocument().delete(id=instance.id)
     except (ConnectionError, NotFoundError) as e:
         logger.error(
             f"Failed to delete project {instance.id} from Elasticsearch: {e}"
