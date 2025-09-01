@@ -62,7 +62,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
 
     @patch('users.pipelines.create_or_update_user')  
     @patch('users.views.oauth_view.load_backend')
-    def test_google_oauth_sets_user_active_based_on_email_verified(self, mock_load_backend, mock_create_or_update_user):
+    def test_google_oauth_sets_user_active(self, mock_load_backend, mock_create_or_update_user):
         """Test Google OAuth login sets is_active correctly based on email_verified"""
         mock_backend = MagicMock()
 
@@ -85,7 +85,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
 
         access_token = res.cookies.get("access_token").value
         client = APIClient()
-        client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+        client.cookies['access_token'] = access_token
         protected_response = client.get('/api/v1/auth/me/')
         self.assertEqual(protected_response.status_code, 200)
 
