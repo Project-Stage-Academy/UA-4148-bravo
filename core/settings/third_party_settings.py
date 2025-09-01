@@ -77,9 +77,9 @@ REST_FRAMEWORK: dict[str, Any] = {
         "rest_framework.throttling.AnonRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "user": "10/minute",
-        "anon": "5/minute",
-        "resend_email": "5/minute"
+        "user": "40/minute",
+        "anon": "20/minute",
+        "resend_email": "10/minute"
     },
     "DEFAULT_SCHEMA_CLASS": 'drf_spectacular.openapi.AutoSchema'
 }

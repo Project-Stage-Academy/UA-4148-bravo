@@ -4,6 +4,7 @@ import {
     useContext,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from 'react';
 import { api } from '../../api/client';
@@ -150,20 +151,26 @@ function AuthProvider({ children }) {
      * @returns {Promise<void>}
      */
     const loadUser = useCallback(async () => {
-        const { data } = await api.get('/api/v1/auth/me/')
-            .then(() => {
+        api.get('/api/v1/auth/me/')
+            .then((res) => {
+                const data = res.data;
+
                 const newUser = {
-                    id: data.id,
-                    first_name: "",
-                    last_name: "",
+                    id: data.user_id,
                     email: data.email,
+                    first_name: data.first_name,
+                    last_name: data.last_name,
                     role: data.role,
                     isAuthorized: true,
                 }
 
                 setUser(newUser);
+
+                console.log("User is authorized");
             })
             .catch((err) => {
+                console.error(err);
+
                 if (err.response?.status === 404) {
                     setUser(null);
                 } else {
@@ -283,31 +290,22 @@ function AuthProvider({ children }) {
             }
             throw err;
         }
-    }, [loadUser, logout]);
+    }, [logout]);
 
-    // useEffect(() => {
-    //     fetch('/api/v1/auth/me/', {
-    //         method: 'GET',
-    //         credentials: 'include'
-    //     })
-    //         .then(res => res.json())
-    //         .then(data => {
-    //             console.log('User info:', data);
-    //             // Set user data in state/context
-    //         })
-    //         .catch(err => console.error('Error fetching user:', err));
-    // }, []);
+    const isRefreshing = useRef(false);
+    useEffect(() => {
+        if (isRefreshing.current) return;
+        isRefreshing.current = true;
 
-    // useEffect(() => {
-    //     (async () => {
-    //         try {
-    //             await refreshToken();
-    //             await loadUser();
-    //         } catch {
-    //             await logout();
-    //         }
-    //     })();
-    // }, [logout]);
+        (async () => {
+            try {
+                await refreshToken();
+                await loadUser();
+            } catch {
+                await logout();
+            }
+        })();
+    }, [logout, loadUser, refreshToken]);
 
     return (
         <AuthCtx.Provider
