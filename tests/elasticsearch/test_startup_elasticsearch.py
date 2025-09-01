@@ -5,8 +5,10 @@ from common.enums import Stage
 from startups.documents import StartupDocument
 from tests.elasticsearch.setup_tests_data import BaseElasticsearchAPITestCase
 from unittest.mock import patch
+from django.test.utils import override_settings
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
     """
     Integration tests for the Startup API with an Elasticsearch backend.

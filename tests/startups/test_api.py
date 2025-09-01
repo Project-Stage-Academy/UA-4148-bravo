@@ -1,3 +1,4 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from startups.models import Startup
@@ -8,6 +9,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from utils.authenticate_client import authenticate_client
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class StartupAPITests(BaseAPITestCase):
     """
     Test suite for Startup API endpoints, including creation and retrieval of startups.
@@ -25,7 +27,7 @@ class StartupAPITests(BaseAPITestCase):
             'founded_year': 2020,
             'email': 'great@example.com',
         }
-        self.url = reverse('startup-list') + '/'
+        self.url = reverse('startup-list')
 
     @patch("users.permissions.IsStartupUser.has_permission", return_value=True)
     @patch("users.permissions.IsStartupUser.has_object_permission", return_value=True)
@@ -62,7 +64,7 @@ class StartupAPITests(BaseAPITestCase):
             industry=self.industry,
             location=self.location
         )
-        url = reverse('startup-list') + '/'
+        url = reverse('startup-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
@@ -134,7 +136,7 @@ class StartupAPITests(BaseAPITestCase):
             user=self.user, company_name='DetailStartup',
             industry=self.industry, location=self.location
         )
-        url_detail = reverse('startup-detail', args=[startup.pk]) + '/'
+        url_detail = reverse('startup-detail', args=[startup.pk])
         response = self.client.get(url_detail)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['company_name'], 'DetailStartup')
@@ -151,7 +153,7 @@ class StartupAPITests(BaseAPITestCase):
             user=self.user, company_name='OldName',
             industry=self.industry, location=self.location
         )
-        url_detail = reverse('startup-detail', args=[startup.pk]) + '/'
+        url_detail = reverse('startup-detail', args=[startup.pk])
         data = {
             'company_name': 'UpdatedName',
             'team_size': 20,
@@ -177,7 +179,7 @@ class StartupAPITests(BaseAPITestCase):
             user=self.user, company_name='PartialUpdate',
             industry=self.industry, location=self.location
         )
-        url_detail = reverse('startup-detail', args=[startup.pk]) + '/'
+        url_detail = reverse('startup-detail', args=[startup.pk])
         data = {'company_name': 'PartialUpdatedName'}
         response = self.client.patch(url_detail, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -195,7 +197,7 @@ class StartupAPITests(BaseAPITestCase):
             user=self.user, company_name='ValidName',
             industry=self.industry, location=self.location
         )
-        url_detail = reverse('startup-detail', args=[startup.pk]) + '/'
+        url_detail = reverse('startup-detail', args=[startup.pk])
         data = {'company_name': ''}
         response = self.client.patch(url_detail, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -213,7 +215,7 @@ class StartupAPITests(BaseAPITestCase):
             user=self.user, company_name='ToDelete',
             industry=self.industry, location=self.location
         )
-        url_detail = reverse('startup-detail', args=[startup.pk]) + '/'
+        url_detail = reverse('startup-detail', args=[startup.pk])
         response = self.client.delete(url_detail)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Startup.objects.filter(pk=startup.pk).exists())
@@ -271,7 +273,7 @@ class StartupAPITests(BaseAPITestCase):
             industry=self.industry,
             location=self.location
         )
-        url_detail = reverse('startup-detail', args=[startup.pk]) + '/'
+        url_detail = reverse('startup-detail', args=[startup.pk])
         data = {
             'company_name': 'NewName',
             'team_size': 30,

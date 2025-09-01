@@ -3,12 +3,13 @@ from django.contrib.auth.hashers import make_password
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-
+from django.test.utils import override_settings
 from investors.models import Investor, SavedStartup
 from startups.models import Startup, Industry, Location
 from users.models import UserRole
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class SavedStartupViewSetTests(APITestCase):
     """
     Tests for the SavedStartupViewSet registered under the basename 'saved-startup'.
@@ -78,7 +79,7 @@ class SavedStartupViewSetTests(APITestCase):
         )
 
         # router names from: router.register(r'saved', SavedStartupViewSet, basename='saved-startup')
-        self.list_url = reverse("saved-startup-list") + '/'
+        self.list_url = reverse("saved-startup-list")
 
         # authenticate as investor user
         self.client.force_authenticate(self.user)
@@ -161,7 +162,7 @@ class SavedStartupViewSetTests(APITestCase):
         self.client.post(self.list_url, data={"startup": self.startup.id}, format="json")
         obj = SavedStartup.objects.get(investor=self.investor, startup=self.startup)
 
-        url = reverse("saved-startup-detail", args=[obj.id]) + '/'
+        url = reverse("saved-startup-detail", args=[obj.id])
         r = self.client.patch(url, data={"status": "contacted"}, format="json")
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         obj.refresh_from_db()
@@ -173,7 +174,7 @@ class SavedStartupViewSetTests(APITestCase):
         self.client.post(self.list_url, data={"startup": self.startup.id}, format="json")
         obj = SavedStartup.objects.get(investor=self.investor, startup=self.startup)
 
-        url = reverse("saved-startup-detail", args=[obj.id]) + '/'
+        url = reverse("saved-startup-detail", args=[obj.id])
         r = self.client.patch(url, data={"status": "not-a-valid"}, format="json")
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
         obj.refresh_from_db()
@@ -184,7 +185,7 @@ class SavedStartupViewSetTests(APITestCase):
         self.client.post(self.list_url, data={"startup": self.startup.id}, format="json")
         obj = SavedStartup.objects.get(investor=self.investor, startup=self.startup)
 
-        url = reverse("saved-startup-detail", args=[obj.id]) + '/'
+        url = reverse("saved-startup-detail", args=[obj.id])
         r = self.client.delete(url)
         self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(SavedStartup.objects.filter(pk=obj.pk).exists())
@@ -230,7 +231,7 @@ class SavedStartupViewSetTests(APITestCase):
         )
         self.client.force_authenticate(other_user)
 
-        detail_url = reverse("saved-startup-detail", args=[obj.id]) + '/'
+        detail_url = reverse("saved-startup-detail", args=[obj.id])
 
         # PATCH
         r1 = self.client.patch(detail_url, data={"status": "contacted"}, format="json")

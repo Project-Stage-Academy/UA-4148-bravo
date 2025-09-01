@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -10,6 +11,7 @@ from users.models import UserRole
 from utils.authenticate_client import authenticate_client
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class SavedStartupsEndpointsTests(APITestCase):
     """
     API endpoints under investors app:
@@ -97,9 +99,9 @@ class SavedStartupsEndpointsTests(APITestCase):
         )
 
         # URLs
-        self.list_url = reverse("investor-saved-startups") + '/'
-        self.unsave_url_1 = reverse("startup-unsave", kwargs={"startup_id": self.startup1.id}) + '/'
-        self.unsave_url_2 = reverse("startup-unsave", kwargs={"startup_id": self.startup2.id}) + '/'
+        self.list_url = reverse("investor-saved-startups")
+        self.unsave_url_1 = reverse("startup-unsave", kwargs={"startup_id": self.startup1.id})
+        self.unsave_url_2 = reverse("startup-unsave", kwargs={"startup_id": self.startup2.id})
 
     def test_auth_required(self):
         """Both list and unsave require authentication -> 401 when anonymous."""

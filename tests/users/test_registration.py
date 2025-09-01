@@ -1,15 +1,15 @@
 import json
 from unittest.mock import patch
-
 from django.test import Client
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
-
 from users.models import User, UserRole
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class UserRegistrationTests(APITestCase):
     """Test suite for user registration functionality."""
     
@@ -173,11 +173,12 @@ class UserRegistrationTests(APITestCase):
         user.save()
         
         verification_url = reverse('verify-email',
-                                   kwargs={'user_id': user_id, 'token': token}) + '/'
+                                   kwargs={'user_id': user_id, 'token': token})
         response = self.client.get(verification_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class EmailVerificationTests(APITestCase):
     """Test email verification functionality."""
     
@@ -215,7 +216,7 @@ class EmailVerificationTests(APITestCase):
         self.user.save(update_fields=['email_verification_sent_at', 'pending_email'])
         
         verification_url = reverse('verify-email',
-                                   kwargs={'user_id': self.user.user_id, 'token': self.verification_token}) + '/'
+                                   kwargs={'user_id': self.user.user_id, 'token': self.verification_token})
         response = self.client.get(verification_url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -230,7 +231,7 @@ class EmailVerificationTests(APITestCase):
     def test_verification_with_invalid_token(self):
         """Test verification with an invalid token."""
         verification_url = reverse('verify-email',
-                                   kwargs={'user_id': self.user.user_id, 'token': 'invalid-token'}) + '/'
+                                   kwargs={'user_id': self.user.user_id, 'token': 'invalid-token'})
         response = self.client.get(verification_url)
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -243,7 +244,7 @@ class EmailVerificationTests(APITestCase):
     
     def test_verification_with_nonexistent_user(self):
         """Test verification with a non-existent user ID."""
-        verification_url = reverse('verify-email', kwargs={'user_id': 9999, 'token': 'some-token'}) + '/'
+        verification_url = reverse('verify-email', kwargs={'user_id': 9999, 'token': 'some-token'})
         response = self.client.get(verification_url)
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -256,7 +257,7 @@ class EmailVerificationTests(APITestCase):
         self.user.save()
         
         verification_url = reverse('verify-email',
-                                   kwargs={'user_id': self.user.user_id, 'token': 'any-token'}) + '/'
+                                   kwargs={'user_id': self.user.user_id, 'token': 'any-token'})
         response = self.client.get(verification_url)
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

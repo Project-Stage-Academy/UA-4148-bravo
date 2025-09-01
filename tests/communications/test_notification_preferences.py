@@ -8,12 +8,13 @@ from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from rest_framework.test import APIClient
 import logging
-
+from django.test.utils import override_settings
 from utils.authenticate_client import authenticate_client
 
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 @ddt.ddt
 class NotificationPreferencesTestCase(APITestCase):
     @classmethod
@@ -37,7 +38,7 @@ class NotificationPreferencesTestCase(APITestCase):
 
     def test_get_notification_types(self):
         """Test retrieving notification types."""
-        url = reverse('communications:notification-type-list') + '/'
+        url = reverse('communications:notification-type-list')
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -48,7 +49,7 @@ class NotificationPreferencesTestCase(APITestCase):
 
     def test_get_user_preferences(self):
         """Test retrieving user notification preferences."""
-        url = reverse('communications:user-notification-preference-list') + '/'
+        url = reverse('communications:user-notification-preference-list')
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -69,7 +70,7 @@ class NotificationPreferencesTestCase(APITestCase):
         """Test updating user notification preferences."""
         pref = UserNotificationPreference.objects.get(user=self.user)
         url = reverse('communications:user-notification-preference-detail',
-                     kwargs={'pk': self.user.pk}) + '/'
+                     kwargs={'pk': self.user.pk})
 
         data = {
             'enable_in_app': True,
@@ -99,7 +100,7 @@ class NotificationPreferencesTestCase(APITestCase):
         url = reverse(
             'communications:user-notification-preference-update-type-preference',
             kwargs={'pk': self.user.pk}
-        ) + '/'
+        )
 
         data = {
             'notification_type_id': type_pref.notification_type.id,
@@ -121,7 +122,7 @@ class NotificationPreferencesTestCase(APITestCase):
         url = reverse(
             'communications:user-notification-preference-update-type-preference',
             kwargs={'pk': self.user.pk}
-        ) + '/'
+        )
         response = self.client.patch(
             url,
             {'notification_type_id': type_pref.notification_type.id, 'frequency': 'invalid_freq'},
@@ -135,7 +136,7 @@ class NotificationPreferencesTestCase(APITestCase):
         url = reverse(
             'communications:user-notification-preference-update-type-preference',
             kwargs={'pk': self.user.pk}
-        )+ '/'
+        )
         response = self.client.patch(
             url,
             {'notification_type_id': 'abc', 'frequency': 'immediate'},
@@ -150,7 +151,7 @@ class NotificationPreferencesTestCase(APITestCase):
         url = reverse(
             'communications:user-notification-preference-update-type-preference',
             kwargs={'pk': self.user.pk}
-        )+ '/'
+        )
         response = self.client.patch(
             url,
             {'notification_type_id': another_type.id, 'frequency': 'immediate'},
@@ -163,12 +164,12 @@ class NotificationPreferencesTestCase(APITestCase):
         """Test that unauthorized users can't access preferences."""
         client = APIClient()
 
-        list_url = reverse('communications:user-notification-preference-list') + '/'
+        list_url = reverse('communications:user-notification-preference-list')
         response = client.get(list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         detail_url = reverse('communications:user-notification-preference-detail',
-                             kwargs={'pk': self.user.pk}) + '/'
+                             kwargs={'pk': self.user.pk})
         response = client.get(detail_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -176,7 +177,7 @@ class NotificationPreferencesTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         type_pref_url = reverse('communications:user-notification-preference-update-type-preference',
-                                kwargs={'pk': self.user.pk}) + '/'
+                                kwargs={'pk': self.user.pk})
         response = client.patch(type_pref_url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 

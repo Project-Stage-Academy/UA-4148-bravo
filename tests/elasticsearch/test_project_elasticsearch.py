@@ -4,8 +4,10 @@ from rest_framework import status
 from projects.documents import ProjectDocument
 from tests.elasticsearch.setup_tests_data import BaseElasticsearchAPITestCase
 from rest_framework.test import APIClient
+from django.test.utils import override_settings
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
     """
     Test suite for Project Elasticsearch integration and API behavior,
@@ -37,7 +39,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
             pass
 
     def test_combined_filters_work_correctly(self):
-        url = reverse('project-document-list') + '/'
+        url = reverse('project-document-list')
         response = self.client.get(url, {
             'category.name': 'Tech',
             'startup.company_name': 'Fintech Solutions'
@@ -51,7 +53,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         Test that querying the project list with no filters
         returns all existing projects with HTTP 200 OK.
         """
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
@@ -61,7 +63,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         Test that searching for a non-existent project title
         returns an empty list with HTTP 200 OK.
         """
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         response = self.client.get(url, {'search': 'nonexistent_project'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
@@ -70,7 +72,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         """
         Test that using an invalid filter field returns HTTP 400 Bad Request.
         """
-        url = reverse('project-document-list') + '/'
+        url = reverse('project-document-list')
         response = self.client.get(url, {'nonexistent_field': 'value'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -80,7 +82,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         'title' and 'email' results in HTTP 400 Bad Request
         with appropriate error messages.
         """
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         data = {
             'startup_id': self.startup1.id,
             'funding_goal': '10000.00',
@@ -97,7 +99,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         Test that creating a project with a negative funding goal
         returns HTTP 400 Bad Request with error for 'funding_goal'.
         """
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         data = {
             'startup_id': self.startup1.id,
             'title': 'Invalid Funding',
@@ -116,7 +118,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         belonging to another user, receiving HTTP 403 Forbidden.
         """
         project = self.project2  # belongs to user2
-        url = reverse('project-detail', args=[project.pk]) + '/'
+        url = reverse('project-detail', args=[project.pk])
         data = {'title': 'Unauthorized Update'}
         response = self.client.patch(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -124,7 +126,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
     def test_permission_denied_for_unauthenticated_user_access(self):
         """Unauthenticated user should get 401 when accessing project list."""
         client = APIClient(enforce_csrf_checks=False)
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         response = client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -134,7 +136,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         Accepts either success (201 Created) or validation failure (400 Bad Request)
         depending on validation rules.
         """
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         data = {
             'startup_id': self.startup1.id,
             'title': 'Large Funding Goal',
@@ -151,7 +153,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         Attempt to create a project with a funding_goal value that cannot be converted to Decimal.
         Expects HTTP 400 Bad Request with validation error on funding_goal.
         """
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         data = {
             'startup_id': self.startup1.id,
             'title': 'Invalid Funding Type',
@@ -169,7 +171,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         Attempt to create a project where current_funding exceeds funding_goal.
         Expects HTTP 400 Bad Request with validation error on current_funding.
         """
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         data = {
             'startup_id': self.startup1.id,
             'title': 'Funding Exceeded',
@@ -188,7 +190,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         Expects either an error response (HTTP 400 or 403) or that the field remains unchanged on HTTP 200.
         """
         project = self.project1
-        url = reverse('project-detail', args=[project.pk]) + '/'
+        url = reverse('project-detail', args=[project.pk])
         new_startup_id = self.startup2.id
         data = {'startup_id': new_startup_id}
         response = self.client.patch(url, data, format='json')
@@ -204,7 +206,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         Attempt to delete a project with a non-existent ID.
         Expects HTTP 404 Not Found response.
         """
-        url = reverse('project-detail', args=[999999]) + '/'
+        url = reverse('project-detail', args=[999999])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -213,7 +215,7 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
         Search for projects by partial match in the title.
         Expects at least one project in the response matching the search term.
         """
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         search_term = 'First Test'
         response = self.client.get(url, {'search': search_term})
         self.assertEqual(response.status_code, status.HTTP_200_OK)

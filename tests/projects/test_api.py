@@ -1,5 +1,6 @@
 from decimal import Decimal
 from ddt import ddt, data, unpack
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from common.enums import ProjectStatus
@@ -8,6 +9,7 @@ from tests.test_base_case import BaseAPITestCase
 from rest_framework.test import APIClient
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProjectAPICRUDTests(BaseAPITestCase):
     """
     API CRUD tests for the Project model.
@@ -46,7 +48,7 @@ class ProjectAPICRUDTests(BaseAPITestCase):
           - The category is assigned correctly.
           - Default fields such as status are set appropriately.
         """
-        url = reverse("project-list") + '/'
+        url = reverse("project-list")
         self.startup.user = self.user
         self.startup.save()
         data = self.get_project_data(title="API Project", email="api@example.com")
@@ -70,7 +72,7 @@ class ProjectAPICRUDTests(BaseAPITestCase):
         Ensures HTTP 200 status and that the list contains at least one project.
         """
         self.get_or_create_project()
-        url = reverse("project-list") + '/'
+        url = reverse("project-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
@@ -91,7 +93,7 @@ class ProjectAPICRUDTests(BaseAPITestCase):
             email="userproject@example.com",
             status=ProjectStatus.DRAFT
         )
-        url = reverse("project-detail", args=[project.pk]) + '/'
+        url = reverse("project-detail", args=[project.pk])
         data = {"title": "UpdatedTitle"}
         response = self.client.patch(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -113,11 +115,12 @@ class ProjectAPICRUDTests(BaseAPITestCase):
             email="delete@example.com",
             status=ProjectStatus.DRAFT
         )
-        url = reverse("project-detail", args=[project.pk]) + '/'
+        url = reverse("project-detail", args=[project.pk])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProjectAPIPermissionTests(BaseAPITestCase):
     """
     Test suite for verifying project-related API permissions.
@@ -166,7 +169,7 @@ class ProjectAPIPermissionTests(BaseAPITestCase):
         when trying to create a project.
         """
         client = APIClient()
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         data = {
             'startup_id': self.startup.id,
             'title': 'Unauthorized',
@@ -184,7 +187,7 @@ class ProjectAPIPermissionTests(BaseAPITestCase):
         when trying to access the project list.
         """
         client = APIClient()
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         response = client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -199,7 +202,7 @@ class ProjectAPIPermissionTests(BaseAPITestCase):
             project_title="OtherProject",
             project_email="otherproject@example.com"
         )
-        url = reverse("project-detail", args=[other_project.pk]) + '/'
+        url = reverse("project-detail", args=[other_project.pk])
         patch_response = self.client.patch(url, {"title": "HackedTitle"}, format="json")
         self.assertEqual(patch_response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -207,6 +210,7 @@ class ProjectAPIPermissionTests(BaseAPITestCase):
         self.assertEqual(delete_response.status_code, status.HTTP_403_FORBIDDEN)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 @ddt
 class ProjectAPIValidationTests(BaseAPITestCase):
     """
@@ -268,7 +272,7 @@ class ProjectAPIValidationTests(BaseAPITestCase):
             - The response data contains an error for the given field.
             - The error message includes the expected error fragment.
         """
-        url = reverse('project-list') + '/'
+        url = reverse('project-list')
         self.startup.user = self.user
         self.startup.save()
         tested_data = self.get_project_data()

@@ -1,3 +1,4 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
@@ -8,6 +9,7 @@ from startups.models import Startup
 from utils.authenticate_client import authenticate_client
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class StartupNotificationPreferencesAPITests(APITestCase):
     """Integration tests for startup notification preferences API:
     verifies retrieval, channel toggles, per-type frequency updates, and permissions.
@@ -24,7 +26,7 @@ class StartupNotificationPreferencesAPITests(APITestCase):
 
     def test_get_preferences_creates_defaults(self):
         """GET initializes default channel flags and seeds per-type preferences."""
-        url = reverse('startup-preferences') + '/'
+        url = reverse('startup-preferences')
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertIn('enable_in_app', resp.data)
@@ -38,7 +40,7 @@ class StartupNotificationPreferencesAPITests(APITestCase):
         """PATCH updates enable_in_app/email/push channel toggles."""
         _ = self.client.get(reverse('startup-preferences'))
 
-        url = reverse('startup-preferences') + '/'
+        url = reverse('startup-preferences')
         payload = {
             'enable_in_app': True,
             'enable_email': False,
@@ -58,7 +60,7 @@ class StartupNotificationPreferencesAPITests(APITestCase):
         pref = UserNotificationPreference.objects.get(user=self.user)
         type_pref = pref.type_preferences.first()
 
-        url = reverse('startup-preferences-update-type') + '/'
+        url = reverse('startup-preferences-update-type')
         payload = {
             'notification_type_id': type_pref.notification_type.id,
             'frequency': 'daily_digest',
@@ -73,7 +75,7 @@ class StartupNotificationPreferencesAPITests(APITestCase):
         pref = UserNotificationPreference.objects.get(user=self.user)
         type_pref = pref.type_preferences.first()
 
-        url = reverse('startup-preferences-update-type') + '/'
+        url = reverse('startup-preferences-update-type')
         resp = self.client.patch(
             url,
             {'notification_type_id': type_pref.notification_type.id, 'frequency': 'invalid_freq'},
@@ -86,7 +88,7 @@ class StartupNotificationPreferencesAPITests(APITestCase):
         """Return 400 when notification_type_id is not an integer."""
         _ = self.client.get(reverse('startup-preferences'))
 
-        url = reverse('startup-preferences-update-type') + '/'
+        url = reverse('startup-preferences-update-type')
         resp = self.client.patch(
             url,
             {'notification_type_id': 'abc', 'frequency': 'immediate'},
@@ -102,7 +104,7 @@ class StartupNotificationPreferencesAPITests(APITestCase):
 
         another_type = NotificationTypeFactory()
 
-        url = reverse('startup-preferences-update-type') + '/'
+        url = reverse('startup-preferences-update-type')
         resp = self.client.patch(
             url,
             {'notification_type_id': another_type.id, 'frequency': 'immediate'},
@@ -117,11 +119,11 @@ class StartupNotificationPreferencesAPITests(APITestCase):
         client = APIClient()
         authenticate_client(client, other_user)
 
-        list_url = reverse('startup-preferences') + '/'
+        list_url = reverse('startup-preferences')
         resp = client.get(list_url)
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
-        update_url = reverse('startup-preferences-update-type') + '/'
+        update_url = reverse('startup-preferences-update-type')
         resp = client.patch(update_url, {}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
