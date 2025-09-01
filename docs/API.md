@@ -440,8 +440,8 @@ registration. Users can either bind to an existing company or create a new one.
 
 ## Authentication
 
-- Requires authentication via JWT token
-- Add `Authorization: Bearer <token>` to request headers
+- Requires authentication via JWT stored in an **HttpOnly cookie** named `access_token`.
+- No `Authorization` header is needed; the backend reads the token from the cookie.
 
 ## Request Body
 

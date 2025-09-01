@@ -1,8 +1,6 @@
 import traceback
 from rest_framework import status
-from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from common.enums import Stage
@@ -13,7 +11,7 @@ import logging
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from users.serializers.company_bind_serializer import CompanyBindingSerializer
-
+from users.views.base_protected_view import CookieJWTProtectedView
 
 logger = logging.getLogger(__name__)
 
@@ -90,10 +88,9 @@ logger = logging.getLogger(__name__)
             ]
         )
     },
-    tags=["Authentication"],
-    auth=[{'Bearer': []}]
+    tags=["Authentication"]
 )
-class CompanyBindingView(APIView):
+class CompanyBindingView(CookieJWTProtectedView):
     """
     API endpoint for binding users to companies after registration.
 
@@ -101,7 +98,6 @@ class CompanyBindingView(APIView):
     1. An existing company (startup or investor)
     2. A newly created company if no matching company exists
     """
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         """

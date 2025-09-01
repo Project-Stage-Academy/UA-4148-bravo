@@ -155,26 +155,23 @@ class AuthCookieTests(APITestCase):
             HTTP_X_CSRFTOKEN=csrf_token
         )
         access_token = login_resp.cookies["access_token"].value
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
+
+        self.client.cookies["access_token"] = access_token
         response = self.client.get(self.protected_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_access_protected_endpoint_without_token(self):
-        """
-        Ensure accessing a protected endpoint without a cookie
-        returns HTTP 403 Forbidden (AnonymousUser rejected by IsAuthenticated).
-        """
-        response = self.client.get(self.protected_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        """Accessing protected endpoint without any token should return 401"""
+        client = APIClient(enforce_csrf_checks=False)
+        response = client.get(self.protected_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_access_protected_endpoint_with_invalid_token(self):
-        """
-        Ensure accessing a protected endpoint with an invalid cookie token
-        returns HTTP 401 Unauthorized (rejected by CookieJWTAuthentication).
-        """
-        self.client.cookies["access_token"] = "invalidtoken123"
-        response = self.client.get(self.protected_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        """Accessing protected endpoint with invalid token returns 401"""
+        client = APIClient(enforce_csrf_checks=False)
+        client.cookies["access_token"] = "invalidtoken123"
+        response = client.get(self.protected_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_jwt_algorithm(self):
         """

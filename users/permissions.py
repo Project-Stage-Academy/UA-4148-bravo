@@ -2,6 +2,8 @@ import logging
 from rest_framework import permissions
 from startups.models import Startup
 from investors.models import Investor
+from rest_framework.permissions import BasePermission
+from rest_framework import exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -99,3 +101,17 @@ class CanCreateCompanyPermission(permissions.BasePermission):
             return False
 
         return True
+
+
+class IsAuthenticatedOr401(BasePermission):
+    """
+    Like IsAuthenticated, but returns 401 instead of 403 when the user is not authenticated.
+    """
+
+    def has_permission(self, request, view):
+        if request.user and request.user.is_authenticated:
+            return True
+        raise exceptions.NotAuthenticated("Authentication credentials were not provided.")
+
+    def authenticate_header(self, request):
+        return 'Bearer'

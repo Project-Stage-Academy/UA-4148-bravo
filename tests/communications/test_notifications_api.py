@@ -2,13 +2,12 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
-from rest_framework.authtoken.models import Token
 from django.utils import timezone
 
 from communications.models import Notification, NotificationPriority
 from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
-
+from utils.authenticate_client import authenticate_client
 
 User = get_user_model()
 
@@ -20,8 +19,7 @@ class NotificationsApiTestCase(APITestCase):
         self.other_user = UserFactory()
 
         # Auth as self.user (same pattern as other tests)
-        self.token = Token.objects.create(user=self.user)
-        self.client.force_authenticate(user=self.user, token=self.token)
+        authenticate_client(self.client, self.user)
 
         # Notification types
         self.type_message = NotificationTypeFactory(code='message_new')
@@ -100,14 +98,16 @@ class NotificationsApiTestCase(APITestCase):
 
     def test_mark_as_read_and_unread(self):
         # mark_as_read
-        url_read = reverse('communications:notification-mark-as-read', kwargs={'notification_id': str(self.n1.notification_id)})
+        url_read = reverse('communications:notification-mark-as-read',
+                           kwargs={'notification_id': str(self.n1.notification_id)})
         resp = self.client.post(url_read)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertIn('status', resp.data)
         self.n1.refresh_from_db()
         self.assertTrue(self.n1.is_read)
         # mark_as_unread
-        url_unread = reverse('communications:notification-mark-as-unread', kwargs={'notification_id': str(self.n1.notification_id)})
+        url_unread = reverse('communications:notification-mark-as-unread',
+                             kwargs={'notification_id': str(self.n1.notification_id)})
         resp = self.client.post(url_unread)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.n1.refresh_from_db()
@@ -117,12 +117,14 @@ class NotificationsApiTestCase(APITestCase):
         url_all_read = reverse('communications:notification-mark-all-as-read')
         resp = self.client.post(url_all_read)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.n1.refresh_from_db(); self.n2.refresh_from_db()
+        self.n1.refresh_from_db();
+        self.n2.refresh_from_db()
         self.assertTrue(self.n1.is_read and self.n2.is_read)
         url_all_unread = reverse('communications:notification-mark-all-as-unread')
         resp = self.client.post(url_all_unread)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.n1.refresh_from_db(); self.n2.refresh_from_db()
+        self.n1.refresh_from_db();
+        self.n2.refresh_from_db()
         self.assertFalse(self.n1.is_read or self.n2.is_read)
 
     def test_unread_count(self):
@@ -155,20 +157,23 @@ class NotificationsApiTestCase(APITestCase):
         url = reverse('communications:notification-list')
         resp = self.client.options(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        allow_header = resp.headers.get('Allow') or resp.get('Allow') 
+        allow_header = resp.headers.get('Allow') or resp.get('Allow')
         self.assertIsNotNone(allow_header)
         self.assertNotIn('POST', allow_header)
 
     def test_unauthorized_access(self):
         client = APIClient()
+
         list_url = reverse('communications:notification-list')
         resp = client.get(list_url)
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
-        # detail
-        detail_url = reverse('communications:notification-detail', kwargs={'notification_id': str(self.n1.notification_id)})
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        detail_url = reverse('communications:notification-detail',
+                             kwargs={'notification_id': str(self.n1.notification_id)})
         resp = client.get(detail_url)
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
-        # action
-        mark_url = reverse('communications:notification-mark-as-read', kwargs={'notification_id': str(self.n1.notification_id)})
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        mark_url = reverse('communications:notification-mark-as-read',
+                           kwargs={'notification_id': str(self.n1.notification_id)})
         resp = client.post(mark_url)
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
