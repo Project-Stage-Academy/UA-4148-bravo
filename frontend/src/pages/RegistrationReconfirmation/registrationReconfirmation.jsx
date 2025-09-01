@@ -1,10 +1,11 @@
-import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button/button';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import TextInput from '../../components/TextInput/textInput';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
+import { useFormWithProtection } from '../../hooks/useFormWithProtection';
+import { useFormWithServerErrors } from '../../hooks/useFormWithServerErrors';
 
 /**
  * Component for reconfirming user registration by resending the activation email.
@@ -21,65 +22,46 @@ function RegistrationReconfirmation() {
     // Hook to navigate programmatically
     const navigate = useNavigate();
 
-    // State to hold form data
-    const [formData, setFormData] = useState(
-        {
-            email: "",
-            unexpected: ""
-        });
-
-    // State to hold validation errors
-    const [errors, setErrors] = useState({});
+    // Form with protection hook
+    const form = useFormWithProtection({
+        email: "",
+        unexpected: "",
+    });
 
     // Function to handle server-side errors
-    const handleError = (error) => {
-        if (error.response && error.response.status === 401) {
-            setErrors(prev => ({
-                ...prev,
-                email: Validator.serverSideErrorMessages.emailAlreadyExist
-            }));
+    const extractError = (error) => {
+        if (error.response.status === 401) {
+            return { email: Validator.serverSideErrorMessages.emailAlreadyExist };
         } else {
-            setErrors(prev => ({
-                ...prev,
-                unexpected: Validator.serverSideErrorMessages.unexpected
-            }));
+            return { unexpected: Validator.serverSideErrorMessages.unexpected };
         }
     };
 
-    // Function to handle form submission
-    const handleSubmit = () => {
-        const validationErrors = Validator.validate(formData);
-        setErrors(validationErrors);
+    // Function to handle form submission with brute force protection
+    const doSubmit = ({ form, handleError }) => {
+        resendRegisterEmail(form.data.email, user.id)
+            .then(() => {
+                setUser({
+                    email: form.data.email
+                });
 
-        if (Object.values(validationErrors).every(value => value === null)) {
-            resendRegisterEmail(formData.email, user.id)
-                .then(() => {
-                    setUser({
-                        email: formData.email
-                    });
-
-                    navigate('/auth/register/confirm');
-                })
-                .catch(handleError);
-        } else {
-            console.log("Errors:", validationErrors);
-        }
-    }
+                navigate('/auth/register/confirm');
+            })
+            .catch(handleError)
+            .finally(() => form.setIsLocked(false));
+    };
 
     // Function to handle cancellation
     const handleCancel = () => {
         navigate("/");
-    }
-
-    // Function to handle input changes
-    const handleChange = (e) => {
-        Validator.handleChange(
-            e,
-            formData,
-            setFormData,
-            setErrors
-        );
     };
+
+    const { handleSubmit, handleChange } = useFormWithServerErrors({
+        form,
+        navigate,
+        extractError,
+        doSubmit,
+    });
 
     return (
         <Panel className={'panel__margin-large'}
@@ -113,27 +95,27 @@ function RegistrationReconfirmation() {
                         autoComplete="off"
                         autoCorrect="off"
                         spellCheck="false"
-                        value={formData.email}
+                        value={form.data.email}
                         onChange={handleChange}
                         placeholder={'Введіть свою електронну пошту'}
                         className={
-                            errors['email'] && 'input__error-border-color'
+                            form.errors['email'] && 'input__error-border-color'
                         }
                         aria-labelledby="email-label"
-                        aria-describedby={errors['email'] ? 'email-error' : undefined}
-                        aria-invalid={!!errors['email']}
+                        aria-describedby={form.errors['email'] ? 'email-error' : undefined}
+                        aria-invalid={!!form.errors['email']}
                         aria-required="true"
                     />
-                    {errors['email'] && (
+                    {form.errors['email'] && (
                         <p id="email-error"
                            className={'panel--danger-text'}
                            role="alert"
                         >
-                            {errors['email']}
+                            {form.errors['email']}
                         </p>
                     )}
                 </div>
-                {errors['unexpected'] && <p className={'panel--danger-text'}>{ errors['unexpected'] }</p>}
+                {form.errors['unexpected'] && <p className={'panel--danger-text'}>{ form.errors['unexpected'] }</p>}
             </PanelBody>
             <PanelNavigation>
                 <Button
@@ -146,6 +128,7 @@ function RegistrationReconfirmation() {
                 <Button
                     variant="secondary"
                     onClick={handleCancel}
+                    disabled={form.isLocked}
                     className={'button__padding panel--button'}
                 >
                     Скасувати
