@@ -10,7 +10,7 @@ class ProjectUpdateAPITests(BaseAPITestCase):
         super().setUp()
         self.project = self.get_or_create_project(startup=self.startup)
         self.client.force_authenticate(user=self.startup_user)
-        self.url = f"/api/v1/projects/{self.project.pk}"
+        self.base_url = f"/api/v1/projects/{self.project.pk}"
         self.update_url = f"{self.base_url}/update/"
 
     def test_project_update_creates_history(self):
