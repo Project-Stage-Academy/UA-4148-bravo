@@ -1,3 +1,4 @@
+import './passwordResetHandler.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Loading from '../../components/Loading/loading';
@@ -13,20 +14,20 @@ function PasswordResetHandler() {
     const [status, setStatus] = useState('processing');
 
     useEffect(() => {
-        if (!user_id || !token) setStatus('error');
-        else setStatus('success');
+        if (!user_id || !token) return setStatus('error');
+        setStatus('success');
     }, [user_id, token]);
 
     useEffect(() => {
         if (status === 'success') {
-            navigate('/auth/restore-password', {state: {user_id, token}});
+            navigate('/auth/restore-password', { state: {user_id, token}, replace: true });
         } else if (status === 'error') {
             navigate('/404');
         }
     }, [status, navigate, user_id, token]);
 
     if (status === 'processing') {
-        return <Loading className={'email-confirmation-handler'}/>;
+        return <Loading className={'password-reset-handler__loading'}/>;
     }
 
     return null;

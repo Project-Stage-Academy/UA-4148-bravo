@@ -36,9 +36,9 @@ function RestorePasswordDone() {
                 </PanelBody>
                 <PanelNavigation>
                     <Button
+                        type="button"
                         onClick={() => navigate('/')}
                         className={'button__padding panel--button'}
-                        type="submit"
                     >
                         Повернутися до входу
                     </Button>

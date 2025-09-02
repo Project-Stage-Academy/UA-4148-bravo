@@ -33,15 +33,8 @@ function RestorePassword() {
     const location = useLocation();
 
     useEffect(() => {
-        if (!location.state) console.log("state is empty");
-        else {
-            if (!location.state.user_id) console.log("user_id is missing");
-            if (!location.state.token) console.log("token is missing");
-        }
-        if (!location.state
-            ||!location.state.user_id
-            || !location.state.token
-        ) navigate('/404');
+        const { user_id, token } = location.state || {};
+        if (!user_id || !token) navigate('/404');
     }, [location.state, navigate]);
 
     // Function to handle server-side errors
@@ -90,7 +83,7 @@ function RestorePassword() {
                             spellCheck="false"
                             value={form.data.password}
                             onChange={handleChange}
-                            className={form.errors['password'] && 'input__error-border-color'}
+                            className={form.errors['password'] ? 'input__error-border-color' : ''}
                             aria-labelledby="restore-password-label"
                             aria-describedby={form.errors['password'] ? 'password-error' : undefined}
                             aria-invalid={!!form.errors['password']}
@@ -120,7 +113,7 @@ function RestorePassword() {
                             spellCheck="false"
                             value={form.data.confirmPassword}
                             onChange={handleChange}
-                            className={form.errors['confirmPassword'] && 'input__error-border-color'}
+                            className={form.errors['confirmPassword'] ? 'input__error-border-color' : ''}
                             aria-labelledby="confirm-password-label"
                             aria-describedby={form.errors['confirmPassword'] ? 'confirm-password-error' : undefined}
                             aria-invalid={!!form.errors['confirmPassword']}
@@ -146,7 +139,7 @@ function RestorePassword() {
                         onClick={handleSubmit}
                         disabled={form.isDisabled || form.isLocked}
                         className={'button__padding panel--button'}
-                        type="submit"
+                        type="button"
                     >
                         Зберегти пароль
                     </Button>
