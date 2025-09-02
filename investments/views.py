@@ -10,7 +10,7 @@ from users.permissions import IsAuthenticatedInvestor403  # always 403 for any u
 from investments.models import Subscription
 from investments.serializers import SubscriptionCreateSerializer
 from projects.models import Project
-
+from rest_framework.exceptions import ValidationError
 logger = logging.getLogger(__name__)
 
 
@@ -41,6 +41,7 @@ class SubscriptionCreateView(CreateAPIView):
         try:
             return Project.objects.get(pk=project_id), None
         except Project.DoesNotExist:
+            logger.warning("Project with id %s does not exist.", project_id)
             return None, Response(
                 {"project": "Project does not exist."},
                 status=status.HTTP_404_NOT_FOUND,
@@ -64,26 +65,30 @@ class SubscriptionCreateView(CreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            self.perform_create(serializer)
-        except Exception:
+            self.perform_create(serializer, project=project)
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError:
             logger.exception(
-                "Failed to create subscription for user %s",
+                "Database integrity error while creating subscription for user %s",
                 getattr(request.user, "id", None),
             )
             return Response(
-                {"detail": "Failed to create subscription. Please try again."},
+                {"detail": "A database error occurred. Please try again."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
+            
         # Refresh project to get the updated funding values
         project.refresh_from_db(fields=["current_funding", "funding_goal"])
 
-        remaining = (project.funding_goal - project.current_funding)
-        remaining = (remaining.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-                     if isinstance(remaining, Decimal)
-                     else Decimal(remaining).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+        if project.funding_goal is None or project.current_funding is None:
+            remaining = Decimal("0.00")
+        else:
+            remaining = (Decimal(project.funding_goal) - Decimal(project.current_funding)).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
 
-        project_status = "Fully funded" if remaining <= 0 else "Partially funded"
+        project_status = "Fully funded" if remaining <= Decimal("0.00") else "Partially funded"
 
         logger.info(
             "Subscription created successfully for project %s by user %s",
@@ -97,18 +102,20 @@ class SubscriptionCreateView(CreateAPIView):
                 "subscription": SubscriptionCreateSerializer(
                     serializer.instance, context={"request": request}
                 ).data,
-                "remaining_funding": remaining,  # Decimal, not string
+                "remaining_funding": str(remaining),
                 "project_status": project_status,
             },
             status=status.HTTP_201_CREATED,
         )
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer, project=None):
         """
         Save subscription with bound investor and project.
         The serializer itself handles validation, limits, and safe project update.
         """
-        project, _ = self._get_project_or_404_payload()
+        if project is None: 
+            project, _ = self._get_project_or_404_payload()
+
         serializer.save(
             investor=self.request.user.investor,
             project=project,

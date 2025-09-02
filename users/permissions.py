@@ -120,13 +120,13 @@ class IsAuthenticatedInvestor403(BasePermission):
     """
     Permission that enforces:
       - User must be authenticated.
-      - User must have an Investor profile.
+      - An Investor record must exist for this user.
     Any failure → 403 Forbidden (per acceptance criteria).
     """
 
     message = "Only authenticated investors are allowed to perform this action."
 
-    def has_permission(self, request, view):
+    def has_permission(self, request, view) -> bool:
         user = getattr(request, "user", None)
 
         if not user or not user.is_authenticated:
@@ -136,7 +136,8 @@ class IsAuthenticatedInvestor403(BasePermission):
             )
             return False
 
-        is_investor = Investor.objects.filter(user=user).exists()
+        is_investor = hasattr(user, "investor") or Investor.objects.filter(user=user).exists()
+
         if not is_investor:
             logger.warning(
                 "Permission denied: user %s is not an investor for %s.",

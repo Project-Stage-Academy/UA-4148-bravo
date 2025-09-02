@@ -1,5 +1,5 @@
 from .subscription_create import SubscriptionCreateSerializer
-from .subscription_update import SubscriptionUpdateSerializer  # якщо є
+from .subscription_update import SubscriptionUpdateSerializer
 
 __all__ = [
     "SubscriptionCreateSerializer",

@@ -82,7 +82,7 @@ class TestSubscriptionCreateAPI(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.project.refresh_from_db()
         self.assertEqual(self.project.current_funding, Decimal("200.00"))
-        self.assertEqual(response.data["remaining_funding"], Decimal("800.00"))
+        self.assertEqual(response.data["remaining_funding"], "800.00")
         self.assertEqual(response.data["project_status"], "Partially funded")
         self.assertEqual(Subscription.objects.count(), 1)
 

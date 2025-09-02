@@ -105,10 +105,16 @@ class TestSubscriptionPermissions403Policy(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN, resp.data)
 
     def test_authenticated_non_investor_gets_403(self):
-        """Authenticated non-investor → 403 Forbidden."""
+        """Authenticated non-investor -> 403 Forbidden and no Subscription created."""
+        before = Subscription.objects.count()
+
         self.client.force_authenticate(user=self.non_investor_user)
         resp = self.client.post(self.url, {"amount": "100.00"}, format="json")
+
+        after = Subscription.objects.count()
+
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN, resp.data)
+        self.assertEqual(after, before)  
 
     def test_authenticated_investor_gets_201_and_subscription_created(self):
         """Authenticated investor → 201 Created and Subscription is created."""
