@@ -17,7 +17,7 @@ class ProjectUpdateAPITests(BaseAPITestCase):
         self.assertEqual(ProjectHistory.objects.count(), 0)
         
         update_data = {'title': 'A Brand New Title'}
-        response = self.client.patch(self.url, update_data, format="json")
+        response = self.client.patch(self.url + '/', update_data, format="json")
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(ProjectHistory.objects.count(), 1)
@@ -34,7 +34,9 @@ class ProjectUpdateAPITests(BaseAPITestCase):
         self.assertEqual(Notification.objects.count(), 0)
         
         update_data = {'description': 'An updated description for investors.'}
-        self.client.patch(self.url, update_data, format="json")
+        response = self.client.patch(self.url + '/', update_data, format="json")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         notifications = Notification.objects.filter(
             user=self.investor1.user, 
