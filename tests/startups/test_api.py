@@ -1,3 +1,4 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from startups.models import Startup
@@ -8,6 +9,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from utils.authenticate_client import authenticate_client
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class StartupAPITests(BaseAPITestCase):
     """
     Test suite for Startup API endpoints, including creation and retrieval of startups.

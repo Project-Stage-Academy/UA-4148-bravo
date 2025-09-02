@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.test.utils import override_settings
 from users.models import User, UserRole
 from django.urls import reverse
 from rest_framework.test import APITestCase
@@ -9,6 +10,7 @@ from rest_framework.test import APIClient
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class MeEndpointTests(APITestCase):
     """
     Test suite for the /api/v1/auth/me/ endpoint.

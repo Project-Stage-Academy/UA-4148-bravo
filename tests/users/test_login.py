@@ -1,8 +1,10 @@
 from django.test import TestCase
+from django.test.utils import override_settings
 from rest_framework.test import APIClient
 from users.models import UserRole, User
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class AuthLoginTestCase(TestCase):
     """
     TestCase to verify JWT login functionality.
