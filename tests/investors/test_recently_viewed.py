@@ -4,7 +4,9 @@ from rest_framework import status
 from investors.models import Investor, ViewedStartup
 from startups.models import Startup, Industry, Location, Stage
 from users.models import User
+from django.test import override_settings
 
+@override_settings(APPEND_SLASH=False, SECURE_SSL_REDIRECT=False)
 class ViewedStartupTests(APITestCase):
     """Tests for the ViewedStartup API endpoints."""
 
@@ -61,21 +63,24 @@ class ViewedStartupTests(APITestCase):
         # Authenticate client as the investor
         self.client.force_authenticate(user=self.user)
 
+    def _fix_url(self, url: str) -> str:
+        """Ensure URL ends with slash to avoid 301 from DRF router."""
+        return url if url.endswith('/') else url + '/'
+
     def test_create_viewed_startup(self):
         """Ensure posting to the viewed startup endpoint creates a ViewedStartup record."""
-        url = reverse('viewed-startup-create', args=[str(self.startup1.id)])
-        response = self.client.post(url)
+        url = self._fix_url(reverse('viewed-startup-create', args=[str(self.startup1.id)]))
+        response = self.client.post(url, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(ViewedStartup.objects.filter(investor=self.investor, startup=self.startup1).exists())
 
     def test_list_viewed_startups_ordered(self):
         """Ensure the list of viewed startups is ordered by viewed_at descending."""
-        # Create two ViewedStartup records
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup1)
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup2)
 
-        url = reverse('viewed-startup-list')
-        response = self.client.get(url)
+        url = self._fix_url(reverse('viewed-startup-list'))
+        response = self.client.get(url, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.data['results']
         returned_ids = [str(item['startup_id']) for item in data]
@@ -87,8 +92,8 @@ class ViewedStartupTests(APITestCase):
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup1)
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup2)
 
-        url = reverse('viewed-startup-clear')
-        response = self.client.delete(url)
+        url = self._fix_url(reverse('viewed-startup-clear'))
+        response = self.client.delete(url, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(ViewedStartup.objects.filter(investor=self.investor).count(), 0)
 
@@ -97,8 +102,8 @@ class ViewedStartupTests(APITestCase):
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup1)
         ViewedStartup.objects.create(investor=self.investor, startup=self.startup2)
 
-        url = reverse('viewed-startup-list') + "?page_size=1"
-        response = self.client.get(url)
+        url = self._fix_url(reverse('viewed-startup-list')) + "?page_size=1"
+        response = self.client.get(url, follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()['results']
         self.assertEqual(len(data), 1)
@@ -108,6 +113,6 @@ class ViewedStartupTests(APITestCase):
         non_investor_user = User.objects.create_user(email="noninvestor@example.com", password="pass")
         self.client.force_authenticate(user=non_investor_user)
 
-        url = reverse('viewed-startup-list')
-        response = self.client.get(url)
+        url = self._fix_url(reverse('viewed-startup-list'))
+        response = self.client.get(url, follow=True)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
