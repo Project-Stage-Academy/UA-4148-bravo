@@ -63,7 +63,7 @@ class ViewedStartupTests(APITestCase):
 
     def test_create_viewed_startup(self):
         """Ensure posting to the viewed startup endpoint creates a ViewedStartup record."""
-        url = reverse('viewed-startup-create', kwargs={"startup_id": str(self.startup1.pk)})
+        url = reverse('viewed-startup-create', args=[str(self.startup1.id)])
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(ViewedStartup.objects.filter(investor=self.investor, startup=self.startup1).exists())
@@ -79,7 +79,7 @@ class ViewedStartupTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.data['results']
         returned_ids = [str(item['startup_id']) for item in data]
-        expected_ids = [str(self.startup2.pk), str(self.startup1.pk)]
+        expected_ids = [str(self.startup2.id), str(self.startup1.id)]
         self.assertEqual(returned_ids, expected_ids)
 
     def test_clear_viewed_startups(self):

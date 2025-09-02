@@ -236,8 +236,7 @@ class ViewedStartupListView(generics.ListAPIView):
     pagination_class = ViewedStartupPagination
 
     def get_queryset(self):
-        return ViewedStartup.objects.filter(investor=self.request.user.investor).order_by("-viewed_at")
-
+        return ViewedStartup.objects.filter(investor=self.request.user.investor).select_related('startup').order_by("-viewed_at")
 class ViewedStartupCreateView(APIView):
     """
     POST /api/v1/startups/view/{startup_id}/
