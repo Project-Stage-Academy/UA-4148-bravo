@@ -81,11 +81,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """
         project = self.get_object()
         self.check_object_permissions(request, project)
+
+        if 'startup_id' in request.data:
+            return Response(
+                {"detail": "Cannot change the startup of a project."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
         serializer = ProjectWriteSerializer(project, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(ProjectReadSerializer(project).data, status=status.HTTP_200_OK)
-
+    
     def partial_update(self, request, *args, **kwargs):
         """
         This method will no longer be the primary way to update a project.
