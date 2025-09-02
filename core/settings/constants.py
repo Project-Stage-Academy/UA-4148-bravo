@@ -75,3 +75,8 @@ FORBIDDEN_WORDS_SET = {
     "crypto", "click here", "subscribe", "buy now", "offer", "promotion",
     "gamble", "casino", "adult", "nsfw", "sex", "porn", "nude"
 }
+
+ALLOWED_TAGS = ["b", "i", "u", "a"]
+ALLOWED_ATTRIBUTES = {
+    "a": ["href", "title"]
+}

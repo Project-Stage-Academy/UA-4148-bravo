@@ -3,6 +3,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from common.company import Company
 from common.enums import Stage
+from core import settings
 
 
 class Investor(Company):
@@ -43,6 +44,15 @@ class Investor(Company):
         blank=True,
         verbose_name='Bookmarked startups',
         help_text='Startups that this investor has bookmarked.',
+    )
+
+    viewed_startups = models.ManyToManyField(
+        'startups.Startup',
+        through='investors.ViewedStartup',
+        related_name='viewed_by',
+        blank=True,
+        verbose_name='Viewed startups',
+        help_text='Startups that this investor recently viewed.',
     )
 
     @property
@@ -120,3 +130,24 @@ class SavedStartup(models.Model):
             models.Index(fields=['-saved_at'], name='saved_saved_at_desc_idx'),
         ]
 
+class ViewedStartup(models.Model):
+    investor = models.ForeignKey(
+        'investors.Investor',
+        on_delete=models.CASCADE,
+        related_name='viewed_startups_links',
+        help_text="Investor who viewed the startup"
+    )
+    startup = models.ForeignKey(
+        "startups.Startup",
+        on_delete=models.CASCADE,
+        related_name="views"
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Startup view history"
+        verbose_name_plural = "Startup view histories"
+        ordering = ["-viewed_at"]
+
+    def __str__(self):
+        return f"{self.investor} viewed {self.startup} at {self.viewed_at}"

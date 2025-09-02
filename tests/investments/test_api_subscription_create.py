@@ -10,8 +10,10 @@ from investors.models import Investor
 from projects.models import Project, Category
 from investments.models import Subscription
 from utils.authenticate_client import authenticate_client
+from django.test.utils import override_settings
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class TestSubscriptionCreateAPI(TestCase):
     """Integration tests for the subscription creation endpoint."""
 
@@ -75,7 +77,8 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_create_subscription_success(self):
         """Test successful creation of a subscription by an investor."""
         authenticate_client(self.client, self.investor_user)
-        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe",
+                      kwargs={"project_id": self.project.id})
         payload = {"amount": 200}
         response = self.client.post(url, payload, format="json")
 
@@ -91,7 +94,8 @@ class TestSubscriptionCreateAPI(TestCase):
         self.project.current_funding = Decimal("900.00")
         self.project.save()
         authenticate_client(self.client, self.investor_user)
-        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe",
+                      kwargs={"project_id": self.project.id})
         payload = {"amount": 100}
         response = self.client.post(url, payload, format="json")
 
@@ -103,7 +107,8 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_create_subscription_exceeds_goal_fails(self):
         """Test that an investment exceeding the goal is blocked."""
         authenticate_client(self.client, self.investor_user)
-        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe",
+                      kwargs={"project_id": self.project.id})
         payload = {"amount": 1500}
         response = self.client.post(url, payload, format="json")
 
@@ -114,7 +119,8 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_unauthenticated_user_cannot_subscribe(self):
         """Ensure unauthenticated user cannot subscribe -> 401."""
         client = APIClient()
-        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe",
+                      kwargs={"project_id": self.project.id})
         payload = {"amount": 200}
         response = client.post(url, payload, format="json")
 
@@ -124,7 +130,8 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_non_investor_cannot_subscribe(self):
         """Test that a non-investor user cannot create a subscription."""
         authenticate_client(self.client, self.startup_user)
-        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe",
+                      kwargs={"project_id": self.project.id})
         payload = {"amount": 100}
         response = self.client.post(url, payload, format="json")
 
@@ -152,7 +159,8 @@ class TestSubscriptionCreateAPI(TestCase):
         self.project.startup.save()
         authenticate_client(self.client, owner_investor_user)
 
-        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe",
+                      kwargs={"project_id": self.project.id})
         payload = {"amount": 100}
         response = self.client.post(url, payload, format="json")
 
@@ -165,7 +173,8 @@ class TestSubscriptionCreateAPI(TestCase):
         self.project.current_funding = self.project.funding_goal
         self.project.save()
         authenticate_client(self.client, self.investor_user)
-        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe",
+                      kwargs={"project_id": self.project.id})
         payload = {"amount": 50}
         response = self.client.post(url, payload, format="json")
 
@@ -176,7 +185,8 @@ class TestSubscriptionCreateAPI(TestCase):
     def test_invest_with_invalid_amount_fails(self):
         """Test that zero or negative investment amounts are blocked."""
         authenticate_client(self.client, self.investor_user)
-        url = reverse("project-subscribe", kwargs={"project_id": self.project.id})
+        url = reverse("project-subscribe",
+                      kwargs={"project_id": self.project.id})
 
         payload_zero = {"amount": 0}
         response_zero = self.client.post(url, payload_zero, format="json")

@@ -4,8 +4,10 @@ from tests.test_base_case import BaseCompanyCreateAPITestCase
 from investors.models import Investor
 from startups.models import Industry, Location
 from utils.authenticate_client import authenticate_client
+from django.test.utils import override_settings
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
     """
     Tests for the investor creation API endpoint (POST /api/v1/investors/).
