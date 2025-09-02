@@ -69,6 +69,7 @@ def handle_project_updates(sender, instance, created, **kwargs):
                 type_code='project_updated',
                 title=title,
                 message=message,
+                related_project_id=instance.id,
             )
 
 @receiver(post_delete, sender=Project)
