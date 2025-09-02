@@ -1,12 +1,14 @@
 import './registration.css';
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
 import { Validator } from '../../utils/validation/validate';
 import Button from '../../components/Button/button';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import TextInput from '../../components/TextInput/textInput';
 import HiddenInput from '../../components/HiddenInput/hiddenInput';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
+import bruteForce from '../../utils/bruteForce/bruteForce';
+import { useFormWithProtection } from '../../hooks/useFormWithProtection';
+import { useFormWithServerErrors } from '../../hooks/useFormWithServerErrors';
 
 /**
  * Registration component handles user registration.
@@ -21,108 +23,63 @@ function Registration() {
     // This component handles user registration
     const { setUser, register } = useAuthContext();
 
-    // Simple brute force protection
-    const [attempts, setAttempts] = useState(0);
-    const [isLocked, setIsLocked] = useState(false);
-
     // Hook to navigate programmatically
     const navigate = useNavigate();
 
-    // State to hold form data
-    const [formData, setFormData] = useState(
-        {
-            email: "",
-            password: "",
-            confirmPassword: "",
-            lastName: "",
-            firstName: "",
-            unexpected: ""
-        });
+    // Brute force max attempts constant
+    const MAX_ATTEMPTS = 5;
 
-    // State to hold validation errors
-    const [errors, setErrors] = useState({});
+    // Form with protection hook
+    const form = useFormWithProtection({
+        email: "",
+        password: "",
+        confirmPassword: "",
+        lastName: "",
+        firstName: "",
+        unexpected: "",
+    });
 
     // Function to handle server-side errors
-    const handleError = (error) => {
-        if (error?.response && error?.response?.data?.errors?.email) {
-            setErrors(prev => ({
-                ...prev,
-                email: Validator.serverSideErrorMessages.emailAlreadyExist
-            }));
+    const extractError = (error) => {
+        if (error?.response?.data?.errors?.email) {
+            return { email: Validator.serverSideErrorMessages.emailAlreadyExist };
         } else {
-            setErrors(prev => ({
-                ...prev,
-                unexpected: Validator.serverSideErrorMessages.unexpected
-            }));
+            return { unexpected: Validator.serverSideErrorMessages.unexpected };
         }
     };
 
-    // Function to handle form submission
-    const handleSubmit = () => {
-        if (isLocked) return;
-
-        const validationErrors = Validator.validate(
-            formData
-        );
-        setErrors(validationErrors);
-
-        if (Object.values(validationErrors).every(value => value === null)) {
-            register(
-                formData.email,
-                formData.firstName,
-                formData.lastName,
-                formData.password,
-                formData.confirmPassword
-            )
-                .then((res) => {
-                    setUser({
-                        id: res.data.user_id,
-                        email: res.data.email
-                    });
-
-                    navigate('/auth/register/confirm');
-                })
-                .catch((error) => {
-                    setAttempts(() => {
-                        const next = attempts + 1;
-                        console.log(next);
-
-                        if (next >= 5) {
-                            setIsLocked(true);
-                            setErrors(prevErrors => ({
-                                ...prevErrors,
-                                unexpected: "Повторіть спробу через 30 секунд"
-                            }));
-
-                            setTimeout(() => {
-                                setAttempts(0);
-                                setErrors(prevErrors => ({
-                                    ...prevErrors,
-                                    unexpected: null
-                                }));
-                                setIsLocked(false);
-                            }, 30000);
-                        } else {
-                            handleError(error);
-                        }
-
-                        return next;
-                    });
+    // Function to handle form submission with brute force protection
+    const doSubmit = ({ form, handleError }) => {
+        register(
+            form.data.email,
+            form.data.firstName,
+            form.data.lastName,
+            form.data.password,
+            form.data.confirmPassword
+        )
+            .then((res) => {
+                setUser({
+                    id: res.data.user_id,
+                    email: res.data.email
                 });
-        } else {
-            console.warn('Errors:', validationErrors);
-        }
+
+                navigate('/auth/register/confirm');
+            })
+            .catch((error) => bruteForce(error, {
+                attempts: form.attempts,
+                setAttempts: form.setAttempts,
+                setIsLocked: form.setIsLocked,
+                handleError
+            }))
+            .finally(() => form.setIsLocked(false));
     };
 
-    // Function to handle input changes
-    const handleChange = (e) => {
-        return Validator.handleChange(
-            e,
-            formData,
-            setFormData,
-            setErrors
-        );
-    };
+    const { handleSubmit, handleChange } = useFormWithServerErrors({
+        form,
+        navigate,
+        extractError,
+        doSubmit,
+    });
 
     return (
         <>
@@ -144,23 +101,23 @@ function Registration() {
                             autoComplete="off"
                             autoCorrect="off"
                             spellCheck="false"
-                            value={formData.email}
+                            value={form.data.email}
                             onChange={handleChange}
                             placeholder={'Введіть свою електронну пошту'}
                             className={
-                                errors['email'] && 'input__error-border-color'
+                                form.errors['email'] && 'input__error-border-color'
                             }
                             aria-labelledby="email-label"
-                            aria-describedby={errors['email'] ? 'email-error' : undefined}
-                            aria-invalid={!!errors['email']}
+                            aria-describedby={form.errors['email'] ? 'email-error' : undefined}
+                            aria-invalid={!!form.errors['email']}
                             aria-required="true"
                         />
-                        {errors['email'] && (
+                        {form.errors['email'] && (
                             <p id="email-error"
                                className={'panel--danger-text'}
                                role="alert"
                             >
-                                {errors['email']}
+                                {form.errors['email']}
                             </p>
                         )}
                     </div>
@@ -179,23 +136,23 @@ function Registration() {
                             autoComplete="off"
                             autoCorrect="off"
                             spellCheck="false"
-                            value={formData.password}
+                            value={form.data.password}
                             onChange={handleChange}
                             placeholder={'Введіть пароль'}
                             className={
-                                errors['password'] && 'input__error-border-color'
+                                form.errors['password'] && 'input__error-border-color'
                             }
                             aria-labelledby="password-label"
-                            aria-describedby={errors['password'] ? 'password-error' : undefined}
-                            aria-invalid={!!errors['password']}
+                            aria-describedby={form.errors['password'] ? 'password-error' : undefined}
+                            aria-invalid={!!form.errors['password']}
                             aria-required="true"
                         />
-                        {errors['password'] && (
+                        {form.errors['password'] && (
                             <p id="password-error"
                                className={'panel--danger-text'}
                                role="alert"
                             >
-                                {errors['password']}
+                                {form.errors['password']}
                             </p>
                         )}
                     </div>
@@ -211,24 +168,24 @@ function Registration() {
                             autoComplete="off"
                             autoCorrect="off"
                             spellCheck="false"
-                            value={formData.confirmPassword}
+                            value={form.data.confirmPassword}
                             onChange={handleChange}
                             placeholder={'Введіть пароль ще раз'}
                             className={
-                                errors['confirmPassword'] &&
+                                form.errors['confirmPassword'] &&
                                 'input__error-border-color'
                             }
                             aria-labelledby="confirmPassword-label"
-                            aria-describedby={errors['confirmPassword'] ? 'confirmPassword-error' : undefined}
-                            aria-invalid={!!errors['confirmPassword']}
+                            aria-describedby={form.errors['confirmPassword'] ? 'confirmPassword-error' : undefined}
+                            aria-invalid={!!form.errors['confirmPassword']}
                             aria-required="true"
                         />
-                        {errors['confirmPassword'] && (
+                        {form.errors['confirmPassword'] && (
                             <p id="confirmPassword-error"
                                className={'panel--danger-text'}
                                role="alert"
                             >
-                                {errors['confirmPassword']}
+                                {form.errors['confirmPassword']}
                             </p>
                         )}
                     </div>
@@ -244,24 +201,24 @@ function Registration() {
                             autoComplete="off"
                             autoCorrect="off"
                             spellCheck="false"
-                            value={formData.lastName}
+                            value={form.data.lastName}
                             onChange={handleChange}
                             placeholder={'Введіть ваше прізвище'}
                             className={
-                                errors['lastName'] &&
+                                form.errors['lastName'] &&
                                 'input__error-border-color'
                             }
                             aria-labelledby="lastName-label"
-                            aria-describedby={errors['lastName'] ? 'lastName-error' : undefined}
-                            aria-invalid={!!errors['lastName']}
+                            aria-describedby={form.errors['lastName'] ? 'lastName-error' : undefined}
+                            aria-invalid={!!form.errors['lastName']}
                             aria-required="true"
                         />
-                        {errors['lastName'] && (
+                        {form.errors['lastName'] && (
                             <p id="lastName-error"
                                className={'panel--danger-text'}
                                role="alert"
                             >
-                                {errors['lastName']}
+                                {form.errors['lastName']}
                             </p>
                         )}
                     </div>
@@ -276,42 +233,49 @@ function Registration() {
                             autoComplete="off"
                             autoCorrect="off"
                             spellCheck="false"
-                            value={formData.firstName}
+                            value={form.data.firstName}
                             onChange={handleChange}
                             placeholder={'Введіть ваше ім’я'}
                             className={
-                                errors['firstName'] &&
+                                form.errors['firstName'] &&
                                 'input__error-border-color'
                             }
                             aria-labelledby="firstName-label"
-                            aria-describedby={errors['firstName'] ? 'firstName-error' : undefined}
-                            aria-invalid={!!errors['firstName']}
+                            aria-describedby={form.errors['firstName'] ? 'firstName-error' : undefined}
+                            aria-invalid={!!form.errors['firstName']}
                             aria-required="true"
                         />
-                        {errors['firstName'] && (
+                        {form.errors['firstName'] && (
                             <p id="firstName-error"
                                className={'panel--danger-text'}
                                role="alert"
                             >
-                                {errors['firstName']}
+                                {form.errors['firstName']}
                             </p>
                         )}
                     </div>
-                    {!isLocked && attempts >= 3 - 1 && (
-                        <p className={'content--text'}>
-                            Залишилося спроб: {5 - attempts}
+                    {!form.isLocked && form.attempts >= (MAX_ATTEMPTS - 2 - 1) && (
+                        <p className={'content--text'}
+                           role="alert"
+                        >
+                            Залишилося спроб: {MAX_ATTEMPTS - form.attempts}
                         </p>
                     )}
-                    {errors['unexpected'] && (
+                    {form.isLocked && form.attempts >= (MAX_ATTEMPTS + 1 - 1) && (
                         <p className={'panel--danger-text'}>
-                            {errors['unexpected']}
+                            Повторіть спробу через 30 секунд
+                        </p>
+                    )}
+                    {form.errors['unexpected'] && (
+                        <p className={'panel--danger-text'}>
+                            {form.errors['unexpected']}
                         </p>
                     )}
                 </PanelBody>
                 <PanelNavigation>
                     <Button
                         onClick={handleSubmit}
-                        disabled={isLocked}
+                        disabled={form.isDisabled || form.isLocked}
                         className={'button__padding panel--button'}
                         type="submit"
                     >
