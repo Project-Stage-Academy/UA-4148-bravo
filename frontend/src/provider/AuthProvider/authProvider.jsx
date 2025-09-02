@@ -156,7 +156,7 @@ function AuthProvider({ children }) {
                 const data = res.data;
 
                 const newUser = {
-                    id: data.user_id,
+                    id: data.id || data.user_id,
                     email: data.email,
                     first_name: data.first_name,
                     last_name: data.last_name,
@@ -166,7 +166,9 @@ function AuthProvider({ children }) {
 
                 setUser(newUser);
 
-                console.log("User is authorized");
+                if (process.env.REACT_APP_NODE_ENV === 'development') {
+                    console.log("User is authorized");
+                }
             })
             .catch((err) => {
                 console.error(err);
@@ -212,10 +214,10 @@ function AuthProvider({ children }) {
      */
     const logout = useCallback(async () => {
         await api.post('/api/v1/auth/logout/')
+            .then(() => setUser(null))
             .catch((err) => {
                 console.log('Logout error\n', err);
-            }).finally(() => {
-                setUser(null);
+                if (err.response?.status === 401) setUser(null);
             });
     }, []);
 
@@ -305,7 +307,7 @@ function AuthProvider({ children }) {
                 await logout();
             }
         })();
-    }, [logout, loadUser, refreshToken]);
+    });
 
     return (
         <AuthCtx.Provider
