@@ -1,15 +1,18 @@
+from django.utils import timezone
 import logging
 from django.db import IntegrityError
-from django.shortcuts import get_object_or_404
-
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics, pagination
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
-from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer
+from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer, ViewedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
+from django.shortcuts import get_object_or_404
+from .models import ViewedStartup
+from startups.models import Startup
 from users.cookie_jwt import CookieJWTAuthentication
 from users.permissions import IsInvestor, CanCreateCompanyPermission, IsAuthenticatedOr401
 from startups.models import Startup
@@ -211,6 +214,68 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
             extra={"saved_id": instance.pk, "by_user": self.request.user.pk},
         )
         super().perform_destroy(instance)
+
+class ViewedStartupPagination(pagination.PageNumberPagination):
+    """
+    Pagination class for recently viewed startups.
+    Default page size is 10, can be overridden via ?page_size query parameter.
+    """
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 50
+
+
+class ViewedStartupListView(generics.ListAPIView):
+    """
+    GET /api/v1/startups/viewed/
+    Retrieve a paginated list of recently viewed startups for the authenticated investor.
+    """
+    serializer_class = ViewedStartupSerializer
+    permission_classes = [IsAuthenticated, IsInvestor]
+    pagination_class = ViewedStartupPagination
+
+    def get_queryset(self):
+        return ViewedStartup.objects.filter(investor=self.request.user.investor).select_related('startup').order_by("-viewed_at")
+class ViewedStartupCreateView(APIView):
+    """
+    POST /api/v1/startups/view/{startup_id}/
+    Log that the authenticated investor has viewed a specific startup.
+    Return the serialized ViewedStartup instance.
+    """
+    permission_classes = [IsAuthenticated, IsInvestor]
+
+    def post(self, request, startup_id):
+        startup = get_object_or_404(Startup, id=startup_id)
+        if not hasattr(request.user, "investor"):
+            return Response({"detail": "User is not an investor."}, status=status.HTTP_403_FORBIDDEN)
+        investor = request.user.investor 
+
+        viewed_obj, created = ViewedStartup.objects.update_or_create(
+            investor=investor,
+            startup=startup,
+            defaults={"viewed_at": timezone.now()}
+        )
+
+        serializer = ViewedStartupSerializer(viewed_obj)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ViewedStartupClearView(APIView):
+    """
+    DELETE /api/v1/startups/viewed/clear/
+    Clear the authenticated investor's viewed startups history.
+    Return number of deleted entries.
+    """
+    permission_classes = [IsAuthenticated, IsInvestor]
+
+    def delete(self, request):
+        investor = request.user.investor
+        deleted_count = investor.viewed_startups.count()
+        investor.viewed_startups.clear()
+        return Response(
+            {"detail": "Viewed startups history cleared successfully.", "deleted_count": deleted_count},
+            status=status.HTTP_200_OK
+        )
 
 class SaveStartupView(CookieJWTProtectedView):
 
