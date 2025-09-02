@@ -69,7 +69,9 @@ def handle_project_updates(sender, instance, created, **kwargs):
                 type_code='project_updated',
                 title=title,
                 message=message,
-                related_project_id=instance.id,
+                related_project=instance, 
+                triggered_by_user=getattr(instance, '_last_editor', None),
+                triggered_by_type='startup'
             )
 
 @receiver(post_delete, sender=Project)

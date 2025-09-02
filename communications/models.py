@@ -151,7 +151,8 @@ class Notification(TimeStampedModel):
         Project, 
         on_delete=models.SET_NULL, 
         null=True, 
-        blank=True
+        blank=True,
+        related_name='notifications'
     )
     related_message_id = models.PositiveIntegerField(null=True, blank=True)
 
