@@ -19,14 +19,24 @@
     display: block;
     border: 0;
     background-color: inherit;
-    width: 100%;
     font-family: var(--text-font), sans-serif;
     text-align: left;
     cursor: pointer;
 }
 
+.dropdown-content__btn {
+    width: 100%;
+}
+
+.dropdown-content__btn:hover,
 .dropdown-content__link:hover {
     background-color: var(--dropdown-item-hover);
+}
+
+.dropdown-content__btn:disabled {
+    color: var(--secondary-text-color);
+    background-color: var(--primary-btn-bcg-color-inactive);
+    cursor: not-allowed;
 }
 
 .dropdown:hover .dropdown-content {

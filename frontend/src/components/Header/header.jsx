@@ -17,11 +17,14 @@ import { useState } from 'react';
 function Header({ show, hide, toggle, visible }) {
     const { logout } = useAuthContext();
     const navigate = useNavigate();
-    const { user } = useAuthContext();
+    //const { user } = useAuthContext();
+    const user = {id: 1}
 
+    const [loading, setLoading] = useState(false);
     const doLogout = async () => {
-        await logout();
-        navigate('/');
+        setLoading(true);
+        try { await logout(); navigate('/'); }
+        finally { setLoading(false); }
     }
 
     return (
@@ -80,8 +83,9 @@ function Header({ show, hide, toggle, visible }) {
                                 </Link>
                             }
                             <button
-                                className={'dropdown-content__link text-danger'}
+                                className={'dropdown-content__btn text-danger'}
                                 onClick={doLogout}
+                                disabled={loading}
                             >
                                 Вийти
                             </button>
