@@ -1,3 +1,4 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
@@ -11,6 +12,7 @@ load_dotenv()
 TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class AuthCookieTests(APITestCase):
     """
     Test suite for JWT authentication using HTTPOnly cookies and CSRF protection.

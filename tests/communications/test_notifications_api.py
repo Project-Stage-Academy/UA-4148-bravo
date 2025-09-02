@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-
+from django.test.utils import override_settings
 from communications.models import Notification, NotificationPriority
 from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
@@ -12,6 +12,7 @@ from utils.authenticate_client import authenticate_client
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class NotificationsApiTestCase(APITestCase):
     def setUp(self):
         # Users
@@ -91,7 +92,8 @@ class NotificationsApiTestCase(APITestCase):
         self.assertGreaterEqual(len(resp.data['results']), 2)
 
     def test_retrieve_notification(self):
-        url = reverse('communications:notification-detail', kwargs={'notification_id': str(self.n1.notification_id)})
+        url = reverse('communications:notification-detail',
+                      kwargs={'notification_id': str(self.n1.notification_id)})
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data['notification_id'], str(self.n1.notification_id))
@@ -139,7 +141,8 @@ class NotificationsApiTestCase(APITestCase):
         self.assertEqual(resp.data.get('unread_count'), 1)
 
     def test_resolve_returns_redirect_payload(self):
-        url = reverse('communications:notification-resolve', kwargs={'notification_id': str(self.n1.notification_id)})
+        url = reverse('communications:notification-resolve',
+                      kwargs={'notification_id': str(self.n1.notification_id)})
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertIn('redirect', resp.data)
@@ -148,7 +151,8 @@ class NotificationsApiTestCase(APITestCase):
         self.assertEqual(redirect.get('id'), 99)
 
     def test_delete_notification(self):
-        url = reverse('communications:notification-detail', kwargs={'notification_id': str(self.n2.notification_id)})
+        url = reverse('communications:notification-detail',
+                      kwargs={'notification_id': str(self.n2.notification_id)})
         resp = self.client.delete(url)
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Notification.objects.filter(notification_id=self.n2.notification_id).exists())

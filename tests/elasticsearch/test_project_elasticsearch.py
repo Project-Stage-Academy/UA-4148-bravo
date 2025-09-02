@@ -4,8 +4,10 @@ from rest_framework import status
 from projects.documents import ProjectDocument
 from tests.elasticsearch.setup_tests_data import BaseElasticsearchAPITestCase
 from rest_framework.test import APIClient
+from django.test.utils import override_settings
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
     """
     Test suite for Project Elasticsearch integration and API behavior,

@@ -99,7 +99,11 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         set_auth_cookies(response, response.data["access"], response.data["refresh"])
 
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
         user = serializer.user
 
         response.data = {
@@ -162,7 +166,11 @@ class CustomTokenRefreshView(TokenRefreshView):
             return response
 
         serializer = self.get_serializer(data={"refresh": refresh})
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
         access = serializer.validated_data.get("access")
 
         response = Response({"detail": "Token refreshed"}, status=status.HTTP_200_OK)
