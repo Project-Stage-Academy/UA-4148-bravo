@@ -21,6 +21,7 @@ from users.serializers.token_serializer import CustomTokenObtainPairSerializer
 from users.serializers.user_serializers import UserSerializer
 from users.tasks import send_welcome_oauth_email_task
 from utils.get_default_user_role import get_default_user_role
+from utils.cookies import set_auth_cookies
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +39,15 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
     """
     Extended token authentication endpoint that supports both traditional email/password
     and OAuth provider authentication (Google/GitHub).
-
+    
     Inherits from Djoser's TokenObtainPairView to maintain all standard functionality
     while adding OAuth support through a unified authentication endpoint.
-
-    Endpoint: users/oauth/login/
+    
+    Endpoint: api/v1/auth/oauth/login/
     Methods: POST
-
+    
     Request Formats:
         - OAuth: {"provider": "google|github", "access_token": "oauth_token"}
-        - Password: {"email": "user@example.com", "password": "password123"}
     """
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -110,8 +110,13 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         Authenticate user using social-auth-app-django backend.
         Raises ValueError if token is invalid or expired.
         """
+        PROVIDER_BACKEND_MAP = {
+            "google": "google-oauth2",
+            "github": "github",
+        }
+        provider_name = PROVIDER_BACKEND_MAP.get(provider)
         strategy = load_strategy()
-        backend = load_backend(strategy=strategy, name=provider, redirect_uri=None)
+        backend = load_backend(strategy=strategy, name=provider_name, redirect_uri=None)
 
         try:
             user = backend.do_auth(access_token)
@@ -193,9 +198,17 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 - access: JWT access token
                 - user: Serialized user data
         """
+        if not user.is_active:
+            return Response(
+                {"detail": "Account is not active. Please verify your email."},
+                status=403
+            )
+
         refresh = RefreshToken.for_user(user)
-        return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
+        refresh_token = str(refresh)
+        access = str(refresh.access_token)
+        response = Response({
             "user": UserSerializer(user).data
         })
+        set_auth_cookies(response, access, refresh_token)
+        return response

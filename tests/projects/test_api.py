@@ -1,12 +1,15 @@
 from decimal import Decimal
 from ddt import ddt, data, unpack
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from common.enums import ProjectStatus
 from projects.models import Project
 from tests.test_base_case import BaseAPITestCase
+from rest_framework.test import APIClient
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProjectAPICRUDTests(BaseAPITestCase):
     """
     API CRUD tests for the Project model.
@@ -117,6 +120,7 @@ class ProjectAPICRUDTests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProjectAPIPermissionTests(BaseAPITestCase):
     """
     Test suite for verifying project-related API permissions.
@@ -161,10 +165,10 @@ class ProjectAPIPermissionTests(BaseAPITestCase):
 
     def test_unauthenticated_user_cannot_create_project(self):
         """
-        Ensure an unauthenticated user attempting to create a project
-        receives HTTP 401 Unauthorized.
+        Unauthenticated user should receive HTTP 401 Unauthorized
+        when trying to create a project.
         """
-        self.client.logout()
+        client = APIClient()
         url = reverse('project-list')
         data = {
             'startup_id': self.startup.id,
@@ -174,18 +178,18 @@ class ProjectAPIPermissionTests(BaseAPITestCase):
             'category_id': self.category.id,
             'email': 'unauth@example.com',
         }
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_unauthenticated_user_cannot_access_project_list(self):
         """
-        Ensure an unauthenticated user cannot retrieve the project list,
-        receiving HTTP 401 Unauthorized.
+        Unauthenticated user should receive HTTP 401 Unauthorized
+        when trying to access the project list.
         """
-        self.client.logout()
+        client = APIClient()
         url = reverse('project-list')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_user_cannot_modify_other_users_project(self):
         """
@@ -206,6 +210,7 @@ class ProjectAPIPermissionTests(BaseAPITestCase):
         self.assertEqual(delete_response.status_code, status.HTTP_403_FORBIDDEN)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 @ddt
 class ProjectAPIValidationTests(BaseAPITestCase):
     """

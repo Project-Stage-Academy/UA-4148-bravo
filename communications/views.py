@@ -6,7 +6,9 @@ from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+
+from users.cookie_jwt import CookieJWTAuthentication
+from users.permissions import IsAuthenticatedOr401
 from .models import (
     Notification,
     UserNotificationPreference,
@@ -37,7 +39,8 @@ class NotificationViewSet(
     ViewSet for managing user notifications.
     """
     serializer_class = NotificationSerializer
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedOr401]
     lookup_field = 'notification_id'
     http_method_names = ['get', 'post', 'delete', 'head', 'options']
     pagination_class = DefaultPageNumberPagination
@@ -196,7 +199,8 @@ class NotificationTypeViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = NotificationType.objects.filter(is_active=True)
     serializer_class = NotificationTypeSerializer
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedOr401]
     pagination_class = None
 
 
@@ -205,7 +209,8 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
     API endpoint that allows users to view and update their notification preferences.
     """
     serializer_class = UserNotificationPreferenceSerializer
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedOr401]
     http_method_names = ['get', 'patch', 'head', 'options']
 
     def get_queryset(self):

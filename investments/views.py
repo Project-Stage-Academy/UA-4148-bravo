@@ -3,11 +3,11 @@ from rest_framework.response import Response
 from rest_framework import status
 import logging
 
-from rest_framework.permissions import IsAuthenticated
+from users.cookie_jwt import CookieJWTAuthentication
 from .models import Subscription
 from projects.models import Project
 from investments.serializers.subscription_create import SubscriptionCreateSerializer
-from users.permissions import IsInvestor
+from users.permissions import IsInvestor, IsAuthenticatedOr401
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,8 @@ class SubscriptionCreateView(CreateAPIView):
     """
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionCreateSerializer
-    permission_classes = [IsAuthenticated, IsInvestor]
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedOr401, IsInvestor]
 
     def create(self, request, *args, **kwargs):
         project_id = self.kwargs["project_id"]

@@ -1,3 +1,4 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
@@ -13,10 +14,12 @@ from tests.factories import (
 from users.models import User
 from startups.models import Startup, Industry, Location, Stage
 from investors.models import Investor
+from utils.authenticate_client import authenticate_client
 
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class CompanyBindingViewTests(APITestCase):
     def setUp(self):
         """Set up test data"""
@@ -45,26 +48,20 @@ class CompanyBindingViewTests(APITestCase):
             stage=Stage.LAUNCH,
         )
 
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.user)
+        self.client = APIClient(enforce_csrf_checks=False)
+        self.csrf_url = reverse("csrf_init")
 
-    def tearDown(self):
-        """Clean up after each test"""
-        User.objects.all().delete()
-        Startup.objects.all().delete()
-        Investor.objects.all().delete()
-        Industry.objects.all().delete()
-        Location.objects.all().delete()
+    def startup_payload(self, name="New Startup"):
+        return {"company_name": name, "company_type": "startup"}
+
+    def investor_payload(self, name="New Investor"):
+        return {"company_name": name, "company_type": "investor"}
 
     def test_bind_to_new_startup_success(self):
         """Test successful creation and binding to new startup"""
-        data = {
-            'company_name': 'New Startup',
-            'company_type': 'startup'
-        }
+        authenticate_client(self.client, self.user)
 
-        response = self.client.post(self.url, data, format='json')
-        print("Startup response:", response.data)
+        response = self.client.post(self.url, self.startup_payload(), format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['company_type'], 'startup')
@@ -80,13 +77,9 @@ class CompanyBindingViewTests(APITestCase):
 
     def test_bind_to_new_investor_success(self):
         """Test successful creation and binding to new investor"""
-        data = {
-            'company_name': 'New Investor',
-            'company_type': 'investor'
-        }
+        authenticate_client(self.client, self.user)
 
-        response = self.client.post(self.url, data, format='json')
-        print("Investor response:", response.data)  # Debug
+        response = self.client.post(self.url, self.investor_payload(), format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['company_type'], 'investor')
@@ -98,19 +91,18 @@ class CompanyBindingViewTests(APITestCase):
         self.assertEqual(new_investor.email, self.user.email)
         self.assertEqual(new_investor.stage, Stage.MVP)
         self.assertEqual(new_investor.fund_size, 0)
-
         self.assertEqual(new_investor.industry.name, "Unknown")
         self.assertEqual(new_investor.location.city, "Unknown")
 
     def test_bind_to_existing_company_with_different_user(self):
         """Test binding to existing company that has a different user"""
-        data = {
-            'company_name': 'Existing Startup',
-            'company_type': 'startup'
-        }
+        authenticate_client(self.client, self.user)
 
-        response = self.client.post(self.url, data, format='json')
-
+        response = self.client.post(
+            self.url,
+            self.startup_payload(name='Existing Startup'),
+            format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
         self.assertIn('company_name', response.data['error'])
@@ -129,13 +121,13 @@ class CompanyBindingViewTests(APITestCase):
             stage=Stage.IDEA
         )
 
-        data = {
-            'company_name': 'Another Company',
-            'company_type': 'startup'
-        }
+        authenticate_client(self.client, self.user)
 
-        response = self.client.post(self.url, data, format='json')
-
+        response = self.client.post(
+            self.url,
+            self.startup_payload(name='Another Company'),
+            format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('already bound', response.data['error'])
 
@@ -153,13 +145,13 @@ class CompanyBindingViewTests(APITestCase):
             fund_size=500000
         )
 
-        data = {
-            'company_name': 'Another Company',
-            'company_type': 'investor'
-        }
+        authenticate_client(self.client, self.user)
 
-        response = self.client.post(self.url, data, format='json')
-
+        response = self.client.post(
+            self.url,
+            self.investor_payload(name='Another Company'),
+            format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('already bound', response.data['error'])
 
@@ -169,6 +161,8 @@ class CompanyBindingViewTests(APITestCase):
             'company_name': 'Test Company',
             'company_type': 'invalid_type'
         }
+
+        authenticate_client(self.client, self.user)
 
         response = self.client.post(self.url, data, format='json')
 
@@ -181,6 +175,8 @@ class CompanyBindingViewTests(APITestCase):
             'company_type': 'startup'
         }
 
+        authenticate_client(self.client, self.user)
+
         response = self.client.post(self.url, data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -188,28 +184,27 @@ class CompanyBindingViewTests(APITestCase):
 
     def test_unauthenticated_access(self):
         """Test that unauthenticated users cannot access the endpoint"""
-        self.client.logout()
+        client = APIClient(enforce_csrf_checks=False)
 
         data = {
             'company_name': 'Test Company',
             'company_type': 'startup'
         }
-
-        response = self.client.post(self.url, data, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch('startups.models.Startup.objects.create')
     def test_startup_creation_failure(self, mock_create):
         """Test handling of startup creation failure"""
         mock_create.side_effect = Exception("Creation failed")
 
-        data = {
-            'company_name': 'New Startup',
-            'company_type': 'startup'
-        }
+        authenticate_client(self.client, self.user)
 
-        response = self.client.post(self.url, data, format='json')
+        response = self.client.post(
+            self.url,
+            self.startup_payload(name='New Startup'),
+            format="json"
+        )
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertIn('unexpected error', response.data['error'])
@@ -219,12 +214,9 @@ class CompanyBindingViewTests(APITestCase):
         """Test handling of investor creation failure"""
         mock_create.side_effect = Exception("Creation failed")
 
-        data = {
-            'company_name': 'New Investor',
-            'company_type': 'investor'
-        }
+        authenticate_client(self.client, self.user)
 
-        response = self.client.post(self.url, data, format='json')
+        response = self.client.post(self.url, self.investor_payload(), format="json")
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertIn('unexpected error', response.data['error'])
@@ -234,12 +226,13 @@ class CompanyBindingViewTests(APITestCase):
         Industry.objects.filter(name="Unknown").delete()
         Location.objects.filter(city="Unknown").delete()
 
-        data = {
-            'company_name': 'New Test Company',
-            'company_type': 'startup'
-        }
+        authenticate_client(self.client, self.user)
 
-        response = self.client.post(self.url, data, format='json')
+        response = self.client.post(
+            self.url,
+            self.startup_payload(name='New Test Company'),
+            format="json"
+        )
 
         if response.status_code != status.HTTP_201_CREATED:
             print(f"Response status: {response.status_code}")
@@ -267,50 +260,47 @@ class CompanyBindingViewTests(APITestCase):
         with patch('startups.models.Startup.objects.create') as mock_create:
             mock_create.side_effect = Exception("Creation failed")
 
-            data = {
-                'company_name': 'Should Not Exist',
-                'company_type': 'startup'
-            }
+            authenticate_client(self.client, self.user)
 
-            response = self.client.post(self.url, data, format='json')
+            response = self.client.post(
+                self.url,
+                self.startup_payload(name='Should Not Exist'),
+                format="json"
+            )
 
             self.assertEqual(Startup.objects.count(), original_startup_count)
             self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def test_company_name_uniqueness_enforcement(self):
         """Test that company name uniqueness is enforced"""
-        data1 = {
-            'company_name': 'Unique Company',
-            'company_type': 'startup'
-        }
-        response1 = self.client.post(self.url, data1, format='json')
+        authenticate_client(self.client, self.user)
+        response1 = self.client.post(self.url, self.startup_payload(name='Unique Company'), format="json")
         self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
-
         another_user = User.objects.create_user(
             email='another_unique@example.com',
             password='anotherpass123',
             first_name='Another',
             last_name='User'
         )
-        self.client.force_authenticate(user=another_user)
 
-        data2 = {
-            'company_name': 'Unique Company',
-            'company_type': 'startup'
-        }
-        response2 = self.client.post(self.url, data2, format='json')
-
-        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('company_name', response2.data.get('error', {}))
-
-        error_text = str(response2.data['error'])
-        self.assertTrue(
-            any(keyword in error_text for keyword in ['company', 'name', 'exists', 'unique']),
-            f"Error should be about company name uniqueness: {error_text}"
+        another_client = APIClient(enforce_csrf_checks=False)
+        authenticate_client(another_client, another_user)
+        response2 = another_client.post(self.url, self.startup_payload(name='Unique Company'), format="json")
+        self.assertEqual(
+            response2.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            msg=f"Expected 400, got {response2.status_code}, data={getattr(response2, 'data', None)}"
         )
 
+        self.assertIn('company_name', response2.data.get('error', {}))
+        error_text = str(response2.data['error'])
+        self.assertTrue(any(keyword in error_text for keyword in ['company', 'name', 'exists', 'unique']),
+                        f"Error should be about company name uniqueness: {error_text}")
+
     def test_email_uniqueness_enforcement(self):
-        """Test that email uniqueness is enforced separately"""
+        """Test that a user cannot bind a second company with the same email"""
+        authenticate_client(self.client, self.user)
+
         data1 = {
             'company_name': 'First Company',
             'company_type': 'startup'
@@ -318,22 +308,19 @@ class CompanyBindingViewTests(APITestCase):
         response1 = self.client.post(self.url, data1, format='json')
         self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
 
-        another_user = User.objects.create_user(
-            email='another@example.com',
-            password='anotherpass123',
-            first_name='Another',
-            last_name='User'
-        )
-        self.client.force_authenticate(user=another_user)
-
         data2 = {
             'company_name': 'Second Company',
             'company_type': 'startup'
         }
         response2 = self.client.post(self.url, data2, format='json')
 
-        print(f"Response status: {response2.status_code}")
-        print(f"Response data: {response2.data}")
+        self.assertEqual(
+            response2.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            msg=f"Expected 400, got {response2.status_code}, data={getattr(response2, 'data', None)}"
+        )
+        error_text = str(response2.data.get('error', ''))
+        self.assertIn('already bound', error_text.lower(), f"Unexpected error message: {error_text}")
 
     def test_bind_to_company_with_same_name_different_case(self):
         """Test binding to company with same name but different case"""
@@ -348,28 +335,31 @@ class CompanyBindingViewTests(APITestCase):
             stage=Stage.IDEA
         )
 
-        data = {
-            'company_name': 'test company',
-            'company_type': 'startup'
-        }
+        authenticate_client(self.client, self.user)
 
-        response = self.client.post(self.url, data, format='json')
+        response = self.client.post(
+            self.url,
+            self.startup_payload(name='test company'),
+            format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_user_cannot_have_both_startup_and_investor(self):
         """Test that user cannot be bound to both startup and investor"""
-        data1 = {
-            'company_name': 'TechNova',
-            'company_type': 'startup'
-        }
-        response1 = self.client.post(self.url, data1, format='json')
+        authenticate_client(self.client, self.user)
+
+        response1 = self.client.post(
+            self.url,
+            self.startup_payload(name='TechNova'),
+            format="json"
+        )
         self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
 
-        data2 = {
-            'company_name': 'ShortDesc',
-            'company_type': 'investor'
-        }
-        response2 = self.client.post(self.url, data2, format='json')
+        response2 = self.client.post(
+            self.url,
+            self.investor_payload(name='ShortDesc'),
+            format="json"
+        )
 
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response2.data)

@@ -22,12 +22,13 @@ urlpatterns = [
     path('api/v1/investors/', include('investors.urls')),
     path('api/v1/investments/', include(('investments.urls', 'investments'), namespace='investments')),
     path('api/v1/communications/', include('communications.urls')),
+    path('api/v1/search/', include('search.urls')),
 
     # Health & allauth
     path('health/elasticsearch/', elasticsearch_healthcheck),
     path('accounts/', include('allauth.urls')),
 
-    path("chat/", include("chat.urls")),
+    path("api/v1/chat/", include("chat.urls")),
 
 ]
 

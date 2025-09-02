@@ -1,14 +1,15 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
-from rest_framework.authtoken.models import Token
-
 from tests.factories import StartupFactory, UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from communications.models import UserNotificationPreference, NotificationType
 from startups.models import Startup
+from utils.authenticate_client import authenticate_client
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class StartupNotificationPreferencesAPITests(APITestCase):
     """Integration tests for startup notification preferences API:
     verifies retrieval, channel toggles, per-type frequency updates, and permissions.
@@ -20,9 +21,8 @@ class StartupNotificationPreferencesAPITests(APITestCase):
 
         self.startup = StartupFactory()
         self.user = self.startup.user
-        self.token = Token.objects.create(user=self.user)
 
-        self.client.force_authenticate(user=self.user, token=self.token)
+        authenticate_client(self.client, self.user)
 
     def test_get_preferences_creates_defaults(self):
         """GET initializes default channel flags and seeds per-type preferences."""
@@ -115,10 +115,9 @@ class StartupNotificationPreferencesAPITests(APITestCase):
 
     def test_permission_denied_for_non_startup_user(self):
         """Non-startup authenticated users are forbidden from accessing preference endpoints."""
-        other_user = UserFactory()
-        other_token = Token.objects.create(user=other_user)
+        other_user = UserFactory.create()
         client = APIClient()
-        client.force_authenticate(user=other_user, token=other_token)
+        authenticate_client(client, other_user)
 
         list_url = reverse('startup-preferences')
         resp = client.get(list_url)

@@ -1,12 +1,13 @@
 from rest_framework.views import APIView
+from chat.permissions import IsOwnerOrRecipient
 from users.cookie_jwt import CookieJWTAuthentication
-from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsAuthenticatedOr401
 
 
-class CookieJWTProtectedView(APIView):
+class ChatCookieJWTProtectedView(APIView):
     """
     Base view that enforces authentication via access_token cookie
     and ensures the user is authenticated.
     """
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOr401, IsOwnerOrRecipient]

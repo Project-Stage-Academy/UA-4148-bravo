@@ -167,3 +167,5 @@ staticfiles/
 .history/
 __pycache__/
 *.pyc
+*.session.sql
+.vscode/
