@@ -2,7 +2,6 @@ import logging
 import os
 import re
 from datetime import datetime, timezone
-from html import escape
 from mongoengine import CASCADE
 from mongoengine import (
     Document, StringField, ListField, ReferenceField,
@@ -41,7 +40,10 @@ class Room(Document):
     created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
     updated_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
 
-    meta = {"collection": "rooms"}
+    meta = {
+        "collection": "rooms",
+        "db_alias": "chat_test"
+    }
 
     def clean(self):
         """Validate that the room has exactly 2 participants (Investor + Startup)."""
@@ -93,6 +95,15 @@ class Message(Document):
     text = EncryptedStringField(required=True)
     timestamp = DateTimeField(default=lambda: datetime.now(timezone.utc))
     is_read = BooleanField(default=False)
+
+    meta = {
+        "collection": "messages",
+        "db_alias": "chat_test"
+    }
+
+    @property
+    def room_name(self):
+        return self.room.name if self.room else None
 
     def clean(self):
         """

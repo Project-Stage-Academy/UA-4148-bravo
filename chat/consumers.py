@@ -1,25 +1,20 @@
 import json
 import logging
-import os
 import re
 from typing import Optional, Tuple
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from mongoengine import ValidationError, DoesNotExist
-from chat.documents import Room, Message
+from chat.documents import Room, Message, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH
 from chat.permissions import check_user_in_room
 from core.settings.constants import FORBIDDEN_WORDS_SET
-from users.models import User
+from users.models import User, UserRole
 from utils.messages_rate_limit import is_rate_limited
 from utils.sanitize import sanitize_message
 import sentry_sdk
-
 from utils.save_documents import log_and_capture
 
 logger = logging.getLogger(__name__)
-
-MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", 1000))
-MIN_MESSAGE_LENGTH = int(os.getenv("MIN_MESSAGE_LENGTH", 1))
 
 
 class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
@@ -226,19 +221,19 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
         """
         roles = {user1.role.role if user1.role else None, user2.role.role if user2.role else None}
 
-        if roles != {"Investor", "Startup"}:
-            raise ValidationError("Chat room must have exactly one Investor and one Startup.")
+        if roles != {UserRole.Role.STARTUP, UserRole.Role.INVESTOR}:
+            raise ValidationError("Chat room must have exactly one Startup and one Investor.")
 
-        investor = user1 if user1.role.role == "Investor" else user2
-        startup = user1 if user1.role.role == "Startup" else user2
+        startup = user1 if user1.role.role == UserRole.Role.STARTUP else user2
+        investor = user2 if user2.role.role == UserRole.Role.INVESTOR else user1
 
-        room_name = f"{investor.email}_{startup.email}"
+        room_name = f"{startup.email}_{investor.email}"
 
         try:
             room = Room.objects.get(name=room_name)
             return room, False
         except DoesNotExist:
-            room = Room(name=room_name, participants=[investor.email, startup.email])
+            room = Room(name=room_name, participants=[startup.email, investor.email])
             room.save()
             return room, True
 

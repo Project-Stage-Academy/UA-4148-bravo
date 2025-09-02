@@ -73,10 +73,20 @@ class ConversationCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
+            if Room.objects(name=serializer.validated_data["name"]).first():
+                msg = "Room name already exists."
+                logger.warning("[ROOM_CREATE] %s | data=%s", msg, request.data)
+                sentry_sdk.capture_message(msg, level="warning")
+                return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
+
             room = self.perform_create(serializer)
             logger.info("[ROOM_CREATE] Created room: %s | participants=%s", room.name, room.participants)
-        except (DRFValidationError, MongoValidationError) as e:
+        except DRFValidationError as e:
             logger.warning("[ROOM_CREATE] Validation failed: %s | data=%s", e, request.data)
+            sentry_sdk.capture_exception(e)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except MongoValidationError as e:
+            logger.warning("[ROOM_CREATE] Mongo validation failed: %s | data=%s", e, request.data)
             sentry_sdk.capture_exception(e)
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:

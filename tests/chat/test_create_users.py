@@ -46,9 +46,10 @@ class BaseChatTestCase(TestCase):
             db="mongoenginetest",
             host="mongodb://localhost",
             mongo_client_class=mongomock.MongoClient,
+            alias="chat_test"
         )
 
     @classmethod
     def tearDownClass(cls):
-        disconnect()
+        disconnect(alias="chat_test")
         super().tearDownClass()

@@ -1,13 +1,9 @@
 import logging
-import os
 from rest_framework import serializers
-from chat.documents import Room, Message
+from chat.documents import Room, Message, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH
 from utils.save_documents import log_and_capture
 
 logger = logging.getLogger(__name__)
-
-MIN_MESSAGE_LENGTH = int(os.getenv("MIN_MESSAGE_LENGTH", 1))
-MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", 1000))
 
 
 class RoomSerializer(serializers.Serializer):
