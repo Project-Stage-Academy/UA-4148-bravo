@@ -142,7 +142,7 @@ def create_in_app_notification(
         message=message,
         priority=priority or Notification._meta.get_field("priority").get_default(),
         related_startup_id=related_startup_id,
-        project_id=related_project_id,
+        related_project_id=related_project_id,
         related_message_id=related_message_id,
         triggered_by_user=triggered_by_user,
         triggered_by_type=triggered_by_type,
