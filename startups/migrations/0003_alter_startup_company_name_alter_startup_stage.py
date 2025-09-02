@@ -17,7 +17,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='startup',
             name='company_name',
-            field=models.CharField(max_length=254, unique=True, validators=[validation.validate_names.validate_company_name, validation.validate_names.validate_latin]),
             field=models.CharField(
                 max_length=254,
                 unique=True,
@@ -30,7 +29,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='startup',
             name='stage',
-            field=models.CharField(choices=[('idea', 'Idea'), ('mvp', 'MVP'), ('seed', 'Seed'), ('launch', 'Launch'), ('scale', 'Scale'), ('exit', 'Exit')], default='idea', help_text='Current development stage of the startup', max_length=20, verbose_name='Development Stage'),
             field=models.CharField(
                 choices=[
                     ('idea', 'Idea'),
