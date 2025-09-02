@@ -10,7 +10,7 @@ import FeedbackForm from '../../pages/FeedbackForm/feedbackForm';
 import ForgotPassword from '../../pages/ForgotPassword/forgotPassword';
 import RestorePassword from '../../pages/RestorePassword/restorePassword';
 import ProfilePage from '../../pages/ProfilePage/profilePage';
-import Policy from '../../pages/Policy/policy';
+import Policy from '../../pages/Policy/policy.jsx';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
 import RegistrationPage from '../../pages/Registration/registration';
