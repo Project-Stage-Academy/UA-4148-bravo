@@ -10,14 +10,9 @@ from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
 from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer, ViewedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
-
-
-from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-
 from .models import ViewedStartup
 from startups.models import Startup
-from users.permissions import IsInvestor, CanCreateCompanyPermission
 from users.cookie_jwt import CookieJWTAuthentication
 from users.permissions import IsInvestor, CanCreateCompanyPermission, IsAuthenticatedOr401
 from startups.models import Startup
@@ -281,7 +276,7 @@ class ViewedStartupClearView(APIView):
             {"detail": "Viewed startups history cleared successfully.", "deleted_count": deleted_count},
             status=status.HTTP_200_OK
         )
-    
+
 class SaveStartupView(CookieJWTProtectedView):
 
     def post(self, request, startup_id: int):

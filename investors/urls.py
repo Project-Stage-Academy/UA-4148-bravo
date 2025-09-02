@@ -1,7 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 from startups.views.startup import StartupViewSet
-
 from django.urls import path
 from .views import (
     ViewedStartupListView,
@@ -34,3 +33,4 @@ urlpatterns = [
     # DELETE /api/v1/investors/startups/<startup_id>/unsave/
     path("startups/<int:startup_id>/unsave/", UnsaveStartupView.as_view(), name="startup-unsave"),
 ] + router.urls
+
