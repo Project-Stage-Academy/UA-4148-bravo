@@ -89,14 +89,10 @@ function App() {
                         </Route>
 
                         {/* Profile */}
-                        <Route path="profile">
+                        <Route path="profile/:uid" element={<ProfilePage />} >
 
-                            {/* Company profile */}
-                            <Route path="company/:uid" element={<ProfilePage />}>
-
-                                {/* Profile editing */}
-                                <Route path="edit" element={<ProfileEditing />} />
-                            </Route>
+                            {/* Profile editing */}
+                            <Route path="edit" element={<ProfileEditing />} />
                         </Route>
 
                         {/* Page not found */}

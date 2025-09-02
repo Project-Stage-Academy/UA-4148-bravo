@@ -198,7 +198,7 @@ function AuthProvider({ children }) {
      */
     const logout = useCallback(async () => {
         await api.post('/api/v1/auth/logout/').catch(() => {
-            console.log('Logout');
+            console.log('Logout error');
         });
         setUser(null);
     }, []);
