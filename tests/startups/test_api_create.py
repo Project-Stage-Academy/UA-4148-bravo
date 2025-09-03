@@ -1,3 +1,4 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from tests.test_base_case import BaseCompanyCreateAPITestCase
@@ -6,6 +7,7 @@ from utils.authenticate_client import authenticate_client
 from rest_framework.test import APIClient
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class StartupCreateAPITests(BaseCompanyCreateAPITestCase):
     """
     Tests for the startup creation API endpoint (POST /api/v1/startups/).

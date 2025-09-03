@@ -1,76 +1,82 @@
 import logging
-import os
 from django.core.management.base import BaseCommand
-from users.documents import UserDocument, UserRoleDocument, UserRoleEnum
-from chat.documents import Room, Message
-from random import shuffle
-from mongoengine import ValidationError
-
-TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "testpassword123")
-
-TEST_USERS = [
-    {"email": "user1@example.com", "first_name": "User", "last_name": "One"},
-    {"email": "user2@example.com", "first_name": "User", "last_name": "Two"},
-    {"email": "user3@example.com", "first_name": "User", "last_name": "Three"},
-]
-
-MESSAGES = [
-    "Hello everyone!",
-    "How are you?",
-    "All good, thanks!",
-    "What's new?",
-    "Who’s here?"
-]
+from mongoengine.errors import ValidationError
+from chat.documents import Message
+from users.models import User, UserRole
+from utils.chat_utils import get_or_create_room
+from utils.encrypt import encrypt_string
+from utils.save_documents import log_and_capture
 
 logger = logging.getLogger(__name__)
 
+TEST_USERS = [
+    {"email": "user1@example.com", "role": "user"},
+    {"email": "user2@example.com", "role": "user"},
+    {"email": "investor@example.com", "role": "investor"},
+    {"email": "startup@example.com", "role": "startup"},
+]
+
+TEST_MESSAGES = [
+    "Hello! This is a test message.",
+    "How are you today?",
+    "Looking forward to our collaboration.",
+]
+
 
 class Command(BaseCommand):
-    help = "Populate MongoDB with test users, rooms and messages"
+    """
+    Django management command to populate test chat rooms
+    and messages for development/testing purposes.
+    """
 
-    def handle(self, *args, **kwargs):
-        role_user = UserRoleDocument.objects(role=UserRoleEnum.USER).first()
-        if not role_user:
-            role_user = UserRoleDocument(role=UserRoleEnum.USER).save()
+    help = "Populate test rooms and messages"
 
-        users = []
+    @log_and_capture("populate_messages", ValidationError)
+    def handle(self, *args, **options):
+        """
+        Main entry point for the management command.
+        - Creates required user roles.
+        - Creates test users.
+        - Creates or retrieves a chat room between the investor and startup.
+        - Populates the room with encrypted test messages.
+        """
+        for role_value in [UserRole.Role.INVESTOR, UserRole.Role.STARTUP]:
+            UserRole.objects.get_or_create(role=role_value)
+
+        users = {}
         for u in TEST_USERS:
-            try:
-                user = UserDocument.objects(email=u["email"]).first()
-                if not user:
-                    user = UserDocument(
-                        email=u["email"],
-                        first_name=u["first_name"],
-                        last_name=u["last_name"],
-                        password=TEST_USER_PASSWORD,
-                        role=role_user,
-                        is_active=True,
-                    ).save()
-                users.append(user)
-            except Exception as e:
-                logger.error("Failed to create user %s: %s", u.get("email"), e)
+            role = UserRole.objects.get(role=u["role"])
+            user, created = User.objects.get_or_create(
+                email=u["email"],
+                defaults={
+                    "first_name": u["email"].split("@")[0],
+                    "last_name": "Test",
+                    "password": "password123",
+                    "role": role,
+                    "is_active": True,
+                },
+            )
+            users[u["email"]] = user
+            logger.info("Created USER: %s", user.email)
 
-        room_name = kwargs.get('room_name', 'TestRoom')
-        room = Room.objects(name=room_name).first()
-        if not room:
-            try:
-                room = Room(name="TestRoom", participants=users).save()
-                logger.info("Created test room 'TestRoom' with %d participants", len(users))
-            except ValidationError as ve:
-                logger.error("Failed to create test room 'TestRoom': %s", ve)
-                raise ve
+        investor = users["investor@example.com"]
+        startup = users["startup@example.com"]
 
-        num_messages = 10
-        shuffled_users = users.copy()
-        shuffled_texts = MESSAGES.copy()
-        shuffle(shuffled_users)
-        shuffle(shuffled_texts)
+        try:
+            room, created = get_or_create_room(investor, startup)
+            logger.info("Room created: %s | created=%s", room.name, created)
+        except ValidationError as ve:
+            logger.error("Failed to create TestRoom: %s", ve)
+            return
 
-        for sender, text in zip(shuffled_users * ((num_messages // len(shuffled_users)) + 1),
-                                shuffled_texts * ((num_messages // len(shuffled_texts)) + 1)):
-            try:
-                Message(room=room, sender=sender, text=text).save()
-            except ValidationError as ve:
-                logger.warning("Failed to save test message from %s: %s", sender.email, ve)
-
-        self.stdout.write(self.style.SUCCESS("MongoDB populated with test data!"))
+        for i, text in enumerate(TEST_MESSAGES):
+            sender = investor if i % 2 == 0 else startup
+            receiver = startup if sender == investor else investor
+            encrypted_text = encrypt_string(text)
+            msg = Message(
+                room=room,
+                sender_email=sender.email,
+                receiver_email=receiver.email,
+                text=encrypted_text
+            )
+            msg.save()
