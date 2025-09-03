@@ -1,7 +1,7 @@
 import os
 import json
 import asyncio
-from django.test import TestCase
+from django.test import TransactionTestCase
 from channels.testing import WebsocketCommunicator
 from channels.auth import AuthMiddlewareStack
 from channels.routing import URLRouter
@@ -19,11 +19,12 @@ from communications.tasks import send_notification_task
 TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
 
 
-class NotificationE2ETestCase(TestCase):
+class NotificationE2ETestCase(TransactionTestCase):
     """
     Stable end-to-end test for the notification flow:
     Message -> Signal/Task -> Notification -> WebSocket
     """
+    reset_sequences = True
 
     @classmethod
     def setUpClass(cls):
@@ -90,7 +91,7 @@ class NotificationE2ETestCase(TestCase):
             )
             await sync_to_async(message.save)()
 
-            self.type_message = NotificationTypeFactory(code='message_new')
+            self.type_message = await sync_to_async(NotificationTypeFactory.create)(code='chat_message_new')
 
             notification = await sync_to_async(Notification.objects.create)(
                 user=self.receiver,
@@ -99,13 +100,12 @@ class NotificationE2ETestCase(TestCase):
                 message=f"New message from {self.sender.email}",
                 related_message_id=str(message.id)
             )
-
-            send_notification_task.delay(
+            await sync_to_async(send_notification_task)(
                 user_id=self.receiver.id,
                 notification_data={
                     "title": "New Message",
                     "message": f"New message from {self.sender.email}",
-                    "notification_id": str(notification.id),
+                    "notification_id": str(notification.notification_id),
                 }
             )
 
