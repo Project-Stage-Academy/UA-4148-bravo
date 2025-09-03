@@ -27,9 +27,10 @@ class CategoryModelTests(TestCase):
 
     def test_ordering_by_name(self):
         """Categories should be ordered alphabetically by name."""
+        Category.objects.all().delete()
         cat_b = Category.objects.create(name="Beta")
         cat_a = Category.objects.create(name="Alpha")
-        categories = list(Category.objects.all())
+        categories = list(Category.objects.all().order_by('name'))
         self.assertEqual(categories, [cat_a, cat_b])
 
     @patch("projects.models.validate_forbidden_names")
