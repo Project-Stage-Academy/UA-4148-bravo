@@ -2,24 +2,29 @@ import logging
 
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from rest_framework import viewsets, status, mixins
+from rest_framework import viewsets, status, mixins, serializers
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from users.cookie_jwt import CookieJWTAuthentication
-from users.permissions import IsAuthenticatedOr401
 from .models import (
     Notification,
     UserNotificationPreference,
     NotificationType,
-    UserNotificationTypePreference
+    UserNotificationTypePreference,
+    EmailNotificationPreference,
+    EmailNotificationTypePreference
 )
 from .serializers import (
     NotificationSerializer,
     UserNotificationPreferenceSerializer,
     NotificationTypeSerializer,
-    UserNotificationTypePreferenceSerializer
+    UserNotificationTypePreferenceSerializer,
+    EmailNotificationTypePreferenceSerializer,
+    UpdateEmailTypePreferenceSerializer,
+    EmailNotificationPreferenceSerializer
 )
 
 
@@ -40,7 +45,7 @@ class NotificationViewSet(
     """
     serializer_class = NotificationSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticatedOr401]
+    permission_classes = [IsAuthenticated]
     lookup_field = 'notification_id'
     http_method_names = ['get', 'post', 'delete', 'head', 'options']
     pagination_class = DefaultPageNumberPagination
@@ -200,7 +205,7 @@ class NotificationTypeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = NotificationType.objects.filter(is_active=True)
     serializer_class = NotificationTypeSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticatedOr401]
+    permission_classes = [IsAuthenticated]
     pagination_class = None
 
 
@@ -210,7 +215,7 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
     """
     serializer_class = UserNotificationPreferenceSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticatedOr401]
+    permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'patch', 'head', 'options']
 
     def get_queryset(self):
@@ -305,3 +310,81 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
                 for choice in NotificationFrequency.choices
             ]
         })
+
+class EmailNotificationPreferenceViewSet(viewsets.GenericViewSet,
+                                        mixins.RetrieveModelMixin,
+                                        mixins.UpdateModelMixin,
+                                        mixins.ListModelMixin):
+    """
+    API endpoint for managing email notification preferences.
+    
+    This ViewSet provides endpoints for managing user email notification preferences,
+    separate from the general notification preferences system.
+    """
+    serializer_class = EmailNotificationPreferenceSerializer
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'patch', 'head', 'options']
+    
+    def get_queryset(self):
+        """Return only the current user's preferences."""
+        return EmailNotificationPreference.objects.filter(user=self.request.user)
+    
+    def get_object(self):
+        """
+        Return the current user's preferences, creating them if they don't exist.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        obj = queryset.first()
+        
+        if obj is None:
+            obj = EmailNotificationPreference.objects.create(user=self.request.user)
+            
+            notification_types = NotificationType.objects.filter(is_active=True)
+            for notification_type in notification_types:
+                EmailNotificationTypePreference.objects.create(
+                    email_preference=obj,
+                    notification_type=notification_type,
+                    enabled=True
+                )
+        
+        return obj
+    
+    def list(self, request, *args, **kwargs):
+        """
+        Get the user's email notification preferences.
+        Will create preferences if they don't exist yet.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Update email notification type preferences.
+        
+        Expected payload:
+        {
+            "types_enabled": [
+                {"notification_type_id": 1, "enabled": true},
+                {"notification_type_id": 2, "enabled": false}
+            ]
+        }
+        """
+        instance = self.get_object()
+        
+        types_enabled_data = request.data.get('types_enabled', [])
+        if not isinstance(types_enabled_data, list):
+            return Response(
+                {'error': 'types_enabled must be a list'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        serializer = self.get_serializer(instance, data=request.data, context={'request': request})
+        
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data)
+        except serializers.ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)

@@ -10,13 +10,16 @@ class CookieJWTAuthentication(BaseAuthentication):
     """
     Custom DRF authentication class that reads the JWT access token from an HttpOnly cookie.
 
-    Always returns 401 Unauthorized if the token is missing, invalid, or the user is inactive.
+    Returns None (no authentication) if the token cookie is missing so that permission
+    classes can decide (typically resulting in 403 for unauthenticated requests).
+    Returns 401 Unauthorized only when a token is present but invalid or the user is inactive.
     """
 
     def authenticate(self, request):
         """
         Authenticate the request using JWT from 'access_token' cookie.
-        Raises AuthenticationFailed (401) if token is missing or invalid.
+        Returns None if token is missing.
+        Raises AuthenticationFailed (401) if token is present but invalid.
 
         Args:
             request (HttpRequest): DRF request object.
@@ -25,26 +28,27 @@ class CookieJWTAuthentication(BaseAuthentication):
             tuple: (User instance, token string) if authentication succeeds.
 
         Raises:
-            NotAuthenticated: If token is missing, invalid, or user inactive.
+            AuthenticationFailed: If token is invalid or user inactive.
         """
         token = request.COOKIES.get("access_token")
 
         if not token:
-            raise exceptions.NotAuthenticated("Authentication credentials were not provided.")
+            # No credentials provided; let permission classes handle as unauthenticated (403)
+            return None
 
         try:
             payload = safe_decode(token)
             user_id = payload.get("user_id")
             if not user_id:
-                raise exceptions.NotAuthenticated("Token payload missing user_id")
+                raise exceptions.AuthenticationFailed("Token payload missing user_id")
 
             try:
                 user = User.objects.get(user_id=user_id, is_active=True)
             except User.DoesNotExist:
-                raise exceptions.NotAuthenticated("User not found or inactive")
+                raise exceptions.AuthenticationFailed("User not found or inactive")
 
             return (user, token)
 
         except Exception as e:
             logger.warning(f"Invalid access token: {str(e)}")
-            raise exceptions.NotAuthenticated("Invalid or expired access token")
+            raise exceptions.AuthenticationFailed("Invalid or expired access token")
