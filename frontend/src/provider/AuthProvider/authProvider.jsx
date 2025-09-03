@@ -2,7 +2,9 @@ import {
     createContext,
     useCallback,
     useContext,
+    useEffect,
     useMemo,
+    useRef,
     useState,
 } from 'react';
 import { api } from '../../api/client';
@@ -15,6 +17,7 @@ import PropTypes from 'prop-types';
  * @property {string} last_name - Last name of the user
  * @property {string} email - Email of the user
  * @property {string | null} role - Role of the user (e.g., 'admin', 'user')
+ * @property {boolean} isAuthorized - Defines if user is authorized for visual context
  */
 
 /**
@@ -140,6 +143,45 @@ function AuthProvider({ children }) {
     }, []);
 
     /**
+     * Me
+     * URL: /api/v1/auth/me/
+     * Req: {  }
+     * Res: 200 { id, email, role, ... }
+     *
+     * @returns {Promise<void>}
+     */
+    const loadUser = useCallback(async () => {
+        api.get('/api/v1/auth/me/')
+            .then((res) => {
+                const data = res.data;
+
+                const newUser = {
+                    id: data.id || data.user_id,
+                    email: data.email,
+                    first_name: data.first_name,
+                    last_name: data.last_name,
+                    role: data.role,
+                    isAuthorized: true,
+                }
+
+                setUser(newUser);
+
+                if (process.env.REACT_APP_NODE_ENV === 'development') {
+                    console.log("User is authorized");
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+
+                if (err.response?.status === 404) {
+                    setUser(null);
+                } else {
+                    throw err;
+                }
+            });
+    }, []);
+
+    /**
      * Create
      * URL: /api/v1/auth/jwt/create/
      * Req: { email, password }
@@ -160,35 +202,9 @@ function AuthProvider({ children }) {
                 throw err;
             });
 
-        /*
-        TODO
         await loadUser();
-        */
         return res;
-    }, []);
-
-    /**
-     * Me
-     * URL: /api/v1/auth/me/
-     * Req: {  }
-     * Res: 200 { id, email, role, ... }
-     *
-     * @returns {Promise<void>}
-     */
-    // eslint-disable-next-line
-    const loadUser = useCallback(async () => {
-        const { data } = await api.get('/api/v1/auth/me/')
-            .then(() => {
-                setUser(data);
-            })
-            .catch((err) => {
-                if (err.response?.status === 404) {
-                    setUser(null);
-                } else {
-                    throw err;
-                }
-            });
-    }, []);
+    }, [loadUser]);
 
     /**
      * Logout
@@ -197,10 +213,12 @@ function AuthProvider({ children }) {
      * Res: 205
      */
     const logout = useCallback(async () => {
-        await api.post('/api/v1/auth/logout/').catch(() => {
-            console.log('Logout');
-        });
-        setUser(null);
+        await api.post('/api/v1/auth/logout/')
+            .then(() => setUser(null))
+            .catch((err) => {
+                console.log('Logout error\n', err);
+                if (err.response?.status === 401) setUser(null);
+            });
     }, []);
 
     /**
@@ -243,6 +261,53 @@ function AuthProvider({ children }) {
                 console.error(err);
             });
     }, []);
+
+    /**
+     * Refresh
+     * URL: /api/v1/auth/jwt/refresh/
+     * Req: {  }
+     * Res: 200 {  }
+     */
+    const refreshToken = useCallback(async () => {
+        try {
+            await api.post('/api/v1/auth/jwt/refresh/');
+        } catch (err) {
+            if (err.response) {
+                console.log(
+                    'Refresh token missing or invalid:',
+                    err.response.status
+                );
+
+                if (err.response?.status === 500) {
+                    console.log("Server do not know this token [500]");
+                    await logout();
+                }
+
+                if (err.response?.status === 404) {
+                    console.log("Server do not know this token [404]");
+                    await logout();
+                }
+            } else {
+                console.error(err);
+            }
+            throw err;
+        }
+    }, [logout]);
+
+    const isRefreshing = useRef(false);
+    useEffect(() => {
+        if (isRefreshing.current) return;
+        isRefreshing.current = true;
+
+        (async () => {
+            try {
+                await refreshToken();
+                await loadUser();
+            } catch {
+                await logout();
+            }
+        })();
+    });
 
     return (
         <AuthCtx.Provider

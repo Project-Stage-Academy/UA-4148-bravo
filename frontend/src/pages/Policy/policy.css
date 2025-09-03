@@ -1,0 +1,45 @@
+.policy__container {
+    background-color: var(--primary-bcg-color);
+    padding: 80px 0;
+    height: calc(100% - 80px * 2);
+}
+
+.policy__text-container {
+    max-width: 1082px;
+    margin: 0 auto;
+}
+
+.policy__title {
+    font-size: 34px;
+    line-height: 120%;
+}
+
+.policy__title--f-weight-bold {
+    font-weight: 700;
+}
+
+.policy__section {
+    margin-top: 24px;
+}
+
+.policy__section > * {
+    margin-top: 24px;
+    line-height: 28px;
+    font-size: 14px;
+}
+
+@media screen and (max-width: 1164px) {
+    .policy__container {
+        padding: 48px 24px;
+    }
+}
+
+@media screen and (max-width: 594px) {
+    .policy__container {
+        padding: 40px 16px;
+    }
+
+    .policy__title {
+        font-size: 18px;
+    }
+}
