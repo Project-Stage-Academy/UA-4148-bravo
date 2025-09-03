@@ -58,7 +58,7 @@ def remove_default_notifications(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('communications', '0003_remove_notification_related_project_id_and_more'),
+        ('communications', '0004_emailnotificationpreference_and_more'),
         ("users", "0002_fill_default_users"),
     ]
 

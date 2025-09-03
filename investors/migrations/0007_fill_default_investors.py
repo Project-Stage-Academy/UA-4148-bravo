@@ -33,7 +33,7 @@ def remove_default_investor(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('investors', '0005_alter_investor_company_name_alter_investor_stage'),
+        ('investors', '0006_alter_viewedstartup_unique_together'),
         ("users", "0002_fill_default_users"),
     ]
 
