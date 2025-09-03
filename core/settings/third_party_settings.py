@@ -37,9 +37,9 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.user.get_username',
     'social_core.pipeline.social_auth.associate_by_email',
     'users.pipelines.create_or_update_user',
-    'users.pipelines.activate_verified_user',
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
+    'users.pipelines.activate_verified_user',
     'users.pipelines.safe_user_details',
 )
 

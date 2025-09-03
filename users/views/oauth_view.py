@@ -161,7 +161,12 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         """
         PROVIDER_MAP = {"google": "Google", "github": "GitHub"}
         provider_name = PROVIDER_MAP.get(provider, provider)
-        action = "registered" if timezone.now() - user.created_at < timedelta(seconds=5) else "logged in"
+
+        existing_user = User.objects.filter(email=user.email).first()
+        created = False
+        if not existing_user:
+            created = True
+        action = "registered" if created else "logged in"
 
         subject = "Welcome to Forum — your space for innovation!"
         message = render_to_string(

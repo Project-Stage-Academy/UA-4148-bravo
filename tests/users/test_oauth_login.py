@@ -10,6 +10,7 @@ from django.core.cache import cache
 from users.tasks import send_welcome_oauth_email_task
 from tests.factories import UserFactory
 from uuid import uuid4
+from django.db import connection
 
 User = get_user_model()
 
@@ -36,9 +37,11 @@ class OAuthTokenObtainPairViewTests(TestCase):
         )
         self.oauth_user.set_unusable_password()
         self.oauth_user.save()
-
-    def tearDown(self):
-        self.oauth_user.delete()
+   
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        connection.close()
 
     def test_invalid_payloads(self):
         """Test failure for malformed/incomplete payloads"""

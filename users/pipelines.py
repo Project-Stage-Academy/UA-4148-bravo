@@ -1,6 +1,9 @@
+import requests
+import logging
 from users.models import UserRole
 from users.tasks import send_welcome_oauth_email_task
 
+logger = logging.getLogger(__name__)
 
 def create_or_update_user(strategy, details, backend, user=None, *args, **kwargs):
     """
@@ -25,37 +28,55 @@ def create_or_update_user(strategy, details, backend, user=None, *args, **kwargs
             last_name=details.get('last_name', ''),
             role=UserRole.objects.get(role='user')
         )
+        send_welcome_oauth_email_task.delay(
+            subject="Welcome!",
+            message="Thanks for signing up via OAuth",
+            recipient_list=[user.email]
+        )
     return {'user': user}
 
 def activate_verified_user(strategy, details, backend, user=None, *args, **kwargs):
     """
-    Activate user only if email is verified. Critical security function.
+    Pipeline step to activate a user only if their email is verified via the OAuth provider.
+    Supports Google and GitHub.
     """
-    if user and not user.is_active:
-        verified_email = False
-        response = kwargs.get('response', {})
-        
-        if backend.name == 'google-oauth2':
-            verified_email = response.get('email_verified', False)
-            
-        elif backend.name == 'github':
-            social = kwargs.get('social') or (
-                user.social_auth.filter(provider='github').first() if user else None
-                )        
-            if social and social.extra_data:
-                emails = social.extra_data.get('emails', []) 
-                user_email = user.email or details.get('email', '')
-                for email_data in emails:
-                    if (isinstance(email_data, dict) and 
-                        email_data.get('email') == user_email and 
-                        email_data.get('verified', False)):
-                        verified_email = True
-                        break
-            else:
-                verified_email = True     
-        if verified_email:
-            user.is_active = True
-            user.save()
+    if not user or user.is_active:
+        return {'user': user}
+
+    verified_email = False
+    response_data = kwargs.get('response', {})
+
+    if backend.name == 'google-oauth2':
+        verified_email = response_data.get('email_verified', False)
+
+    elif backend.name == 'github':
+        social = kwargs.get('social') or user.social_auth.filter(provider='github').first()
+        if social and 'access_token' in social.extra_data:
+            access_token = social.extra_data['access_token']
+            headers = {
+                'Authorization': f'token {access_token}',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            try:
+                github_response = requests.get('https://api.github.com/user/emails', headers=headers)
+                if github_response.status_code == 200:
+                    emails = github_response.json()
+                    for email_data in emails:
+                        if email_data.get('verified') and email_data.get('primary'):
+                            primary_email = email_data.get('email')
+                            if primary_email and user.email != primary_email:
+                                user.email = primary_email
+                                user.save(update_fields=["email"])
+                            verified_email = True
+                            break
+            except requests.RequestException as e:
+                logger.warning(f"GitHub email verification failed: {e}")
+
+    if verified_email:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+    return {'user': user}
 
 def safe_user_details(strategy, details, backend, user=None, *args, **kwargs):
     """
@@ -63,13 +84,13 @@ def safe_user_details(strategy, details, backend, user=None, *args, **kwargs):
     Returns {'user': user} to keep the pipeline happy.
     """
     if user is None:
-        return
+        return {'user': None}
 
     changed = False
     for field, value in details.items():
         if field in ['first_name', 'last_name']:
             continue
-        if not value:
+        if value is None:
             continue
         if hasattr(user, field):
             current_value = getattr(user, field)
