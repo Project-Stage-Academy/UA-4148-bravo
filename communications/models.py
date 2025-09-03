@@ -147,7 +147,6 @@ class Notification(TimeStampedModel):
 
     related_startup_id = models.CharField(max_length=64, null=True, blank=True)
     related_message_id = models.CharField(max_length=64, null=True, blank=True)
-    related_message_id = models.PositiveIntegerField(null=True, blank=True)
 
     priority = models.CharField(
         max_length=10,

@@ -16,7 +16,6 @@ class NotificationConsumerTestCase(TestCase):
     """
     Tests for the NotificationConsumer WebSocket consumer.
     """
-    reset_sequences = True
 
     @classmethod
     def setUpClass(cls):

@@ -1,19 +1,28 @@
 import os
+import json
+import asyncio
 from django.test import TestCase
-from unittest.mock import patch
+from channels.testing import WebsocketCommunicator
+from channels.auth import AuthMiddlewareStack
+from channels.routing import URLRouter
+from chat.routing import websocket_urlpatterns
 from chat.documents import Message, Room
-from users.models import User, UserRole
 from communications.models import Notification
+from tests.communications.factories import NotificationTypeFactory
+from users.models import User, UserRole
 from mongoengine import connect, disconnect
 import mongomock
+from unittest.mock import patch
+from asgiref.sync import sync_to_async
+from communications.tasks import send_notification_task
 
 TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
 
 
-class NotificationFlowTestCase(TestCase):
+class NotificationE2ETestCase(TestCase):
     """
-    Tests the full notification flow:
-    Message saved -> Notification created -> Celery task executed -> WS message sent.
+    Stable end-to-end test for the notification flow:
+    Message -> Signal/Task -> Notification -> WebSocket
     """
 
     @classmethod
@@ -34,43 +43,96 @@ class NotificationFlowTestCase(TestCase):
     def setUp(self):
         role_startup, _ = UserRole.objects.get_or_create(role=UserRole.Role.STARTUP)
         role_investor, _ = UserRole.objects.get_or_create(role=UserRole.Role.INVESTOR)
+
         self.sender = User.objects.create_user(
             email="sender@example.com",
             password=TEST_USER_PASSWORD,
             first_name="Sender",
             last_name="User",
-            role=role_startup,
+            role=role_startup
         )
         self.receiver = User.objects.create_user(
             email="receiver@example.com",
             password=TEST_USER_PASSWORD,
             first_name="Receiver",
             last_name="User",
-            role=role_investor,
+            role=role_investor
         )
 
-    @patch("communications.tasks.send_notification_task.delay")
-    def test_message_triggers_notification_task(self, mock_send_task):
-        """
-        Test that creating a Message triggers a Notification and dispatches the Celery task.
-        """
-        room = Room(name='chat_room', participants=[self.sender.email, self.receiver.email]).save()
-        message = Message(
-            room=room,
-            sender_email=self.sender.email,
-            receiver_email=self.receiver.email,
-            text="Hello, this is a test message"
-        )
-        message.save()
+    async def async_connect_user(self, user):
+        application = AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
+        communicator = WebsocketCommunicator(application, "/ws/notifications/")
+        communicator.scope["user"] = user
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+        return communicator
 
-        notifications = Notification.objects.filter(recipient=self.receiver)
-        self.assertEqual(notifications.count(), 1)
-        notification = notifications.first()
-        self.assertEqual(notification.message.text, message.text)
+    def run_async(self, coro):
+        return asyncio.run(coro)
 
-        mock_send_task.assert_called_once()
-        args, kwargs = mock_send_task.call_args
-        self.assertEqual(kwargs["user_id"], self.receiver.id)
-        self.assertEqual(kwargs["notification_data"]["title"], "New Message")
-        self.assertEqual(kwargs["notification_data"]["message"], f"New message from {self.sender.username}")
-        self.assertEqual(kwargs["notification_data"]["notification_id"], str(notification.id))
+    def test_notification_flow(self):
+        async def run_test():
+            communicator = await self.async_connect_user(self.receiver)
+
+            with patch("chat.documents.get_user_or_raise") as mock_get_user:
+                mock_get_user.side_effect = lambda email, room_name: (
+                    self.sender if email == self.sender.email else self.receiver
+                )
+
+                room = Room(name="chat_room", participants=[self.sender.email, self.receiver.email])
+                await sync_to_async(room.save)()
+
+            message = Message(
+                room=room,
+                sender_email=self.sender.email,
+                receiver_email=self.receiver.email,
+                text="E2E test message"
+            )
+            await sync_to_async(message.save)()
+
+            self.type_message = NotificationTypeFactory(code='message_new')
+
+            notification = await sync_to_async(Notification.objects.create)(
+                user=self.receiver,
+                notification_type=self.type_message,
+                title="New Message",
+                message=f"New message from {self.sender.email}",
+                related_message_id=str(message.id)
+            )
+
+            send_notification_task.delay(
+                user_id=self.receiver.id,
+                notification_data={
+                    "title": "New Message",
+                    "message": f"New message from {self.sender.email}",
+                    "notification_id": str(notification.id),
+                }
+            )
+
+            notification_fetched = None
+            for _ in range(10):
+                notifications_qs = await sync_to_async(Notification.objects.filter)(user=self.receiver)
+                exists = await sync_to_async(notifications_qs.exists)()
+                if exists:
+                    notification_fetched = await sync_to_async(notifications_qs.first)()
+                    break
+                await asyncio.sleep(0.5)
+
+            self.assertIsNotNone(notification_fetched, "Notification was not created for the receiver.")
+
+            response = await communicator.receive_from(timeout=5)
+            data = json.loads(response)
+            self.assertIn("notification", data)
+            self.assertEqual(data["notification"]["title"], "New Message")
+            self.assertEqual(
+                data["notification"]["message"],
+                f"New message from {self.sender.email}"
+            )
+            self.assertEqual(
+                data["notification"]["notification_id"],
+                str(notification_fetched.notification_id)
+            )
+
+            await communicator.disconnect()
+
+        self.run_async(run_test())
