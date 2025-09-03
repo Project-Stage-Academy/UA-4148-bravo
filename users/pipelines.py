@@ -9,6 +9,7 @@ def create_or_update_user(strategy, details, backend, user=None, *args, **kwargs
     """
     Pipeline for custom logic after OAuth.
     """
+    created = False
     if user:
         first_name = details.get('first_name', '')
         last_name = details.get('last_name', '')
@@ -28,11 +29,13 @@ def create_or_update_user(strategy, details, backend, user=None, *args, **kwargs
             last_name=details.get('last_name', ''),
             role=UserRole.objects.get(role='user')
         )
+        created = True
         send_welcome_oauth_email_task.delay(
             subject="Welcome!",
             message="Thanks for signing up via OAuth",
             recipient_list=[user.email]
         )
+    strategy.session_set('user_created', created)    
     return {'user': user}
 
 def activate_verified_user(strategy, details, backend, user=None, *args, **kwargs):

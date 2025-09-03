@@ -153,20 +153,17 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
             user.role = get_default_user_role()
             user.save()
 
-        self.send_welcome_email(user, provider)
+        created = strategy.session_get('user_created')
+        self.send_welcome_email(user, provider, created)
         return user
 
-    def send_welcome_email(self, user, provider):
+    def send_welcome_email(self, user, provider, created):
         """
         Send welcome email after OAuth login/registration.
         """
         PROVIDER_MAP = {"google": "Google", "github": "GitHub"}
         provider_name = PROVIDER_MAP.get(provider, provider)
 
-        existing_user = User.objects.filter(email=user.email).first()
-        created = False
-        if not existing_user:
-            created = True
         action = "registered" if created else "logged in"
 
         subject = "Welcome to Forum — your space for innovation!"
