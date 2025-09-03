@@ -6,7 +6,6 @@ from startups.documents import StartupDocument
 from tests.elasticsearch.setup_tests_data import BaseElasticsearchAPITestCase
 from unittest.mock import patch
 from django.test.utils import override_settings
-from projects.models import Startup
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
@@ -46,9 +45,6 @@ class StartupElasticsearchTests(BaseElasticsearchAPITestCase):
         """
         Ensure that an empty search query returns all startups in the index.
         """
-        Startup.objects.all().delete()
-        startup1 = Startup.objects.create(name="Startup 1")
-        startup2 = Startup.objects.create(name="Startup 2")
         url = reverse('startup-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
