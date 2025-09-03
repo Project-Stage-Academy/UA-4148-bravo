@@ -10,7 +10,7 @@ class ProjectUpdateAPITests(BaseAPITestCase):
         super().setUp()
         self.project = self.get_or_create_project(startup=self.startup)
         self.client.force_authenticate(user=self.startup_user)
-        self.url = reverse('project-detail', args=[self.project.pk])
+        self.url = reverse('project-update-project', args=[self.project.pk])
 
     def test_project_update_creates_history(self):
         """We verify that the update creates an entry in ProjectHistory."""
