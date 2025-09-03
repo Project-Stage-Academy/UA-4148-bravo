@@ -2,12 +2,14 @@
 
 from django.db import migrations
 from django.contrib.auth.hashers import make_password
+from django.apps import apps
+from django.db.models.signals import post_migrate
 
-def create_default_users(apps, schema_editor):
-    User = apps.get_model("users", "User")
-    UserRole = apps.get_model("users", "UserRole")
+def create_default_users(sender, **kwargs):
+    User = apps.get_model('users', 'User')
+    UserRole = apps.get_model('users', 'UserRole')
 
-    roles = {role.role: role for role in UserRole.objects.all()}
+    roles = {r.role: r for r in UserRole.objects.all()}
 
     users_data = [
         {
@@ -47,6 +49,8 @@ def create_default_users(apps, schema_editor):
     ]
 
     for udata in users_data:
+        if udata["role"] is None:
+            continue
         user, created = User.objects.update_or_create(
             email=udata["email"],
             defaults={k: v for k, v in udata.items() if k != "password"}
@@ -54,7 +58,6 @@ def create_default_users(apps, schema_editor):
         if created or not user.check_password(udata["password"]):
             user.password = make_password(udata["password"])
             user.save()
-
 
 def remove_default_users(apps, schema_editor):
     User = apps.get_model("users", "User")
@@ -64,7 +67,6 @@ def remove_default_users(apps, schema_editor):
         "user1@example.com",
         "user2@example.com"
     ]).delete()
-
 class Migration(migrations.Migration):
 
     dependencies = [
