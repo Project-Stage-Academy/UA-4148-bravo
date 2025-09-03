@@ -133,7 +133,8 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
             try:
                 emails = requests.get(
                     "https://api.github.com/user/emails",
-                    headers={"Authorization": f"token {access_token}"}
+                    headers={"Authorization": f"token {access_token}"},
+                    timeout=(3.05, 5)
                 ).json()
             except Exception as e:
                 logger.error("Failed to fetch GitHub emails", exc_info=True)

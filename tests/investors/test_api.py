@@ -1,3 +1,4 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from common.enums import Stage
@@ -6,6 +7,7 @@ from tests.test_base_case import BaseAPITestCase
 from rest_framework.test import APIClient
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class InvestorAPITests(BaseAPITestCase):
     """
     API tests for Investor model: list, update, delete,

@@ -58,7 +58,7 @@ def activate_verified_user(strategy, details, backend, user=None, *args, **kwarg
                 'Accept': 'application/vnd.github.v3+json'
             }
             try:
-                github_response = requests.get('https://api.github.com/user/emails', headers=headers)
+                github_response = requests.get('https://api.github.com/user/emails', headers=headers, timeout=(3.05, 5))
                 if github_response.status_code == 200:
                     emails = github_response.json()
                     for email_data in emails:

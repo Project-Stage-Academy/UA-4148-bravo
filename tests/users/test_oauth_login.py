@@ -1,5 +1,6 @@
 from unittest.mock import patch, MagicMock
 from django.contrib.auth import get_user_model
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -14,6 +15,8 @@ from django.db import connection
 
 User = get_user_model()
 
+
+@override_settings(SECURE_SSL_REDIRECT=False)
 @patch('users.views.oauth_view.OAuthTokenObtainPairView.throttle_classes', [])
 class OAuthTokenObtainPairViewTests(TestCase):
     """
@@ -33,7 +36,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
             first_name='OAuth',
             last_name='User',
             role=self.role,
-            is_active = True
+            is_active=True
         )
         self.oauth_user.set_unusable_password()
         self.oauth_user.save()
@@ -101,7 +104,8 @@ class OAuthTokenObtainPairViewTests(TestCase):
         mock_backend.do_auth.return_value = inactive_user
         mock_load_backend.return_value = mock_backend
 
-        res = self.client.post(self.auth_url, {'provider': self.GITHUB_PROVIDER, 'access_token': 'token'}, format='json')
+        res = self.client.post(self.auth_url, {'provider': self.GITHUB_PROVIDER, 'access_token': 'token'},
+                               format='json')
 
         mock_backend.do_auth.assert_called_with('token')
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
@@ -118,7 +122,8 @@ class OAuthTokenObtainPairViewTests(TestCase):
         mock_backend.do_auth.return_value = new_user
         mock_load_backend.return_value = mock_backend
 
-        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'}, format='json')
+        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'},
+                               format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['user']['email'], new_user.email)
 
@@ -135,7 +140,8 @@ class OAuthTokenObtainPairViewTests(TestCase):
         mock_load_backend.return_value = mock_backend
         mock_create_or_update_user.return_value = {'user': updated_user}
 
-        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'}, format='json')
+        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'},
+                               format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         user = User.objects.get(email=updated_user.email)
         self.assertEqual(user.first_name, 'Updated')
@@ -148,7 +154,8 @@ class OAuthTokenObtainPairViewTests(TestCase):
         mock_backend.do_auth.return_value = None
         mock_load_backend.return_value = mock_backend
 
-        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'invalid'}, format='json')
+        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'invalid'},
+                               format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('OAuth authentication failed', res.data['error'])
 
@@ -161,7 +168,8 @@ class OAuthTokenObtainPairViewTests(TestCase):
         mock_backend.do_auth.return_value = new_user
         mock_load_backend.return_value = mock_backend
 
-        res = self.client.post(self.auth_url, {'provider': self.GITHUB_PROVIDER, 'access_token': 'token'}, format='json')
+        res = self.client.post(self.auth_url, {'provider': self.GITHUB_PROVIDER, 'access_token': 'token'},
+                               format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['user']['email'], new_user.email)
 
@@ -178,7 +186,8 @@ class OAuthTokenObtainPairViewTests(TestCase):
         mock_load_backend.return_value = mock_backend
         mock_create_or_update_user.return_value = {'user': updated_user}
 
-        res = self.client.post(self.auth_url, {'provider': self.GITHUB_PROVIDER, 'access_token': 'token'}, format='json')
+        res = self.client.post(self.auth_url, {'provider': self.GITHUB_PROVIDER, 'access_token': 'token'},
+                               format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         user = User.objects.get(email=updated_user.email)
         self.assertEqual(user.first_name, 'Updated')
@@ -243,7 +252,8 @@ class OAuthTokenObtainPairViewTests(TestCase):
         mock_backend.do_auth.return_value = active_user
         mock_load_backend.return_value = mock_backend
 
-        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'}, format='json')
+        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'},
+                               format='json')
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertNotIn("access", res.data)
@@ -253,6 +263,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
             cookie = res.cookies[key]
             self.assertTrue(cookie["httponly"])
             self.assertTrue(cookie["secure"])
+
 
 class TestSendWelcomeEmail(TestCase):
     def setUp(self):
