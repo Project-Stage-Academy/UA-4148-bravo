@@ -10,14 +10,14 @@ class ProjectUpdateAPITests(BaseAPITestCase):
         super().setUp()
         self.project = self.get_or_create_project(startup=self.startup)
         self.client.force_authenticate(user=self.startup_user)
-        self.url = reverse('project-detail', args=[self.project.pk])
+        self.url = f"/api/v1/projects/{self.project.pk}/"
 
     def test_project_update_creates_history(self):
         """We verify that the update creates an entry in ProjectHistory."""
         self.assertEqual(ProjectHistory.objects.count(), 0)
         
         update_data = {'title': 'A Brand New Title'}
-        response = self.client.patch(self.url, update_data, format="json")
+        response = self.client.patch(self.url, update_data, format="json", follow=True)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(ProjectHistory.objects.count(), 1)
@@ -34,7 +34,7 @@ class ProjectUpdateAPITests(BaseAPITestCase):
         self.assertEqual(Notification.objects.count(), 0)
         
         update_data = {'description': 'An updated description for investors.'}
-        response = self.client.patch(self.url, update_data, format="json")
+        response = self.client.patch(self.url, update_data, format="json", follow=True)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
