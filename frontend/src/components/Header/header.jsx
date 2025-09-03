@@ -17,8 +17,7 @@ import { useState } from 'react';
 function Header({ show, hide, toggle, visible }) {
     const { logout } = useAuthContext();
     const navigate = useNavigate();
-    //const { user } = useAuthContext();
-    const user = {id: 1}
+    const { user } = useAuthContext();
 
     const [loading, setLoading] = useState(false);
     const doLogout = async () => {
@@ -29,7 +28,7 @@ function Header({ show, hide, toggle, visible }) {
 
     return (
         <header className={'header'}>
-            <Link to={'/'} className={'header--logo'}>
+            <Link to={"/"} className={'header--logo'}>
                 <img src="/pictures/svg/header-logo.svg" alt={'Logo'} />
                 <img
                     src="/pictures/svg/header-logo-text.svg"
@@ -53,7 +52,7 @@ function Header({ show, hide, toggle, visible }) {
                     </Link>
                     <Search className={'nav-panel--search'} />
                 </div>
-                {user ? (
+                {(user && user.isAuthorized) ? (
                     <div className={'nav-panel--set dropdown'}>
                         <Link
                             to={'/profile/user/edit'}
