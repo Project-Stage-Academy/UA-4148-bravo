@@ -40,3 +40,13 @@ class ProjectStatus(TextChoices):
     IN_PROGRESS = 'in_progress', 'In Progress'
     COMPLETED = 'completed', 'Completed'
     CANCELLED = 'cancelled', 'Cancelled'
+
+class NotificationTypeCode(TextChoices):
+    """
+    Canonical codes for NotificationType.code.
+    Keep this list in sync with the seeding command.
+    """
+    STARTUP_SAVED = 'startup_saved', 'Startup Saved'
+    PROJECT_FOLLOWED = 'project_followed', 'Project Followed'
+    MESSAGE_RECEIVED = 'message_received', 'Message Received'
+    ACTIVITY_SUMMARIZED = 'activity_summarized', 'Activity Summarized'

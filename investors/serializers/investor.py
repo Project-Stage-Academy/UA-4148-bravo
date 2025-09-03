@@ -5,7 +5,7 @@ from django.db import transaction
 from rest_framework import serializers
 from django.core.exceptions import ValidationError
 from common.enums import Stage
-from investors.models import Investor, SavedStartup
+from investors.models import Investor, SavedStartup, ViewedStartup
 from startups.models import Startup
 from validation.validate_names import validate_company_name
 
@@ -171,3 +171,12 @@ class SavedStartupSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'non_field_errors': ['Already saved.']})
 
         return obj
+
+class ViewedStartupSerializer(serializers.ModelSerializer):
+    startup_id = serializers.IntegerField(source="startup.id", read_only=True)
+    company_name = serializers.CharField(source="startup.company_name", read_only=True)
+
+    class Meta:
+        model = ViewedStartup
+        fields = ["id", "startup_id", "company_name", "viewed_at"]
+        

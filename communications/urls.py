@@ -4,6 +4,7 @@ from .views import (
     NotificationViewSet,
     NotificationTypeViewSet,
     UserNotificationPreferenceViewSet,
+    EmailNotificationPreferenceViewSet,
 )
 
 router = DefaultRouter()
@@ -24,6 +25,12 @@ router.register(
     r'preferences',
     UserNotificationPreferenceViewSet,
     basename='user-notification-preference'
+)
+
+router.register(
+    r'email-preferences',
+    EmailNotificationPreferenceViewSet,
+    basename='email-notification-preference'
 )
 
 app_name = 'communications'
