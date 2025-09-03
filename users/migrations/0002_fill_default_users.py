@@ -5,11 +5,14 @@ from django.contrib.auth.hashers import make_password
 from django.apps import apps
 from django.db.models.signals import post_migrate
 
-def create_default_users(sender, **kwargs):
+def create_default_users(apps, schema_editor):
     User = apps.get_model('users', 'User')
     UserRole = apps.get_model('users', 'UserRole')
 
-    roles = {r.role: r for r in UserRole.objects.all()}
+    roles = {}
+    for role_name in ['admin', 'moderator', 'user']:
+        role_obj, _ = UserRole.objects.get_or_create(role=role_name)
+        roles[role_name] = role_obj
 
     users_data = [
         {
@@ -17,7 +20,7 @@ def create_default_users(sender, **kwargs):
             "first_name": "Admin",
             "last_name": "User",
             "password": "admin1234",
-            "role": roles.get("admin"),
+            "role": roles['admin'],
             "is_active": True,
             "is_staff": True,
             "is_superuser": True,
@@ -27,7 +30,7 @@ def create_default_users(sender, **kwargs):
             "first_name": "Moderator",
             "last_name": "User",
             "password": "mod1234",
-            "role": roles.get("moderator"),
+            "role": roles['moderator'],
             "is_active": True,
         },
         {
@@ -35,7 +38,7 @@ def create_default_users(sender, **kwargs):
             "first_name": "User1",
             "last_name": "Test",
             "password": "user1234",
-            "role": roles.get("user"),
+            "role": roles['user'],
             "is_active": True,
         },
         {
@@ -43,20 +46,18 @@ def create_default_users(sender, **kwargs):
             "first_name": "User2",
             "last_name": "Test",
             "password": "user1234",
-            "role": roles.get("user"),
+            "role": roles['user'],
             "is_active": True,
         },
     ]
 
     for udata in users_data:
-        if udata["role"] is None:
-            continue
         user, created = User.objects.update_or_create(
-            email=udata["email"],
-            defaults={k: v for k, v in udata.items() if k != "password"}
+            email=udata['email'],
+            defaults={k: v for k, v in udata.items() if k != 'password'}
         )
-        if created or not user.check_password(udata["password"]):
-            user.password = make_password(udata["password"])
+        if created or not user.check_password(udata['password']):
+            user.password = make_password(udata['password'])
             user.save()
 
 def remove_default_users(apps, schema_editor):
