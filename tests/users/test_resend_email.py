@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
@@ -16,6 +17,7 @@ NON_EXISTENT_USER_ID = 999_999
 ALLOWED_THROTTLE_REQUESTS = getattr(settings, "API_THROTTLE_LIMIT", 5)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ResendEmailTests(APITestCase):
 
     @classmethod

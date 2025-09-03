@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.test.utils import override_settings
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from rest_framework.test import APITestCase
@@ -8,6 +9,7 @@ from rest_framework import status
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class CustomPasswordResetTests(APITestCase):
     """
     Integration tests for the custom password reset and password reset confirmation API views.

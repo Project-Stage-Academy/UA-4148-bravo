@@ -3,8 +3,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-
-from communications.models import Notification, NotificationPriority
+from django.test.utils import override_settings
+from communications.models import Notification, NotificationPriority, NotificationType
 from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from utils.authenticate_client import authenticate_client
@@ -12,6 +12,7 @@ from utils.authenticate_client import authenticate_client
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class NotificationsApiTestCase(APITestCase):
     def setUp(self):
         # Users
@@ -22,8 +23,8 @@ class NotificationsApiTestCase(APITestCase):
         authenticate_client(self.client, self.user)
 
         # Notification types
-        self.type_message = NotificationTypeFactory(code='message_new')
-        self.type_project = NotificationTypeFactory(code='project_update')
+        self.type_message = NotificationType.objects.get(code='message_received')
+        self.type_project = NotificationType.objects.get(code='activity_summarized')
 
         # Some notifications for self.user
         self.n1 = Notification.objects.create(
@@ -70,9 +71,9 @@ class NotificationsApiTestCase(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertTrue(all(not item['is_read'] for item in resp.data['results']))
         # type code filter
-        resp = self.client.get(url, {'type': 'project_update'})
+        resp = self.client.get(url, {'type': 'activity_summarized'})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertTrue(all(item['notification_type']['code'] == 'project_update' for item in resp.data['results']))
+        self.assertTrue(all(item['notification_type']['code'] == 'activity_summarized' for item in resp.data['results']))
         # priority filter
         resp = self.client.get(url, {'priority': 'low'})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -91,7 +92,8 @@ class NotificationsApiTestCase(APITestCase):
         self.assertGreaterEqual(len(resp.data['results']), 2)
 
     def test_retrieve_notification(self):
-        url = reverse('communications:notification-detail', kwargs={'notification_id': str(self.n1.notification_id)})
+        url = reverse('communications:notification-detail',
+                      kwargs={'notification_id': str(self.n1.notification_id)})
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data['notification_id'], str(self.n1.notification_id))
@@ -139,7 +141,8 @@ class NotificationsApiTestCase(APITestCase):
         self.assertEqual(resp.data.get('unread_count'), 1)
 
     def test_resolve_returns_redirect_payload(self):
-        url = reverse('communications:notification-resolve', kwargs={'notification_id': str(self.n1.notification_id)})
+        url = reverse('communications:notification-resolve',
+                      kwargs={'notification_id': str(self.n1.notification_id)})
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertIn('redirect', resp.data)
@@ -148,7 +151,8 @@ class NotificationsApiTestCase(APITestCase):
         self.assertEqual(redirect.get('id'), 99)
 
     def test_delete_notification(self):
-        url = reverse('communications:notification-detail', kwargs={'notification_id': str(self.n2.notification_id)})
+        url = reverse('communications:notification-detail',
+                      kwargs={'notification_id': str(self.n2.notification_id)})
         resp = self.client.delete(url)
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Notification.objects.filter(notification_id=self.n2.notification_id).exists())

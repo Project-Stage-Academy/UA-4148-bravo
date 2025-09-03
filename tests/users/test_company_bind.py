@@ -1,3 +1,4 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
@@ -18,6 +19,7 @@ from utils.authenticate_client import authenticate_client
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class CompanyBindingViewTests(APITestCase):
     def setUp(self):
         """Set up test data"""
