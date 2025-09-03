@@ -129,3 +129,4 @@ sentry_sdk.init(
     traces_sample_rate=0.5,
     send_default_pii=True
 )
+
