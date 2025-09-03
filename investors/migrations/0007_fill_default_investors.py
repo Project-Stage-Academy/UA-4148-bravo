@@ -8,7 +8,7 @@ def create_default_investor(apps, schema_editor):
     Investor = apps.get_model("investors", "Investor")
     User = apps.get_model("users", "User")
 
-    user2 = User.objects.filter(email="user2@example.com").first()
+    user2 = User.objects.filter(email="user_investor@example.com").first()
     industry = Industry.objects.get_or_create(name="Finance")[0]
     location = Location.objects.get_or_create(country="US", city="New York", region="NY")[0]
     if user2 and not Investor.objects.filter(user=user2).exists():

@@ -20,7 +20,7 @@ def create_default_startups(apps, schema_editor):
         "LDN": Location.objects.get_or_create(country="GB", city="London")[0],
     }
 
-    user1 = User.objects.filter(email="user1@example.com").first()
+    user1 = User.objects.filter(email="user_startup@example.com").first()
     if user1 and not Startup.objects.filter(user=user1).exists():
         Startup.objects.create(
             user=user1,
