@@ -1,9 +1,11 @@
 #!/bin/sh
 set -eu
 
-# Checking for host as first argument
+# ------------------------------
+# Check for DB host argument
+# ------------------------------
 if [ -z "${1:-}" ]; then
-  echo "Usage: $0 <host> [command...]"
+  echo "Usage: $0 <db_host> [command...]"
   exit 1
 fi
 
@@ -11,10 +13,8 @@ host="$1"
 shift
 
 port="${DB_PORT:-5432}"
-
-# Max retries and sleep duration configurable via environment variables
-max_retries="${MAX_RETRIES}"
-sleep_duration="${SLEEP_DURATION}"
+max_retries="${MAX_RETRIES:-30}"     # default 30 retries
+sleep_duration="${SLEEP_DURATION:-2}" # default 2 seconds
 count=0
 
 echo "Waiting for PostgreSQL to be ready at $host:$port..."
@@ -31,7 +31,14 @@ done
 
 echo "PostgreSQL is ready - continuing..."
 
-python manage.py migrate
+# ------------------------------
+# Django setup
+# ------------------------------
+python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
+# ------------------------------
+# Run the passed command (Gunicorn)
+# ------------------------------
 exec "$@"
+
