@@ -90,7 +90,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             
         serializer = ProjectWriteSerializer(project, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        self.perform_update(serializer)
         return Response(ProjectReadSerializer(project).data, status=status.HTTP_200_OK)
     
     def partial_update(self, request, *args, **kwargs):
