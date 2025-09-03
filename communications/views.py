@@ -6,9 +6,9 @@ from rest_framework import viewsets, status, mixins, serializers
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from users.cookie_jwt import CookieJWTAuthentication
-from users.permissions import IsAuthenticatedOr401
 from .models import (
     Notification,
     UserNotificationPreference,
@@ -45,7 +45,7 @@ class NotificationViewSet(
     """
     serializer_class = NotificationSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticatedOr401]
+    permission_classes = [IsAuthenticated]
     lookup_field = 'notification_id'
     http_method_names = ['get', 'post', 'delete', 'head', 'options']
     pagination_class = DefaultPageNumberPagination
@@ -205,7 +205,7 @@ class NotificationTypeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = NotificationType.objects.filter(is_active=True)
     serializer_class = NotificationTypeSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticatedOr401]
+    permission_classes = [IsAuthenticated]
     pagination_class = None
 
 
@@ -215,7 +215,7 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
     """
     serializer_class = UserNotificationPreferenceSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticatedOr401]
+    permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'patch', 'head', 'options']
 
     def get_queryset(self):
@@ -323,7 +323,7 @@ class EmailNotificationPreferenceViewSet(viewsets.GenericViewSet,
     """
     serializer_class = EmailNotificationPreferenceSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticatedOr401]
+    permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'patch', 'head', 'options']
     
     def get_queryset(self):

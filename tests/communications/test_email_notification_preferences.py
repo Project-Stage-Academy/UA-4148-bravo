@@ -9,10 +9,12 @@ import ddt
 from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from utils.authenticate_client import authenticate_client
+from django.test.utils import override_settings
 
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 @ddt.ddt
 class EmailNotificationPreferencesTestCase(APITestCase):
     @classmethod
