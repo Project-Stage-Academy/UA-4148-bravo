@@ -10,7 +10,7 @@ import FeedbackForm from '../../pages/FeedbackForm/feedbackForm';
 import ForgotPassword from '../../pages/ForgotPassword/forgotPassword';
 import RestorePassword from '../../pages/RestorePassword/restorePassword';
 import ProfilePage from '../../pages/ProfilePage/profilePage';
-import Policy from '../../pages/Policy/policy';
+import Policy from '../../pages/Policy/policy.jsx';
 import WhoWeAre from '../../pages/WhoWeAre/whoWeAre';
 import LogInPage from '../../pages/LogIn/logIn';
 import RegistrationPage from '../../pages/Registration/registration';
@@ -24,6 +24,7 @@ import RestorePasswordDone from '../../pages/RestorePasswordDone/restorePassword
 import RegistrationUserRepresent from '../../pages/RegistrationUserRepresent/registrationUserRepresent';
 import RegistrationCompleted from '../../pages/RegistrationCompleted/registrationCompleted';
 import ForgotPasswordDone from '../../pages/ForgotPasswordDone/forgotPasswordDone';
+import PasswordResetHandler from '../../pages/PasswordResetHandler/passwordResetHandler';
 
 /**
  * Main application component that sets up routing and provider providers.
@@ -54,9 +55,6 @@ function App() {
 
                         {/* Feedback form */}
                         <Route path="feedback" element={<FeedbackForm />} />
-
-                        {/* Policy */}
-                        <Route path="policy" element={<Policy />} />
 
                         {/* Who we are */}
                         <Route path="who-we-are" element={<WhoWeAre />} />
@@ -94,6 +92,12 @@ function App() {
                             {/* Profile editing */}
                             <Route path="edit" element={<ProfileEditing />} />
                         </Route>
+
+                        {/* Redirect password reset */}
+                        <Route path="/password/reset/confirm/:user_id/:token/" element={<PasswordResetHandler />} />
+                          
+                        {/* Privacy policy */}
+                        <Route path="privacy-policy" element={<Policy />} />
 
                         {/* Page not found */}
                         <Route path="*" element={<NotFound />} />

@@ -40,3 +40,13 @@ input::-webkit-credentials-auto-fill-button {
 input::-webkit-textfield-decoration-container {
     display: none !important;
 }
+
+ul {
+    padding-left: 24px;
+}
+
+li {
+    font-family: var(--text-font), sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+}

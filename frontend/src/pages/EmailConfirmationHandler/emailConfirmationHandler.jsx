@@ -48,7 +48,7 @@ function EmailConfirmationHandler() {
     }, [status, navigate]);
 
     if (status === 'processing') {
-        return <Loading className={'email-confirmation-handler'}/>;
+        return <Loading className={'email-confirmation-handler__loading'}/>;
     }
     
     return null;
