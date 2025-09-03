@@ -99,6 +99,12 @@ def create_in_app_notification(user, type_code, title, message, related_project=
     Creates an in-app notification.
     """
     try:
+        notification_type = NotificationType.objects.get(code=type_code)
+    except NotificationType.DoesNotExist:
+        logger.error(f"Attempted to create notification with non-existent type_code: {type_code}")
+        return None
+    
+    try:
         if related_project:
             kwargs['related_project'] = related_project
 
@@ -110,14 +116,14 @@ def create_in_app_notification(user, type_code, title, message, related_project=
             
         return Notification.objects.create(
             user=user,
-            notification_type_id=NotificationType.objects.get(code=type_code).id,
+            notification_type=notification_type,
             title=title,
             message=message,
             **kwargs
         )
     
     except Exception as e:
-        logger.error(f"Error creating in-app notification: {e}")
+        logger.error(f"Error creating in-app notification for type '{type_code}': {e}")
         return None
     
     related_project = None
