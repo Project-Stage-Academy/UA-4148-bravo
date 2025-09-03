@@ -1,25 +1,20 @@
 import json
 import logging
-import os
 import re
-import time
-from collections import defaultdict
-from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
-from mongoengine import ValidationError, DoesNotExist
 from typing import Optional, Tuple
-from chat.documents import Room, Message
+from channels.db import database_sync_to_async
+from channels.generic.websocket import AsyncWebsocketConsumer
+from mongoengine import ValidationError, DoesNotExist
+from chat.documents import Room, Message, MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH
+from chat.permissions import check_user_in_room
 from core.settings.constants import FORBIDDEN_WORDS_SET
-from users.models import User
+from users.models import User, UserRole
+from utils.messages_rate_limit import is_rate_limited
+from utils.sanitize import sanitize_message
+import sentry_sdk
+from utils.save_documents import log_and_capture
 
 logger = logging.getLogger(__name__)
-
-MAX_MESSAGE_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", 1000))
-MIN_MESSAGE_LENGTH = int(os.getenv("MIN_MESSAGE_LENGTH", 1))
-MESSAGE_RATE_LIMIT = int(os.getenv("MESSAGE_RATE_LIMIT", 5))
-RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", 10))
-
-user_message_times = defaultdict(list)
 
 
 class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
@@ -52,7 +47,14 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             1. Checks user authentication.
             2. Retrieves the other user by email.
             3. Creates or fetches a chat room (investor-startup).
-            4. Joins the Channels group and accepts the connection.
+            4. Verifies that the user is a participant of the room.
+            5. Joins the Channels group and accepts the connection.
+
+        Closing codes:
+            4401 → unauthenticated,
+            4404 → not found,
+            4403 → forbidden,
+            1011 → internal error.
         """
         self.user = self.scope.get('user', None)
         other_user_email = self.scope["url_route"]["kwargs"].get("other_user_email")
@@ -73,7 +75,12 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             logger.info("[CONNECT] Room %s, created=%s", self.room.name, created)
         except ValidationError as ve:
             logger.error("[CONNECT] Failed to create/get room: %s", ve)
+            sentry_sdk.capture_exception(ve)
             await self.close(code=1011)
+            return
+
+        if not check_user_in_room(self.user, self.room):
+            await self.close(code=4403)
             return
 
         self.room_group_name = f"chat_{self.room.id}"
@@ -84,6 +91,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             logger.info("[CONNECT] Connected to room group: %s", self.room_group_name)
         except Exception as e:
             logger.error("[CONNECT] Failed to add channel: %s", e)
+            sentry_sdk.capture_exception(e)
             await self.close(code=1011)
 
     async def disconnect(self, close_code):
@@ -97,6 +105,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             logger.info("[DISCONNECT] Left room: %s", self.room_group_name)
         except Exception as e:
             logger.error("[DISCONNECT] Failed to discard channel: %s", e)
+            sentry_sdk.capture_exception(e)
 
     async def receive(self, text_data=None, bytes_data=None):
         """
@@ -114,23 +123,26 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             message = data.get("message", "").strip()
             if not message:
                 return
+            message = sanitize_message(message)
+
             if len(message) < MIN_MESSAGE_LENGTH or len(message) > MAX_MESSAGE_LENGTH:
                 await self.send(
                     json.dumps({"error": f"Message length must be {MIN_MESSAGE_LENGTH}-{MAX_MESSAGE_LENGTH} chars"}))
                 return
+
             if any(word in message.lower() for word in FORBIDDEN_WORDS_SET):
                 await self.send(json.dumps({"error": "Message contains forbidden content"}))
-                return
-            if re.match(r"(.)\1{10,}", message):
-                await self.send(json.dumps({"error": "Message looks like spam"}))
+                logger.warning("[MESSAGE] Forbidden content by %s in room %s", self.user.email, self.room_group_name)
                 return
 
-            now = time.time()
-            times = user_message_times[self.channel_name]
-            times = [t for t in times if now - t < RATE_LIMIT_WINDOW]
-            times.append(now)
-            user_message_times[self.channel_name] = times
-            if len(times) > MESSAGE_RATE_LIMIT:
+            if re.match(r"(.)\1{10,}", message):
+                await self.send(json.dumps({"error": "Message looks like spam"}))
+                logger.warning("[MESSAGE] Spam detected by %s in room %s", self.user.email, self.room_group_name)
+                sentry_sdk.capture_message(f"Spam detected from {self.user.email} in room {self.room_group_name}",
+                                           level="warning")
+                return
+
+            if is_rate_limited(self.user.id, self.room_group_name):
                 await self.send(json.dumps({"error": "Rate limit exceeded"}))
                 return
 
@@ -139,6 +151,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
                 logger.info("[RECEIVE] Message saved from %s: %s", self.user.email, msg.text[:50])
             except ValidationError as ve:
                 logger.error("[RECEIVE] Failed to save message: %s", ve)
+                sentry_sdk.capture_exception(ve)
                 await self.send(json.dumps({"error": "Failed to save message"}))
                 return
 
@@ -153,8 +166,10 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
 
         except json.JSONDecodeError as e:
             logger.error("Invalid JSON: %s | %s", text_data, e)
+            sentry_sdk.capture_exception(e)
         except Exception as e:
             logger.error("Error in receive: %s", e)
+            sentry_sdk.capture_exception(e)
 
     async def receive_chat_message(self, event):
         """
@@ -180,6 +195,7 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
                         message[:50] + ("..." if len(message) > 50 else ""))
         except Exception as e:
             logger.error("[receive_chat_message] Failed to send message: %s", e)
+            sentry_sdk.capture_exception(e)
 
     @database_sync_to_async
     def get_user_by_email(self, email: str) -> Optional[User]:
@@ -198,37 +214,31 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
             return None
 
     @database_sync_to_async
+    @log_and_capture("room", ValidationError)
     def get_or_create_chat_room(self, user1, user2) -> Tuple[Room, bool]:
         """
         Creates or retrieves a chat room between an investor and a startup.
-
-        Args:
-            user1 (User): One participant.
-            user2 (User): Another participant.
-
-        Returns:
-            Tuple[Room, bool]: The Room instance and a boolean indicating if it was created.
         """
-        investor = user1 if hasattr(user1, 'roles') and user1.roles.filter(name='Investor').exists() else user2
-        startup = user2 if hasattr(user2, 'roles') and user2.roles.filter(name='Startup').exists() else user1
+        roles = {user1.role.role if user1.role else None, user2.role.role if user2.role else None}
 
-        room_name = f"{investor.email}_{startup.email}"
+        if roles != {UserRole.Role.STARTUP, UserRole.Role.INVESTOR}:
+            raise ValidationError("Chat room must have exactly one Startup and one Investor.")
+
+        startup = user1 if user1.role.role == UserRole.Role.STARTUP else user2
+        investor = user2 if user2.role.role == UserRole.Role.INVESTOR else user1
+
+        room_name = f"{startup.email}_{investor.email}"
 
         try:
             room = Room.objects.get(name=room_name)
-            created = False
+            return room, False
         except DoesNotExist:
-            room = Room(name=room_name, participants=[investor.email, startup.email])
-            try:
-                room.save()
-                created = True
-            except ValidationError as ve:
-                logger.error("[get_or_create_chat_room] Failed to save room: %s", ve)
-                raise ve
-
-        return room, created
+            room = Room(name=room_name, participants=[startup.email, investor.email])
+            room.save()
+            return room, True
 
     @database_sync_to_async
+    @log_and_capture("message", ValidationError)
     def save_message(self, message_text: str) -> Message:
         """
         Saves a message to the Room in MongoDB.
@@ -250,19 +260,11 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
                 self.room.participants.append(email)
                 updated = True
         if updated:
-            try:
-                self.room.save()
-                logger.info("[SAVE_MESSAGE] Updated participants for room: %s", self.room.name)
-            except ValidationError as ve:
-                logger.error("[SAVE_MESSAGE] Failed to update room participants: %s", ve)
-                raise ve
+            self.room.save()
 
-        msg = Message(room=self.room, sender_email=sender_email, receiver_email=receiver_email, text=message_text)
-        try:
-            msg.save()
-            logger.info("[SAVE_MESSAGE] Saved message in room '%s'", self.room.name)
-        except ValidationError as ve:
-            logger.error("[SAVE_MESSAGE] Failed to save message: %s", ve)
-            raise ve
-
+        msg = Message(room=self.room,
+                      sender_email=sender_email,
+                      receiver_email=receiver_email,
+                      text=message_text)
+        msg.save()
         return msg

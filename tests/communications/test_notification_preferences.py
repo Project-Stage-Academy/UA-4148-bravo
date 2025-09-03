@@ -8,12 +8,13 @@ from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from rest_framework.test import APIClient
 import logging
-
+from django.test.utils import override_settings
 from utils.authenticate_client import authenticate_client
 
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 @ddt.ddt
 class NotificationPreferencesTestCase(APITestCase):
     @classmethod
@@ -167,7 +168,8 @@ class NotificationPreferencesTestCase(APITestCase):
         response = client.get(list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        detail_url = reverse('communications:user-notification-preference-detail', kwargs={'pk': self.user.pk})
+        detail_url = reverse('communications:user-notification-preference-detail',
+                             kwargs={'pk': self.user.pk})
         response = client.get(detail_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 

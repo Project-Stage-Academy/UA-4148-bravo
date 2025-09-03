@@ -37,13 +37,13 @@ Authorization: Bearer <your_access_token>
 
 - `POST /api/v1/auth/jwt/create/`
   Authenticates a user and issues JWT tokens.
-  - Sets both access_token and refresh_token in secure HttpOnly cookies.
-  - Returns only minimal user info in response body (no tokens).
+    - Sets both access_token and refresh_token in secure HttpOnly cookies.
+    - Returns only minimal user info in response body (no tokens).
 
 ### Request Example
 
 - POST /api/v1/auth/jwt/create/
-    Headers:
+  Headers:
     - Content-Type: application/json
     - X-CSRFToken: <csrf_token>
 
@@ -63,6 +63,7 @@ Authorization: Bearer <your_access_token>
   "user_id": 42
 }
 ```
+
 The access_token and refresh_token are stored in HttpOnly cookies and are not returned in the response body.
 
 #### 3. JWT Refresh
@@ -74,8 +75,8 @@ The access_token and refresh_token are stored in HttpOnly cookies and are not re
 ### Request Example
 
 - POST /api/v1/auth/jwt/refresh/
-    Headers:    
-    - Content-Type: application/json    
+  Headers:
+    - Content-Type: application/json
     - X-CSRFToken: <csrf_token>
 
 ### Example Response
@@ -85,6 +86,7 @@ The access_token and refresh_token are stored in HttpOnly cookies and are not re
   "detail": "Token refreshed"
 }
 ```
+
 The new access token is available only in the HttpOnly cookie.
 
 #### 4. JWT Logout
@@ -95,7 +97,7 @@ The new access token is available only in the HttpOnly cookie.
 ### Request Example
 
 - POST /api/v1/auth/logout/
-    Headers:
+  Headers:
     - Content-Type: application/json
     - X-CSRFToken: <csrf_token>
 
@@ -141,6 +143,120 @@ sequenceDiagram
 - `GET /api/profiles/startups/{id}/` — Retrieve details of a specific startup profile
 - `PATCH /api/profiles/startups/{id}/` — Update an existing startup profile
 - `DELETE /api/profiles/startups/{id}/` — Delete a startup profile
+
+### Startup Notification Preferences
+
+All endpoints require authentication and the Startup role. Base path: `/api/v1/startups/`.
+
+- `GET /api/v1/startups/preferences/` — Get the current startup user's notification channel preferences. If preferences do not exist, defaults are created and per-type preferences are seeded for all active notification types.
+- `PATCH /api/v1/startups/preferences/` — Update channel toggles (`enable_in_app`, `enable_email`, `enable_push`). Partial updates supported.
+- `PATCH /api/v1/startups/preferences/update_type/` — Update the frequency for a specific notification type. Payload requires `notification_type_id` (int) and `frequency` (one of `immediate`, `daily_digest`, `weekly_summary`, `disabled`).
+
+#### Example: GET /api/v1/startups/preferences/
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "enable_in_app": true,
+  "enable_email": true,
+  "enable_push": true,
+  "type_preferences": [
+    {
+      "id": 101,
+      "notification_type": { "id": 3, "code": "message_received", "name": "Message Received", "description": "A new message was received", "is_active": true },
+      "frequency": "immediate",
+      "created_at": "2025-08-05T12:00:00Z",
+      "updated_at": "2025-08-05T12:00:00Z"
+    }
+  ],
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-05T12:00:00Z"
+}
+```
+
+#### Example: PATCH /api/v1/startups/preferences/
+
+Request
+
+```json
+{
+  "enable_in_app": true,
+  "enable_email": false,
+  "enable_push": true
+}
+```
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "enable_in_app": true,
+  "enable_email": false,
+  "enable_push": true,
+  "type_preferences": [ /* ... */ ]
+}
+```
+
+#### Example: PATCH /api/v1/startups/preferences/update_type/
+
+Request
+
+```json
+{
+  "notification_type_id": 3,
+  "frequency": "daily_digest"
+}
+```
+
+Response 200
+
+```json
+{
+  "id": 101,
+  "notification_type": { "id": 3, "code": "message_received", "name": "Message Received", "description": "A new message was received", "is_active": true },
+  "frequency": "daily_digest",
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-05T12:05:00Z"
+}
+```
+
+Error responses
+
+- 400 Missing fields
+
+```json
+{
+  "notification_type_id": ["This field is required."],
+  "frequency": ["This field is required."]
+}
+```
+
+- 400 Invalid notification_type_id (non-integer)
+
+```json
+{
+  "notification_type_id": ["A valid integer is required."]
+}
+```
+
+- 400 Invalid frequency value
+
+```json
+{
+  "frequency": ["\"invalid_freq\" is not a valid choice."]
+}
+```
+
+- 404 Notification type preference not found
+
+```json
+{
+  "error": "Notification type preference not found"
+}
+```
 
 ## Investor API
 
@@ -313,7 +429,7 @@ JWT tokens and returns user information.
 
 **Status codes:**
 
-|    Status Code    |                 Description                  |
+| Status Code       | Description                                  |
 |-------------------|----------------------------------------------|
 | `400 Bad Request` | Invalid request parameters or malformed data |
 | `403 Forbidden`   | Authenticated but insufficient permissions   |
@@ -390,8 +506,8 @@ Creation of notifications via public API is disabled.
       "notification_id": "b6b9e6f4-8f5a-4e58-9e7f-2d3b1f7ac111",
       "notification_type": {
         "id": 3,
-        "code": "message_new",
-        "name": "New Message",
+        "code": "message_received",
+        "name": "Message Received",
         "description": "A new message was received",
         "is_active": true
       },
@@ -427,6 +543,94 @@ Creation of notifications via public API is disabled.
 - `POST /notifications/mark_all_as_unread/` → `{ "status": "marked <n> notifications as unread" }`
 - `GET /notifications/{id}/resolve/` → `{ "redirect": { ... } }`
 
+### Email Notification Preferences
+
+These endpoints manage email notification preferences for users:
+
+- `GET /email-preferences/` — Get the current user's email notification preferences.
+- `PATCH /email-preferences/` — Update email notification preferences. Partial updates supported.
+
+#### Example: GET /email-preferences/
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "types_enabled": [
+    {
+      "notification_type": {
+        "id": 1,
+        "code": "message_received", 
+        "name": "Message Received",
+        "description": "A new message was received"
+      },
+      "enabled": true
+    },
+    {
+      "notification_type": {
+        "id": 2,
+        "code": "project_update",
+        "name": "Project Update",
+        "description": "A project was updated"
+      },
+      "enabled": false
+    }
+  ],
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-05T12:00:00Z"
+}
+```
+
+#### Example: PATCH /email-preferences/
+
+Request
+
+```json
+{
+  "types_enabled": [
+    {
+      "notification_type_id": 1,
+      "enabled": false
+    },
+    {
+      "notification_type_id": 2,
+      "enabled": true
+    }
+  ]
+}
+```
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "types_enabled": [
+    {
+      "notification_type": {
+        "id": 1,
+        "code": "message_received", 
+        "name": "Message Received",
+        "description": "A new message was received"
+      },
+      "enabled": false
+    },
+    {
+      "notification_type": {
+        "id": 2,
+        "code": "project_update",
+        "name": "Project Update",
+        "description": "A project was updated"
+      },
+      "enabled": true
+    }
+  ],
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-15T14:30:00Z"
+}
+```
+
 # Company Binding API
 
 ## Overview
@@ -459,5 +663,177 @@ registration. Users can either bind to an existing company or create a new one.
   "message": "Successfully bound to existing startup: Tech Innovations Inc.",
   "company_type": "startup",
   "company_id": 1
+}
+```
+
+## Chat API
+
+### Endpoints
+
+#### 1. Create Private Conversation (Room)
+
+- `POST /api/v1/chat/conversations/`
+  Creates a private Room between exactly 2 participants: one Investor and one Startup.
+
+### Request Example
+
+- POST /api/v1/chat/conversations/
+  Headers:    
+  Content-Type: application/json        
+  Cookie: access_token=<JWT_TOKEN>
+
+```json
+{
+  "name": "investor_startup_chat",
+  "participants": [
+    "investor@example.com",
+    "startup@example.com"
+  ]
+}
+```
+
+### Example Response
+
+```json
+{
+  "name": "investor_startup_chat",
+  "participants": [
+    "investor@example.com",
+    "startup@example.com"
+  ],
+  "created_at": "2025-08-30T09:00:00Z",
+  "updated_at": "2025-08-30T09:00:00Z"
+}
+```
+
+### Error Responses
+
+- 400 Bad Request
+
+```json
+{
+  "error": "Private room must have exactly 2 participants."
+}
+```
+
+- 401 Unauthorized
+
+```json
+{
+  "detail": "Authentication credentials were not provided."
+}
+```
+
+#### 2. Send Message in a Conversation
+
+- `POST /api/v1/chat/messages/`
+  Sends a message inside a private Room.
+  Automatically creates the Room if it does not exist.
+
+### Request Example
+
+- POST /api/v1/chat/messages/
+  Headers:    
+  Content-Type: application/json    
+  Cookie: access_token=<JWT_TOKEN>
+
+```json
+{
+  "room": "investor_startup_chat",
+  "sender_email": "investor@example.com",
+  "receiver_email": "startup@example.com",
+  "text": "Hello!"
+}
+```
+
+### Example Response
+
+```json
+{
+  "room": "investor_startup_chat",
+  "sender_email": "investor@example.com",
+  "receiver_email": "startup@example.com",
+  "text": "Hello!",
+  "timestamp": "2025-08-30T09:00:00Z",
+  "is_read": false
+}
+```
+
+### Error Responses
+
+400 Bad Request – invalid data or room creation failed
+
+```json
+{
+  "error": "Private room must have exactly 2 participants."
+}
+```
+
+403 Forbidden – sender is not a participant of the room
+
+```json
+{
+  "error": "You are not a participant of this room."
+}
+```
+
+500 Internal Server Error – unexpected save error
+
+```json
+{
+  "error": "Failed to save message: <error details>"
+}
+```
+
+#### 3. List Messages in a Conversation
+
+- `GET /api/v1/chat/conversations/{room_name}/messages/`
+  Retrieves all messages from a specific Room.
+  Only participants of the Room can access messages.
+
+### Request Example
+
+- GET /api/v1/chat/conversations/investor_startup_chat/messages/
+  Headers:    
+  Cookie: access_token=<JWT_TOKEN>
+
+### Example Response
+
+```json
+[
+  {
+    "room": "investor_startup_chat",
+    "sender_email": "investor@example.com",
+    "receiver_email": "startup@example.com",
+    "text": "Hello!",
+    "timestamp": "2025-08-30T09:00:00Z",
+    "is_read": false
+  },
+  {
+    "room": "investor_startup_chat",
+    "sender_email": "startup@example.com",
+    "receiver_email": "investor@example.com",
+    "text": "Hi there!",
+    "timestamp": "2025-08-30T09:01:00Z",
+    "is_read": false
+  }
+]
+```
+
+### Error Responses
+
+- 401 Unauthorized
+
+```json
+{
+  "detail": "Authentication credentials were not provided."
+}
+```
+
+- 404 Not Found – room does not exist or user not participant
+
+```json
+{
+  "detail": "Room 'investor_startup_chat' does not exist."
 }
 ```

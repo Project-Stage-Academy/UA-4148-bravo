@@ -1,3 +1,4 @@
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
@@ -8,6 +9,7 @@ from startups.models import Startup
 from utils.authenticate_client import authenticate_client
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class StartupNotificationPreferencesAPITests(APITestCase):
     """Integration tests for startup notification preferences API:
     verifies retrieval, channel toggles, per-type frequency updates, and permissions.

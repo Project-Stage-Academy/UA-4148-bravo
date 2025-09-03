@@ -1,5 +1,6 @@
 from decimal import Decimal
 from ddt import ddt, data, unpack
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework import status
 from common.enums import ProjectStatus
@@ -8,6 +9,7 @@ from tests.test_base_case import BaseAPITestCase
 from rest_framework.test import APIClient
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProjectAPICRUDTests(BaseAPITestCase):
     """
     API CRUD tests for the Project model.
@@ -118,6 +120,7 @@ class ProjectAPICRUDTests(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProjectAPIPermissionTests(BaseAPITestCase):
     """
     Test suite for verifying project-related API permissions.
@@ -207,6 +210,7 @@ class ProjectAPIPermissionTests(BaseAPITestCase):
         self.assertEqual(delete_response.status_code, status.HTTP_403_FORBIDDEN)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 @ddt
 class ProjectAPIValidationTests(BaseAPITestCase):
     """

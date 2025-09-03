@@ -5,8 +5,10 @@ from investors.models import Investor, SavedStartup
 from startups.models import Startup
 from users.models import User, UserRole
 from tests.test_base_case import BaseAPITestCase as BaseInvestorTestCase
+from django.test.utils import override_settings
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class SavedStartupLoggingTests(BaseInvestorTestCase):
     def setUp(self):
         super().setUp()
