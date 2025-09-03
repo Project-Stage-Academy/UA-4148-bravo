@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.test.utils import override_settings
-from communications.models import Notification, NotificationPriority
+from communications.models import Notification, NotificationPriority, NotificationType
 from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from utils.authenticate_client import authenticate_client
@@ -23,8 +23,8 @@ class NotificationsApiTestCase(APITestCase):
         authenticate_client(self.client, self.user)
 
         # Notification types
-        self.type_message = NotificationTypeFactory(code='message_new')
-        self.type_project = NotificationTypeFactory(code='project_update')
+        self.type_message = NotificationType.objects.get(code='message_received')
+        self.type_project = NotificationType.objects.get(code='activity_summarized')
 
         # Some notifications for self.user
         self.n1 = Notification.objects.create(
@@ -71,9 +71,9 @@ class NotificationsApiTestCase(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertTrue(all(not item['is_read'] for item in resp.data['results']))
         # type code filter
-        resp = self.client.get(url, {'type': 'project_update'})
+        resp = self.client.get(url, {'type': 'activity_summarized'})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertTrue(all(item['notification_type']['code'] == 'project_update' for item in resp.data['results']))
+        self.assertTrue(all(item['notification_type']['code'] == 'activity_summarized' for item in resp.data['results']))
         # priority filter
         resp = self.client.get(url, {'priority': 'low'})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)

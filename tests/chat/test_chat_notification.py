@@ -142,7 +142,7 @@ class NotificationE2ETestCase(TransactionTestCase):
                 f"New message from {self.sender.email}"
             )
             self.assertEqual(
-                data["notification"]["notification_id"],
+                notification_data["notification"]["notification_id"],
                 str(notification_fetched.notification_id)
             )
 
