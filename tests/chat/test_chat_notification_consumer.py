@@ -1,6 +1,6 @@
 import os
 import json
-import asyncio
+from asgiref.sync import async_to_sync
 from django.test import TestCase
 from channels.testing import WebsocketCommunicator
 from channels.layers import get_channel_layer
@@ -63,7 +63,7 @@ class NotificationConsumerTestCase(TestCase):
 
     def run_async(self, coro):
         """Helper to run async tests inside Django's TestCase."""
-        return asyncio.run(coro)
+        return async_to_sync(coro)
 
     def test_connect_and_disconnect(self):
         """Test that the consumer can connect and disconnect successfully."""

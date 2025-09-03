@@ -101,7 +101,10 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
         Removes the channel from the room group.
         """
         try:
-            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+            if hasattr(self, "room_group_name"):
+                await self.channel_layer.group_discard(
+                    self.room_group_name, self.channel_name
+                )
             logger.info("[DISCONNECT] Left room: %s", self.room_group_name)
         except Exception as e:
             logger.error("[DISCONNECT] Failed to discard channel: %s", e)
@@ -308,10 +311,10 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         Args:
             close_code (int): WebSocket close code.
         """
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
+        if hasattr(self, "room_group_name"):
+            await self.channel_layer.group_discard(
+                self.room_group_name, self.channel_name
+            )
         logger.info("[NOTIFICATION_WS] User %s disconnected (code=%s)", self.scope["user"].email, close_code)
 
     async def send_notification(self, event: Dict[str, Any]) -> None:

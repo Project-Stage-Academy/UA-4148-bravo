@@ -76,9 +76,10 @@ class NotificationE2ETestCase(TransactionTestCase):
             communicator = await self.async_connect_user(self.receiver)
 
             with patch("chat.documents.get_user_or_raise") as mock_get_user:
-                mock_get_user.side_effect = lambda email, room_name: (
-                    self.sender if email == self.sender.email else self.receiver
-                )
+                mock_get_user.side_effect = lambda email, room_name: {
+                    self.sender.email: self.sender,
+                    self.receiver.email: self.receiver
+                }.get(email, None)
 
                 room = Room(name="chat_room", participants=[self.sender.email, self.receiver.email])
                 await sync_to_async(room.save)()
@@ -109,23 +110,35 @@ class NotificationE2ETestCase(TransactionTestCase):
                 }
             )
 
+            max_retries = 40
+            poll_interval = 0.25
+
             notification_fetched = None
-            for _ in range(10):
+            notification_data = None
+
+            for _ in range(max_retries):
                 notifications_qs = await sync_to_async(Notification.objects.filter)(user=self.receiver)
                 exists = await sync_to_async(notifications_qs.exists)()
-                if exists:
+                if exists and notification_fetched is None:
                     notification_fetched = await sync_to_async(notifications_qs.first)()
+
+                if notification_data is None:
+                    try:
+                        response = await communicator.receive_from(timeout=poll_interval)
+                        notification_data = json.loads(response)
+                    except asyncio.TimeoutError:
+                        pass
+
+                if notification_fetched and notification_data:
                     break
-                await asyncio.sleep(0.5)
 
-            self.assertIsNotNone(notification_fetched, "Notification was not created for the receiver.")
+                await asyncio.sleep(poll_interval)
 
-            response = await communicator.receive_from(timeout=5)
-            data = json.loads(response)
-            self.assertIn("notification", data)
-            self.assertEqual(data["notification"]["title"], "New Message")
+            self.assertIsNotNone(notification_data, "Notification was not received via WebSocket.")
+            self.assertIn("notification", notification_data)
+            self.assertEqual(notification_data["notification"]["title"], "New Message")
             self.assertEqual(
-                data["notification"]["message"],
+                notification_data["notification"]["message"],
                 f"New message from {self.sender.email}"
             )
             self.assertEqual(

@@ -71,7 +71,6 @@ services:
 
   celery:
     build: .
-    entrypoint: [ ]
     command: celery -A core worker -l info --concurrency=4 --prefetch-multiplier=1 --with-prometheus -f /app/logs/celery/worker.log
     volumes:
       - .:/app

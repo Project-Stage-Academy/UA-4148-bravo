@@ -16,13 +16,14 @@ def send_notification_task(user_id, notification_data):
     """
     try:
         channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"notifications_{user_id}",
-            {
-                "type": "send_notification",
-                "notification": notification_data,
-            }
-        )
-        logger.info("Notification sent to user %s", user_id)
+        if channel_layer is not None:
+            async_to_sync(channel_layer.group_send)(
+                f"notifications_{user_id}",
+                {
+                    "type": "send_notification",
+                    "notification": notification_data,
+                }
+            )
+            logger.info("Notification sent to user %s", user_id)
     except Exception as e:
         logger.error("Failed to send notification to user %s: %s", user_id, e)
