@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from mongoengine import ValidationError, DoesNotExist
@@ -268,3 +268,63 @@ class InvestorStartupMessageConsumer(AsyncWebsocketConsumer):
                       text=message_text)
         msg.save()
         return msg
+
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer for sending real-time notifications to authenticated users.
+
+    Each user has their own notification group identified by their user ID.
+    """
+
+    async def connect(self) -> None:
+        """
+        Called when a WebSocket connection is opened.
+
+        Joins the user's notification group and accepts the connection.
+        """
+        user = self.scope["user"]
+
+        if not user.is_authenticated:
+            logger.warning("[NOTIFICATION_WS] Unauthorized connection attempt")
+            await self.close()
+            return
+
+        self.room_group_name: str = f'notifications_{user.id}'
+
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        await self.accept()
+        logger.info("[NOTIFICATION_WS] User %s connected to %s", user.email, self.room_group_name)
+
+    async def disconnect(self, close_code: int) -> None:
+        """
+        Called when the WebSocket connection is closed.
+
+        Leaves the user's notification group.
+
+        Args:
+            close_code (int): WebSocket close code.
+        """
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        logger.info("[NOTIFICATION_WS] User %s disconnected (code=%s)", self.scope["user"].email, close_code)
+
+    async def send_notification(self, event: Dict[str, Any]) -> None:
+        """
+        Receive a notification event from the channel layer and send it to the WebSocket.
+
+        Args:
+            event (dict): Event data containing the 'notification' key.
+        """
+        notification: Dict[str, Any] = event["notification"]
+
+        await self.send(text_data=json.dumps({
+            'notification': notification
+        }))
+        logger.debug("[NOTIFICATION_WS] Sent notification to %s | data=%s",
+                     self.scope["user"].email, notification)
