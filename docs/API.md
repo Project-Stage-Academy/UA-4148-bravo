@@ -144,6 +144,120 @@ sequenceDiagram
 - `PATCH /api/profiles/startups/{id}/` — Update an existing startup profile
 - `DELETE /api/profiles/startups/{id}/` — Delete a startup profile
 
+### Startup Notification Preferences
+
+All endpoints require authentication and the Startup role. Base path: `/api/v1/startups/`.
+
+- `GET /api/v1/startups/preferences/` — Get the current startup user's notification channel preferences. If preferences do not exist, defaults are created and per-type preferences are seeded for all active notification types.
+- `PATCH /api/v1/startups/preferences/` — Update channel toggles (`enable_in_app`, `enable_email`, `enable_push`). Partial updates supported.
+- `PATCH /api/v1/startups/preferences/update_type/` — Update the frequency for a specific notification type. Payload requires `notification_type_id` (int) and `frequency` (one of `immediate`, `daily_digest`, `weekly_summary`, `disabled`).
+
+#### Example: GET /api/v1/startups/preferences/
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "enable_in_app": true,
+  "enable_email": true,
+  "enable_push": true,
+  "type_preferences": [
+    {
+      "id": 101,
+      "notification_type": { "id": 3, "code": "message_received", "name": "Message Received", "description": "A new message was received", "is_active": true },
+      "frequency": "immediate",
+      "created_at": "2025-08-05T12:00:00Z",
+      "updated_at": "2025-08-05T12:00:00Z"
+    }
+  ],
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-05T12:00:00Z"
+}
+```
+
+#### Example: PATCH /api/v1/startups/preferences/
+
+Request
+
+```json
+{
+  "enable_in_app": true,
+  "enable_email": false,
+  "enable_push": true
+}
+```
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "enable_in_app": true,
+  "enable_email": false,
+  "enable_push": true,
+  "type_preferences": [ /* ... */ ]
+}
+```
+
+#### Example: PATCH /api/v1/startups/preferences/update_type/
+
+Request
+
+```json
+{
+  "notification_type_id": 3,
+  "frequency": "daily_digest"
+}
+```
+
+Response 200
+
+```json
+{
+  "id": 101,
+  "notification_type": { "id": 3, "code": "message_received", "name": "Message Received", "description": "A new message was received", "is_active": true },
+  "frequency": "daily_digest",
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-05T12:05:00Z"
+}
+```
+
+Error responses
+
+- 400 Missing fields
+
+```json
+{
+  "notification_type_id": ["This field is required."],
+  "frequency": ["This field is required."]
+}
+```
+
+- 400 Invalid notification_type_id (non-integer)
+
+```json
+{
+  "notification_type_id": ["A valid integer is required."]
+}
+```
+
+- 400 Invalid frequency value
+
+```json
+{
+  "frequency": ["\"invalid_freq\" is not a valid choice."]
+}
+```
+
+- 404 Notification type preference not found
+
+```json
+{
+  "error": "Notification type preference not found"
+}
+```
+
 ## Investor API
 
 ### Endpoints
@@ -392,8 +506,8 @@ Creation of notifications via public API is disabled.
       "notification_id": "b6b9e6f4-8f5a-4e58-9e7f-2d3b1f7ac111",
       "notification_type": {
         "id": 3,
-        "code": "message_new",
-        "name": "New Message",
+        "code": "message_received",
+        "name": "Message Received",
         "description": "A new message was received",
         "is_active": true
       },
@@ -428,6 +542,94 @@ Creation of notifications via public API is disabled.
 - `POST /notifications/mark_all_as_read/` → `{ "status": "marked <n> notifications as read" }`
 - `POST /notifications/mark_all_as_unread/` → `{ "status": "marked <n> notifications as unread" }`
 - `GET /notifications/{id}/resolve/` → `{ "redirect": { ... } }`
+
+### Email Notification Preferences
+
+These endpoints manage email notification preferences for users:
+
+- `GET /email-preferences/` — Get the current user's email notification preferences.
+- `PATCH /email-preferences/` — Update email notification preferences. Partial updates supported.
+
+#### Example: GET /email-preferences/
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "types_enabled": [
+    {
+      "notification_type": {
+        "id": 1,
+        "code": "message_received", 
+        "name": "Message Received",
+        "description": "A new message was received"
+      },
+      "enabled": true
+    },
+    {
+      "notification_type": {
+        "id": 2,
+        "code": "project_update",
+        "name": "Project Update",
+        "description": "A project was updated"
+      },
+      "enabled": false
+    }
+  ],
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-05T12:00:00Z"
+}
+```
+
+#### Example: PATCH /email-preferences/
+
+Request
+
+```json
+{
+  "types_enabled": [
+    {
+      "notification_type_id": 1,
+      "enabled": false
+    },
+    {
+      "notification_type_id": 2,
+      "enabled": true
+    }
+  ]
+}
+```
+
+Response 200
+
+```json
+{
+  "user_id": 12,
+  "types_enabled": [
+    {
+      "notification_type": {
+        "id": 1,
+        "code": "message_received", 
+        "name": "Message Received",
+        "description": "A new message was received"
+      },
+      "enabled": false
+    },
+    {
+      "notification_type": {
+        "id": 2,
+        "code": "project_update",
+        "name": "Project Update",
+        "description": "A project was updated"
+      },
+      "enabled": true
+    }
+  ],
+  "created_at": "2025-08-05T12:00:00Z",
+  "updated_at": "2025-08-15T14:30:00Z"
+}
+```
 
 # Company Binding API
 
