@@ -187,19 +187,19 @@ class ProjectElasticsearchTests(BaseElasticsearchAPITestCase):
     def test_update_project_startup_id_forbidden(self):
         """
         Attempt to update the startup_id of an existing project.
-        Expects either an error response (HTTP 400 or 403) or that the field remains unchanged on HTTP 200.
+        Expects HTTP 403 Forbidden because a project's startup should not be changeable.
         """
         project = self.project1
-        url = reverse('project-detail', args=[project.pk])
+        url = reverse('project-detail', args=[project.pk]) + 'update/'
+        
         new_startup_id = self.startup2.id
-        data = {'startup_id': new_startup_id}
-        response = self.client.patch(url, data, format='json')
+        data = {'startup_id': new_startup_id, 'title': 'New title'}
 
-        self.assertIn(response.status_code,
-                      [status.HTTP_400_BAD_REQUEST, status.HTTP_403_FORBIDDEN, status.HTTP_200_OK])
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        if response.status_code == status.HTTP_200_OK:
-            self.assertEqual(response.data['startup_id'], project.startup_id)
+        project.refresh_from_db()
+        self.assertEqual(project.startup.id, self.startup1.id)
 
     def test_delete_nonexistent_project_returns_404(self):
         """

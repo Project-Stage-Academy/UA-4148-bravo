@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.db import models
+from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 
@@ -103,6 +104,10 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    technologies_used = models.CharField(max_length=255, blank=True, default="", help_text="Technologies used in the project, comma-separated")
+    milestones = models.JSONField(default=dict, blank=True, help_text="Project milestones or roadmap")
+
+
     def clean(self):
         """
         Validates the Project instance.
@@ -144,3 +149,20 @@ class Project(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['title', 'startup'], name='unique_startup_project_title')
         ]
+class ProjectHistory(models.Model):
+    """
+    Stores a history of changes for the Project model.
+    """
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='history')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    changed_fields = models.JSONField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "project_history"
+        ordering = ['-timestamp']
+        verbose_name = "Project History"
+        verbose_name_plural = "Project Histories"
+
+    def __str__(self):
+        return f"History for {self.project.title} at {self.timestamp}"
