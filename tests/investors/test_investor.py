@@ -28,7 +28,7 @@ class InvestorAPITestCase(APITestCase):
         User = get_user_model()
         self.user = User.objects.create_user(email="test@test.com", password="password123")
 
-        self.industry = Industry.objects.create(name="Tech")
+        self.industry = Industry.objects.create(name="Fintech")
 
         self.location = Location.objects.create(
             country="PL", 
