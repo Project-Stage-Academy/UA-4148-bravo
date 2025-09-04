@@ -13,8 +13,6 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django.utils import timezone
-from datetime import timedelta
 
 # Local application imports
 from users.models import User
