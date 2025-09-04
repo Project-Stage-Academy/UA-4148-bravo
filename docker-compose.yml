@@ -22,6 +22,7 @@ services:
     
   fastapi:
     build: .
+    restart: unless-stopped
     command: uvicorn core.asgi:application --host 0.0.0.0 --port 8001 --reload
     ports:
       - "8001:8001"
@@ -70,17 +71,52 @@ services:
 
   celery:
     build: .
-    entrypoint: []
-    command: celery -A core worker -l info
+    command: celery -A core worker -l info --concurrency=4 --prefetch-multiplier=1 --with-prometheus -f /app/logs/celery/worker.log
     volumes:
       - .:/app
+      - ./logs/celery:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - forum
+    healthcheck:
+      test: [ "CMD-SHELL", "celery -A core status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  celery-beat:
+    build: .
+    command: celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler -f /app/logs/celery/beat.log
+    volumes:
+      - .:/app
+      - ./logs/celery:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - forum
+
+  flower:
+    image: mher/flower
+    container_name: flower
+    command: flower --broker=redis://redis:6379/0 --port=5555
+    ports:
+      - "5555:5555"
     depends_on:
       - redis
-      - db
-    env_file:
-      - .env  
     networks:
-      - forum    
+      - forum
+
   db:
     image: postgres:14
     container_name: db
@@ -130,6 +166,8 @@ services:
       db:
         condition: service_healthy
       elasticsearch:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - .:/app
