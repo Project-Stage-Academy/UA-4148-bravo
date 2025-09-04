@@ -60,18 +60,13 @@ INSTALLED_APPS = [
     'django_elasticsearch_dsl',
 
     # OAuth
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.github',
+    'social_django',
 ]
 
 SITE_ID = 1
 AUTH_USER_MODEL = 'users.User'
 
 MIDDLEWARE = [
-    "allauth.account.middleware.AccountMiddleware",  # OAuth
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
