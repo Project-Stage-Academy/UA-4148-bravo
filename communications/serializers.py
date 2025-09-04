@@ -7,6 +7,8 @@ from .models import (
     NotificationType,
     UserNotificationTypePreference,
     NotificationTrigger,
+    EmailNotificationPreference,
+    EmailNotificationTypePreference,
 )
 from investors.models import Investor
 
@@ -140,6 +142,149 @@ class UpdateTypePreferenceSerializer(serializers.Serializer):
         type_pref.frequency = self.validated_data['frequency']
         type_pref.save()
         return type_pref
+
+class EmailNotificationTypePreferenceSerializer(serializers.ModelSerializer):
+    """
+    Serializer for email notification type preferences.
+    """
+    notification_type = NotificationTypeSerializer(read_only=True)
+    notification_type_id = serializers.PrimaryKeyRelatedField(
+        source='notification_type',
+        write_only=True,
+        queryset=NotificationType.objects.all()
+    )
+    
+    class Meta:
+        model = EmailNotificationTypePreference
+        fields = [
+            'id', 'notification_type', 'notification_type_id',
+            'enabled', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'notification_type', 'created_at', 'updated_at']
+    
+    def validate(self, attrs):
+        """Validate the notification type exists."""
+        request = self.context.get('request')
+        if not request or not hasattr(request, 'user') or not request.user.is_authenticated:
+            raise serializers.ValidationError('Authentication required')
+            
+        return attrs
+
+
+class UpdateEmailTypePreferenceSerializer(serializers.Serializer):
+    """
+    Serializer to validate and apply email notification type preference updates.
+    """
+    notification_type_id = serializers.IntegerField()
+    enabled = serializers.BooleanField()
+
+    def validate(self, attrs):
+        email_pref = self.context.get('email_pref')
+        if email_pref is None:
+            raise serializers.ValidationError('Email preference context is required')
+        
+        nt_id = attrs.get('notification_type_id')
+        
+        # Try to get the existing type preference
+        try:
+            type_pref = email_pref.types_enabled.get(notification_type_id=nt_id)
+            attrs['type_pref'] = type_pref
+        except EmailNotificationTypePreference.DoesNotExist:
+            # Verify the notification type exists
+            try:
+                notification_type = NotificationType.objects.get(id=nt_id)
+                attrs['notification_type'] = notification_type
+            except NotificationType.DoesNotExist:
+                raise serializers.ValidationError({
+                    'notification_type_id': f'Notification type with id {nt_id} does not exist'
+                })
+        
+        return attrs
+
+    def save(self, **kwargs):
+        if 'type_pref' in self.validated_data:
+            # Update existing preference
+            type_pref = self.validated_data['type_pref']
+            type_pref.enabled = self.validated_data['enabled']
+            type_pref.save()
+            return type_pref
+        else:
+            # Create new preference
+            email_pref = self.context.get('email_pref')
+            return EmailNotificationTypePreference.objects.create(
+                email_preference=email_pref,
+                notification_type=self.validated_data['notification_type'],
+                enabled=self.validated_data['enabled']
+            )
+
+
+class EmailNotificationPreferenceSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the EmailNotificationPreference model.
+    Used to manage a user's email notification preferences.
+    """
+    user_id = serializers.PrimaryKeyRelatedField(source='user', read_only=True)
+    types_enabled = EmailNotificationTypePreferenceSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = EmailNotificationPreference
+        fields = ['user_id', 'types_enabled', 'created_at', 'updated_at']
+        read_only_fields = ['user_id', 'created_at', 'updated_at']
+    
+    def update(self, instance, validated_data):
+        """
+        Update email notification type preferences.
+        """
+        types_enabled_data = self.context.get('request').data.get('types_enabled', [])
+        if types_enabled_data and isinstance(types_enabled_data, list):
+            errors = []
+            for i, type_data in enumerate(types_enabled_data):
+                serializer = UpdateEmailTypePreferenceSerializer(
+                    data=type_data, context={'email_pref': instance}
+                )
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    errors.append(serializer.errors)
+            
+            if errors:
+                raise serializers.ValidationError({'types_enabled': errors})
+        
+        return instance
+
+
+class UserEmailNotificationPreferenceSerializer(serializers.ModelSerializer):
+    """
+    Serializer for email-specific notification preferences.
+    Provides a focused view of notification preferences specifically for email channel.
+    """
+    type_preferences = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserNotificationPreference
+        fields = [
+            'user_id', 'enable_email', 'type_preferences', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['user_id', 'created_at', 'updated_at']
+    
+    def get_type_preferences(self, obj):
+        """
+        Return notification type preferences for email.
+        This represents email notification type preferences.
+        """
+        type_prefs = obj.type_preferences.all()
+        serializer = UserNotificationTypePreferenceSerializer(
+            type_prefs, many=True, context=self.context
+        )
+        return serializer.data
+    
+    def update(self, instance, validated_data):
+        """Update email notification preference fields."""
+        if 'enable_email' in validated_data:
+            instance.enable_email = validated_data['enable_email']
+            instance.save(update_fields=['enable_email', 'updated_at'])
+        return instance
+
 
 class NotificationSerializer(serializers.ModelSerializer):
     """Serializer for notifications."""

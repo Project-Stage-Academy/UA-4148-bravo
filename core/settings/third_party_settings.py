@@ -150,6 +150,10 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 SECURE_SSL_REDIRECT = True
 
+# Avoid HTTPS redirects during test runs (prevents 301 in API tests)
+if 'test' in sys.argv:
+    SECURE_SSL_REDIRECT = False
+
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
