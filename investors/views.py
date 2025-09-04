@@ -303,54 +303,54 @@ class SaveStartupView(CookieJWTProtectedView):
                 return Response(SavedStartupSerializer(obj).data, status=status.HTTP_200_OK)
             raise
 
-    class InvestorListView(generics.ListAPIView):
-        """
-        Returns a list of all investors with filtering support.
-        Only authenticated users can access.
-        """
-        serializer_class = InvestorListSerializer
-        permission_classes = [permissions.IsAuthenticated]
+class InvestorListView(generics.ListAPIView):
+    """
+    Returns a list of all investors with filtering support.
+    Only authenticated users can access.
+    """
+    serializer_class = InvestorListSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-        def get_queryset(self):
-            queryset = Investor.objects.all()
-            params = self.request.query_params
-
-            # --- Filters ---
-            industry = params.get("industry")
-            stage = params.get("stage")
-            min_team_size = params.get("min_team_size")
-            max_team_size = params.get("max_team_size")
-            min_fund_size = params.get("min_fund_size")
-            max_fund_size = params.get("max_fund_size")
-
-            if industry:
-                queryset = queryset.filter(industry__name__icontains=industry)
-            if stage:
-                queryset = queryset.filter(stage=stage)
-            if min_team_size:
-                queryset = queryset.filter(team_size__gte=min_team_size)
-            if max_team_size:
-                queryset = queryset.filter(team_size__lte=max_team_size)
-            if min_fund_size:
-                queryset = queryset.filter(fund_size__gte=min_fund_size)
-            if max_fund_size:
-                queryset = queryset.filter(fund_size__lte=max_fund_size)
-
-            # --- Sorting ---
-            ordering = params.get("ordering")  # etc.: ?ordering=fund_size or ?ordering=-team_size
-            if ordering:
-                queryset = queryset.order_by(ordering)
-            else:
-                queryset = queryset.order_by("company_name")
-
-            return queryset
-
-
-    class InvestorDetailView(generics.RetrieveAPIView):
-        """
-        Returns a single investor profile.
-        Only authenticated users can access.
-        """
+    def get_queryset(self):
         queryset = Investor.objects.all()
-        serializer_class = InvestorSerializer
-        permission_classes = [permissions.IsAuthenticated]
+        params = self.request.query_params
+
+        # --- Filters ---
+        industry = params.get("industry")
+        stage = params.get("stage")
+        min_team_size = params.get("min_team_size")
+        max_team_size = params.get("max_team_size")
+        min_fund_size = params.get("min_fund_size")
+        max_fund_size = params.get("max_fund_size")
+
+        if industry:
+            queryset = queryset.filter(industry__name__icontains=industry)
+        if stage:
+            queryset = queryset.filter(stage=stage)
+        if min_team_size:
+            queryset = queryset.filter(team_size__gte=min_team_size)
+        if max_team_size:
+            queryset = queryset.filter(team_size__lte=max_team_size)
+        if min_fund_size:
+            queryset = queryset.filter(fund_size__gte=min_fund_size)
+        if max_fund_size:
+            queryset = queryset.filter(fund_size__lte=max_fund_size)
+
+        # --- Sorting ---
+        ordering = params.get("ordering")  # etc.: ?ordering=fund_size or ?ordering=-team_size
+        if ordering:
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by("company_name")
+
+        return queryset
+
+
+class InvestorDetailView(generics.RetrieveAPIView):
+    """
+    Returns a single investor profile.
+    Only authenticated users can access.
+    """
+    queryset = Investor.objects.all()
+    serializer_class = InvestorSerializer
+    permission_classes = [permissions.IsAuthenticated]
