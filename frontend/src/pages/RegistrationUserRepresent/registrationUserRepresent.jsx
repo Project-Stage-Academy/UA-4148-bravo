@@ -39,9 +39,8 @@ function RegistrationUserRepresent() {
 
     // Function to handle server-side errors
     const extractError = (error) => {
-        // TODO
-        if (error.response.status === 401) {
-            return { email: Validator.serverSideErrorMessages.companyAlreadyExist };
+        if (error.response.status === 400) {
+            return { email: Validator.serverSideErrorMessages.userAlreadyBound };
         } else {
             return { unexpected: Validator.serverSideErrorMessages.unexpected };
         }
@@ -49,7 +48,6 @@ function RegistrationUserRepresent() {
 
     // Function to handle form submission with brute force protection
     const doSubmit = ({ form, handleError }) => {
-        // TODO
         bindCompanyToUser(form.data.companyName, form.data.representation.company ? 'investor' : 'startup')
             .then(() => {
                 navigate('/auth/register/completed');

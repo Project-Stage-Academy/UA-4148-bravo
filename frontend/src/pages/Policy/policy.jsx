@@ -29,13 +29,11 @@ function Policy() {
             return (
                 <ul
                     key={index}
-                    role="list"
                     aria-label={`Список у пункті ${paraIndex + 1}`}
                 >
                     {textBlock.items.map((item, i) => (
                         <li
                             key={i}
-                            role="listitem"
                             aria-label={`Елемент ${paraIndex + 1}.${index + 1}.${i + 1}`.trim()}
                         >
                             {item}
