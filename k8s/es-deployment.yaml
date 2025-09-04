@@ -22,18 +22,48 @@ spec:
             - name: discovery.type
               value: single-node
             - name: xpack.security.enabled
-              value: "false"
+              value: "true"
+            - name: ELASTIC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: es-secrets
+                  key: ELASTIC_USERNAME
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: es-secrets
+                  key: ELASTIC_PASSWORD
             - name: ES_JAVA_OPTS
               value: "-Xms512m -Xmx512m"
           ports:
             - containerPort: 9200
             - containerPort: 9300
+
           readinessProbe:
             httpGet:
-              path: /_cluster/health?wait_for_status=yellow
+              path: /
               port: 9200
-            initialDelaySeconds: 20
+            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9200
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          startupProbe:
+            httpGet:
+              path: /
+              port: 9200
+            failureThreshold: 30
+            periodSeconds: 10
+
           resources:
             requests:
               cpu: "200m"
@@ -41,3 +71,14 @@ spec:
             limits:
               cpu: "1"
               memory: "2Gi"
+
+          volumeMounts:
+            - name: es-data
+              mountPath: /usr/share/elasticsearch/data
+
+      volumes:
+        - name: es-data
+          persistentVolumeClaim:
+            claimName: es-pvc
+
+

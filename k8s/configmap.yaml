@@ -6,7 +6,7 @@ metadata:
 data:
   # Django
   DJANGO_SETTINGS_MODULE: "core.settings.production"
-  DEBUG: "True"
+  DEBUG: "False"
   DOCS_ENABLED: "True"
   ALLOWED_HOSTS: "127.0.0.1,localhost,forum.local"
 
@@ -21,7 +21,7 @@ data:
   REDIS_PORT: "6379"
 
   # Elasticsearch
-  ELASTICSEARCH_HOST: "http://es-service:9200"
+  ELASTICSEARCH_HOST: "http://elasticsearch:9200"
 
   # Locale
   LANGUAGE_CODE: "en-us"
@@ -29,6 +29,7 @@ data:
 
   # Frontend URL
   FRONTEND_URL: "http://localhost:3000"
+
 
 
 
