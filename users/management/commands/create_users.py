@@ -2,10 +2,18 @@ import logging
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from users.models import UserRole
+import os
+import secrets
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+DEFAULT_PASSWORDS = {
+    "admin": os.getenv("ADMIN_PASSWORD", secrets.token_urlsafe(12)),
+    "moderator": os.getenv("MODERATOR_PASSWORD", secrets.token_urlsafe(12)),
+    "user1": os.getenv("USER1_PASSWORD", secrets.token_urlsafe(12)),
+    "user2": os.getenv("USER2_PASSWORD", secrets.token_urlsafe(12)),
+}
 
 class Command(BaseCommand):
     help = "Create default users with predefined roles (idempotent)."
@@ -27,7 +35,7 @@ class Command(BaseCommand):
                 "email": "admin@example.com",
                 "first_name": "Admin",
                 "last_name": "User",
-                "password": "admin1234",
+                "password": DEFAULT_PASSWORDS["admin"],
                 "role": roles["admin"],
                 "is_active": True,
                 "is_staff": True,
@@ -37,7 +45,7 @@ class Command(BaseCommand):
                 "email": "mod@example.com",
                 "first_name": "Moderator",
                 "last_name": "User",
-                "password": "mod1234",
+                "password": DEFAULT_PASSWORDS["moderator"],
                 "role": roles["moderator"],
                 "is_active": True,
                 "is_staff": False,
@@ -47,7 +55,7 @@ class Command(BaseCommand):
                 "email": "user1@example.com",
                 "first_name": "User1",
                 "last_name": "Test",
-                "password": "user1234",
+                "password": DEFAULT_PASSWORDS["user1"],
                 "role": roles["user"],
                 "is_active": True,
                 "is_staff": False,
@@ -57,7 +65,7 @@ class Command(BaseCommand):
                 "email": "user2@example.com",
                 "first_name": "User2",
                 "last_name": "Test",
-                "password": "user1234",
+                "password": DEFAULT_PASSWORDS["user2"],
                 "role": roles["user"],
                 "is_active": True,
                 "is_staff": False,
@@ -84,4 +92,4 @@ class Command(BaseCommand):
             user.save()
 
             self.stdout.write(self.style.SUCCESS(f"User {udata['email']} created successfully."))
-            logger.info(f"User {udata['email']} created")
+            logger.info(f"User {user.id} created")
