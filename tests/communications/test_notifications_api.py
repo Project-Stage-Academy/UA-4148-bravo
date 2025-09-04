@@ -6,7 +6,6 @@ from django.utils import timezone
 from django.test.utils import override_settings
 from communications.models import Notification, NotificationPriority, NotificationType
 from tests.factories import UserFactory
-from tests.communications.factories import NotificationTypeFactory
 from utils.authenticate_client import authenticate_client
 
 User = get_user_model()

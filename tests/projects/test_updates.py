@@ -1,9 +1,11 @@
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from tests.test_base_case import BaseAPITestCase
 from projects.models import ProjectHistory
 from communications.models import Notification
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProjectUpdateAPITests(BaseAPITestCase):
 
     def setUp(self):
