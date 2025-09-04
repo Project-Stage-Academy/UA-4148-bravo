@@ -21,6 +21,7 @@ User = get_user_model()
     CELERY_TASK_EAGER_PROPAGATES=True,
     CELERY_BROKER_URL="memory://",
     CELERY_RESULT_BACKEND="cache+memory://",
+    SECURE_SSL_REDIRECT=False
 )
 class TestSubscriptionPermissions403Policy(TestCase):
     """

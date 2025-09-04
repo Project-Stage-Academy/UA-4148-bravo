@@ -6,7 +6,6 @@ from django.utils import timezone
 from django.test.utils import override_settings
 from communications.models import Notification, NotificationPriority, NotificationType
 from tests.factories import UserFactory
-from tests.communications.factories import NotificationTypeFactory
 from utils.authenticate_client import authenticate_client
 
 User = get_user_model()
@@ -148,7 +147,7 @@ class NotificationsApiTestCase(APITestCase):
         self.assertIn('redirect', resp.data)
         redirect = resp.data['redirect']
         self.assertEqual(redirect.get('kind'), 'message')
-        self.assertEqual(redirect.get('id'), 99)
+        self.assertEqual(redirect.get('id'), '99')
 
     def test_delete_notification(self):
         url = reverse('communications:notification-detail',
