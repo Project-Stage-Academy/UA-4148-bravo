@@ -88,18 +88,26 @@ class SearchTests(APITestCase):
         for m in ("query", "filter", "source", "extra"):
             getattr(search_obj, m).return_value = search_obj
 
-        search_obj.__getitem__.return_value = search_obj
+        def _getitem(key):
+            if isinstance(key, slice):
+                return search_obj
+            return hits[key]
+        search_obj.__getitem__.side_effect = _getitem
 
-        search_obj.__iter__ = lambda s: iter(hits)
+        search_obj.__iter__.return_value = iter(hits)
+        search_obj.__len__.return_value = len(hits)
+        search_obj.__bool__.return_value = bool(hits)
 
-        mock_resp = mock.Mock()
-        mock_resp.__iter__ = lambda s: iter(hits)
+        mock_resp = mock.MagicMock()
+        mock_resp.__iter__.return_value = iter(hits)
+        mock_resp.hits = hits
         search_obj.execute.return_value = mock_resp
 
         if qs is not None:
             search_obj.to_queryset.return_value = qs
 
     def test_startup_search_mocked(self):
+        self.client.force_authenticate(user=self.user)
         with mock.patch.object(sv.StartupDocument, "search") as search_fn:
             search_obj = search_fn.return_value
             hit = self._make_hit(self.startup.id)
@@ -107,13 +115,15 @@ class SearchTests(APITestCase):
             self._chainable_search(search_obj, [hit], qs=qs)
 
             url = reverse("startup-search")
-            resp = self.client.get(url, {"q": "health"}) 
+            query = "health"
+            resp = self.client.get(url, {"q": query})
             self.assertTrue(search_fn.called, "StartupDocument.search() was not called (wrong patch target?)")
             self.assertEqual(resp.status_code, 200, resp.data)
             self.assertEqual(len(resp.data), 1, resp.data)
             self.assertEqual(resp.data[0]["company_name"], "Test Startup")
 
     def test_project_search_mocked(self):
+        self.client.force_authenticate(user=self.user)
         with mock.patch.object(sv.ProjectDocument, "search") as search_fn:
             search_obj = search_fn.return_value
             hit = self._make_hit(self.project.id)
@@ -121,7 +131,8 @@ class SearchTests(APITestCase):
             self._chainable_search(search_obj, [hit], qs=qs)
 
             url = reverse("project-search")
-            resp = self.client.get(url, {"q": "health"})
+            query = "health"
+            resp = self.client.get(url, {"q": query})
             self.assertTrue(search_fn.called, "ProjectDocument.search() was not called (wrong patch target?)")
             self.assertEqual(resp.status_code, 200, resp.data)
             self.assertEqual(len(resp.data), 1, resp.data)
