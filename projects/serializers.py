@@ -92,7 +92,7 @@ class ProjectWriteSerializer(serializers.ModelSerializer):
             'media_files', 'status', 'duration',
             'funding_goal', 'current_funding', 'category_id', 'website',
             'email', 'has_patents', 'is_participant', 'is_active',
-            'created_at', 'updated_at'
+            'created_at', 'updated_at', 'technologies_used', 'milestones'
         ]
         read_only_fields = ('startup_id',)
 
