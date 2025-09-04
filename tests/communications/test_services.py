@@ -5,7 +5,13 @@ from communications.services import (
     should_send_email_notification,
     get_or_create_email_pref,
 )
-from communications.models import NotificationType, UserNotificationPreference, NotificationFrequency, EmailNotificationPreference
+from communications.models import (
+    Notification,
+    NotificationType, 
+    UserNotificationPreference, 
+    NotificationFrequency, 
+    EmailNotificationPreference,
+)
 from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 
@@ -13,7 +19,10 @@ class NotificationServicesTests(TestCase):
     """Unit tests for notification service functions."""
 
     def setUp(self):
+        NotificationType.objects.all().delete()
         self.user = UserFactory()
+        UserNotificationPreference.objects.filter(user=self.user).delete()
+        
         self.nt_immediate = NotificationTypeFactory(code="immediate_type", default_frequency=NotificationFrequency.IMMEDIATE)
         self.nt_disabled = NotificationTypeFactory(code="disabled_type", default_frequency=NotificationFrequency.DISABLED)
 
