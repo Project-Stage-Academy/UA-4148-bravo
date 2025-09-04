@@ -67,6 +67,13 @@ COMMUNICATIONS_NOTIFICATION_TYPES = [
         'default_frequency': 'weekly_summary',
         'is_active': True,
     },
+    {
+        'code': 'project_updated',
+        'name': 'Project Updated',
+        'description': 'Notification when a project you are subscribed to is updated',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
 ]
 
 # Chat words settings

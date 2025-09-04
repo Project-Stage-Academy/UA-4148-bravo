@@ -1,5 +1,6 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from elasticsearch.exceptions import ConnectionError, TransportError
@@ -15,13 +16,12 @@ from django_elasticsearch_dsl_drf.filter_backends import (
 
 from users.cookie_jwt import CookieJWTAuthentication
 from users.permissions import IsAuthenticatedOr401
-from .documents import ProjectDocument
-from .permissions import IsOwnerOrReadOnly
-from .serializers import ProjectDocumentSerializer, ProjectReadSerializer, ProjectWriteSerializer
+from projects.documents import ProjectDocument
+from projects.permissions import IsOwnerOrReadOnly
+from projects.serializers import ProjectDocumentSerializer, ProjectReadSerializer, ProjectWriteSerializer
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
@@ -59,26 +59,45 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         - For read actions (`list`, `retrieve`), use `ProjectReadSerializer`
           to include detailed, read-only fields.
-        - For write actions (`create`, `update`, `partial_update`, `destroy`),
-          use `ProjectWriteSerializer` to handle validation and input data.
+        - For write actions (`create`), use `ProjectWriteSerializer` to handle validation and input data.
+        - For the `update_project` action, we'll use `ProjectReadSerializer` for the response.
         """
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'update_project']:
             return ProjectReadSerializer
         return ProjectWriteSerializer
     
     def perform_update(self, serializer):
+        """
+        Updates the project instance and sets the last editor.
+        """
         serializer.instance._last_editor = self.request.user
         serializer.save()
 
-    def partial_update(self, request, *args, **kwargs):
+    @action(detail=True, methods=['post'], url_path='update')
+    def update_project(self, request, pk=None):
         """
-        Handle PATCH requests for partially updating a project.
+        Custom action to handle project updates via a POST request.
+        The URL will be /api/v1/projects/{pk}/update/
         """
-        if 'startup' in request.data or 'startup_id' in request.data:
+        project = self.get_object()
+        self.check_object_permissions(request, project)
+
+        if 'startup_id' in request.data:
             return Response(
                 {"detail": "Cannot change the startup of a project."},
                 status=status.HTTP_403_FORBIDDEN
             )
+            
+        serializer = ProjectWriteSerializer(project, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(ProjectReadSerializer(project).data, status=status.HTTP_200_OK)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """
+        This method will no longer be the primary way to update a project.
+        The new update workflow uses a POST request to a custom endpoint.
+        """
         return super().partial_update(request, *args, **kwargs)
 
 
