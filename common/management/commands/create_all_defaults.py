@@ -9,5 +9,5 @@ class Command(BaseCommand):
         call_command("create_default_startups")
         call_command("create_default_projects")
         call_command("create_default_investors")
-        call_command("create_default_notifications")
+        call_command("create_default_communications")
         self.stdout.write(self.style.SUCCESS("All default data created successfully"))
