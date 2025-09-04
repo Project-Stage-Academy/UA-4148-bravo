@@ -2,8 +2,9 @@ import logging
 from typing import Optional
 
 from django.contrib.auth import get_user_model
+from projects.models import Project
 
-from .models import (
+from communications.models import (
     Notification,
     NotificationType,
     UserNotificationPreference,
@@ -109,51 +110,37 @@ def is_type_allowed(user: User, ntype: NotificationType) -> bool:
     return type_pref.frequency != NotificationFrequency.DISABLED
 
 
-def create_in_app_notification(
-    *,
-    user: User,
-    type_code: str,
-    title: str,
-    message: str,
-    priority: Optional[str] = None,
-    related_startup_id: Optional[int] = None,
-    related_project_id: Optional[int] = None,
-    related_message_id: Optional[int] = None,
-    triggered_by_user: Optional[User] = None,
-    triggered_by_type: Optional[str] = None,
-) -> Optional[Notification]:
+def create_in_app_notification(user, type_code, title, message, related_project=None, triggered_by_user=None, triggered_by_type=None, **kwargs):
     """
-    Create an in-app Notification only if user's preferences allow it.
-    Returns the Notification instance or None if suppressed by preferences.
+    Creates an in-app notification.
     """
     try:
-        ntype = NotificationType.objects.get(code=type_code)
+        notification_type = NotificationType.objects.get(code=type_code)
     except NotificationType.DoesNotExist:
-        logger.warning("Unknown notification type code: %s", type_code)
+        logger.error(f"Attempted to create notification with non-existent type_code: {type_code}")
         return None
-
-    if not is_channel_enabled(user, "in_app"):
-        logger.info("Suppressing in-app notification for user=%s (channel disabled)", getattr(user, "id", None))
+    
+    try:
+        notification_kwargs = {
+            'user': user,
+            'notification_type': notification_type,
+            'title': title,
+            'message': message,
+        }
+        if related_project:
+            notification_kwargs['related_project'] = related_project
+        if triggered_by_user:
+            notification_kwargs['triggered_by_user'] = triggered_by_user
+        if triggered_by_type:
+            notification_kwargs['triggered_by_type'] = triggered_by_type
+        
+        notification_kwargs.update(kwargs)
+            
+        return Notification.objects.create(**notification_kwargs)
+    
+    except Exception as e:
+        logger.error(f"Error creating in-app notification for type '{type_code}': {e}", exc_info=True)
         return None
-    if not is_type_allowed(user, ntype):
-        logger.info(
-            "Suppressing in-app notification for user=%s type=%s (type disabled)",
-            getattr(user, "id", None), ntype.code,
-        )
-        return None
-
-    return Notification.objects.create(
-        user=user,
-        notification_type=ntype,
-        title=title,
-        message=message,
-        priority=priority or Notification._meta.get_field("priority").get_default(),
-        related_startup_id=related_startup_id,
-        related_project_id=related_project_id,
-        related_message_id=related_message_id,
-        triggered_by_user=triggered_by_user,
-        triggered_by_type=triggered_by_type,
-    )
 
 
 def should_send_email_notification(user, notification_type_code):
