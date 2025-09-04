@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from projects.models import Project
 
 class TimeStampedModel(models.Model):
     """Abstract model for created_at and updated_at fields."""
@@ -146,6 +147,13 @@ class Notification(TimeStampedModel):
     )
 
     related_startup_id = models.CharField(max_length=64, null=True, blank=True)
+    related_project = models.ForeignKey(
+        Project, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='notifications'
+    )
     related_message_id = models.CharField(max_length=64, null=True, blank=True)
 
     priority = models.CharField(
