@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from decouple import config
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 from utils.get_env import get_env
@@ -12,10 +11,11 @@ SECRET_KEY = get_env("SECRET_KEY", required=True)
 DEBUG = get_env("DEBUG", default=False, cast=bool)
 DOCS_ENABLED = get_env("DOCS_ENABLED", default=True, cast=bool)
 
-ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS',
-    default='127.0.0.1, localhost, 0.0.0.0',
-    cast=lambda v: [s.strip() for s in v.split(',')]
+ALLOWED_HOSTS = get_env(
+    "ALLOWED_HOSTS",
+    default="127.0.0.1, localhost, 0.0.0.0",
+    cast=lambda v: [s.strip() for s in v.split(',')],
+    use_decouple=True
 )
 
 # Applications
