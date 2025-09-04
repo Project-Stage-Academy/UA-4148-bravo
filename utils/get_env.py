@@ -27,12 +27,6 @@ def get_env(
     """
     value = None
 
-    if use_decouple:
-        try:
-            value = decouple_config(name, default=None)
-        except Exception:
-            value = None
-
     if value is None:
         value = os.environ.get(name, None)
 

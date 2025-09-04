@@ -147,7 +147,7 @@ class NotificationsApiTestCase(APITestCase):
         self.assertIn('redirect', resp.data)
         redirect = resp.data['redirect']
         self.assertEqual(redirect.get('kind'), 'message')
-        self.assertEqual(redirect.get('id'), 99)
+        self.assertEqual(redirect.get('id'), '99')
 
     def test_delete_notification(self):
         url = reverse('communications:notification-detail',
