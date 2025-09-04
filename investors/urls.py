@@ -7,12 +7,13 @@ from .views import (
     ViewedStartupCreateView,
     ViewedStartupClearView
 )
-from investors.views import InvestorViewSet, SavedStartupViewSet, SaveStartupView
+from investors.views import InvestorViewSet, SavedStartupViewSet, SaveStartupView, FollowedProjectViewSet, FollowProjectView, UnfollowProjectView
 from investors.views_saved import InvestorSavedStartupsList, UnsaveStartupView
 
 router = DefaultRouter()
 router.register(r'saved', SavedStartupViewSet, basename='saved-startup')
 router.register(r'', InvestorViewSet, basename='investor')
+router.register(r'followed-projects', FollowedProjectViewSet, basename='followed-project')
 
 urlpatterns = [
     # Endpoint 1: GET recently viewed startups
@@ -32,5 +33,10 @@ urlpatterns = [
 
     # DELETE /api/v1/investors/startups/<startup_id>/unsave/
     path("startups/<int:startup_id>/unsave/", UnsaveStartupView.as_view(), name="startup-unsave"),
-] + router.urls
 
+    # POST /api/v1/investors/projects/<project_id>/follow/
+    path("projects/<int:project_id>/follow/", FollowProjectView.as_view(), name="project-follow"),
+
+    # DELETE /api/v1/investors/projects/<project_id>/unfollow/
+    path("projects/<int:project_id>/unfollow/", UnfollowProjectView.as_view(), name="project-unfollow"),
+] + router.urls

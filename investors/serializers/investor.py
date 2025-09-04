@@ -5,7 +5,7 @@ from django.db import transaction
 from rest_framework import serializers
 from django.core.exceptions import ValidationError
 from common.enums import Stage
-from investors.models import Investor, SavedStartup, ViewedStartup
+from investors.models import Investor, SavedStartup, ViewedStartup, FollowedProject
 from startups.models import Startup
 from validation.validate_names import validate_company_name
 
@@ -180,3 +180,51 @@ class ViewedStartupSerializer(serializers.ModelSerializer):
         model = ViewedStartup
         fields = ["id", "startup_id", "company_name", "viewed_at"]
         
+
+class FollowedProjectSerializer(serializers.ModelSerializer):
+    """
+    Serializer for FollowedProject model.
+    Includes nested project information and validation.
+    """
+    project_title = serializers.CharField(source='project.title', read_only=True)
+    project_description = serializers.CharField(source='project.description', read_only=True)
+    startup_name = serializers.CharField(source='project.startup.company_name', read_only=True)
+    
+    class Meta:
+        model = FollowedProject
+        fields = [
+            'id', 'project', 'project_title', 'project_description', 'startup_name',
+            'status', 'notes', 'followed_at', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'followed_at', 'created_at', 'updated_at']
+
+    def validate_project(self, value):
+        """
+        Validate that the project exists and is not owned by the requesting investor.
+        """
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'investor'):
+            raise serializers.ValidationError("Only investors can follow projects.")
+        
+        investor = request.user.investor
+        
+        # Check if project exists and is accessible
+        if not value:
+            raise serializers.ValidationError("Project is required.")
+        
+        # Prevent following own projects
+        if hasattr(value, 'startup') and value.startup.user_id == request.user.pk:
+            raise serializers.ValidationError("You cannot follow your own project.")
+        
+        return value
+
+    def create(self, validated_data):
+        """
+        Create a new FollowedProject instance.
+        """
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'investor'):
+            raise serializers.ValidationError("Only investors can follow projects.")
+        
+        validated_data['investor'] = request.user.investor
+        return super().create(validated_data)

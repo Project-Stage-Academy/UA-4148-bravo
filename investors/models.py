@@ -55,6 +55,15 @@ class Investor(Company):
         help_text='Startups that this investor recently viewed.',
     )
 
+    followed_projects = models.ManyToManyField(
+        'projects.Project',
+        through='investors.FollowedProject',
+        related_name='followed_by',
+        blank=True,
+        verbose_name='Followed projects',
+        help_text='Projects that this investor is following.',
+    )
+
     @property
     def user_id(self):
         return self.user.id if self.user else None
@@ -151,3 +160,67 @@ class ViewedStartup(models.Model):
 
     def __str__(self):
         return f"{self.investor} viewed {self.startup} at {self.viewed_at}"
+
+class FollowedProject(models.Model):
+    """
+    Intermediate model representing a project followed by an investor.
+    Stores additional metadata such as status, notes, and timestamps.
+    """
+    investor = models.ForeignKey(
+        'investors.Investor',
+        on_delete=models.PROTECT,
+        related_name='followed_projects_set',
+        db_column='investor_profile_id',
+    )
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.PROTECT,
+        related_name='followed_by_investors',
+        db_column='project_id',
+    )
+    followed_at = models.DateTimeField(auto_now_add=True)
+
+    STATUS_CHOICES = [
+        ('watching', 'Watching'),
+        ('interested', 'Interested'),
+        ('contacted', 'Contacted'),
+        ('negotiating', 'Negotiating'),
+        ('passed', 'Passed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='watching')
+    notes = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        if self.notes is None:
+            self.notes = ""
+
+        # Prevent investors from following their own projects
+        inv_user_id = self.investor.user_id if getattr(self, 'investor_id', None) else None
+        proj_startup_user_id = None
+        if getattr(self, 'project_id', None):
+            project = getattr(self, 'project', None)
+            if project and hasattr(project, 'startup') and hasattr(project.startup, 'user_id'):
+                proj_startup_user_id = project.startup.user_id
+        
+        if inv_user_id is not None and proj_startup_user_id is not None and inv_user_id == proj_startup_user_id:
+            raise ValidationError({"non_field_errors": ["You cannot follow your own project."]})
+
+    def __str__(self):
+        return f"{self.investor} follows {self.project}"
+
+    class Meta:
+        db_table = 'followed_projects'
+        constraints = [
+            models.UniqueConstraint(fields=['investor', 'project'], name='uniq_investor_project')
+        ]
+        ordering = ['-followed_at']
+        verbose_name = 'Followed Project'
+        verbose_name_plural = 'Followed Projects'
+        indexes = [
+            models.Index(fields=['investor', 'project'], name='followed_investor_project_idx'),
+            models.Index(fields=['status'], name='followed_status_idx'),
+            models.Index(fields=['-followed_at'], name='followed_followed_at_desc_idx'),
+        ]
