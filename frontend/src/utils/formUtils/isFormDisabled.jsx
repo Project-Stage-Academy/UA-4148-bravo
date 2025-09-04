@@ -12,10 +12,10 @@ export function isFormDisabled(filteredFormEntries, filteredErrorKeys, errors) {
             switch (typeof value) {
                 case 'string':
                     return !value.trim();
-                case 'boolean':
-                    return value;
+                case 'object':
+                    return !Object.values(value).some(v => v);
                 default:
-                    return false;
+                    return true;
             }
         }
     );

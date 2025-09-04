@@ -12,6 +12,7 @@ import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import { useFormWithProtection } from '../../hooks/useFormWithProtection';
 import { useFormWithServerErrors } from '../../hooks/useFormWithServerErrors';
 import { useNavigate } from 'react-router-dom';
+import bruteForce from '../../utils/bruteForce/bruteForce';
 
 /**
  * Registration page that asks the user to select
@@ -26,6 +27,9 @@ function RegistrationUserRepresent() {
 
     // Hook to navigate programmatically
     const navigate = useNavigate();
+
+    // Brute force max attempts constant
+    const MAX_ATTEMPTS = 5;
 
     // Form with protection hook
     const form = useFormWithProtection({
@@ -52,7 +56,12 @@ function RegistrationUserRepresent() {
             .then(() => {
                 navigate('/auth/register/completed');
             })
-            .catch(handleError)
+            .catch((error) => bruteForce(error, {
+                attempts: form.attempts,
+                setAttempts: form.setAttempts,
+                setIsLocked: form.setIsLocked,
+                handleError
+            }))
             .finally(() => form.setIsLocked(false));
     };
 
@@ -128,6 +137,18 @@ function RegistrationUserRepresent() {
                         </p>
                     )}
                 </div>
+                {!form.isLocked && form.attempts >= (MAX_ATTEMPTS - 2 - 1) && (
+                    <p className={'content--text'}
+                       role="alert"
+                    >
+                        Залишилося спроб: {MAX_ATTEMPTS - form.attempts}
+                    </p>
+                )}
+                {form.isLocked && form.attempts >= (MAX_ATTEMPTS + 1 - 1) && (
+                    <p className={'panel--danger-text'}>
+                        Повторіть спробу через 30 секунд
+                    </p>
+                )}
                 { form.errors['unexpected'] && (
                     <p id="unexpected-error"
                        className={"panel--danger-text"}
@@ -141,7 +162,7 @@ function RegistrationUserRepresent() {
                 <Button
                     onClick={handleSubmit}
                     className={'button__padding panel--button'}
-                    disabled={form.isLocked}
+                    disabled={form.isDisabled || form.isLocked}
                     type="submit"
                 >
                     Продовжити

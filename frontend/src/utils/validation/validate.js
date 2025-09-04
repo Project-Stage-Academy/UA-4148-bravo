@@ -11,7 +11,7 @@ export class Validator {
      * @type {Object<string, function(value: any, data?: Object): boolean>}
      */
     static validators = {
-        companyName: (value) => /^[\p{L}’ʼ-]{2,}$/u.test(value),
+        companyName: (value) => /^\p{L}+(?:[ ’ʼ-]\p{L}+)*$/u.test(value),
         email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
         password: (value) => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(value),
         confirmPassword: (value, data) => typeof value === "string" && value.trim() !== "" && value === data.password,

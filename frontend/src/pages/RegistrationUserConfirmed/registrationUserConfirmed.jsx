@@ -17,7 +17,7 @@ function RegistrationUserConfirmed() {
 
     // Function to handle the submission of the registration form
     function handleSubmit() {
-        navigate("/auth/register/user-represent");
+        navigate("/auth/login");
     }
 
     return (
@@ -44,7 +44,7 @@ function RegistrationUserConfirmed() {
                     className={'button__padding panel--button'}
                     type="submit"
                 >
-                    Продовжити реєстрацію
+                    Увійти в профіль
                 </Button>
             </PanelNavigation>
         </Panel>
