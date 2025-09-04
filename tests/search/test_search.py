@@ -1,6 +1,7 @@
 from decimal import Decimal
 from unittest import mock
 
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
@@ -11,6 +12,7 @@ from projects.models import Project, Category
 import search.views as sv
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class SearchTests(APITestCase):
     def setUp(self):
         # Role / user

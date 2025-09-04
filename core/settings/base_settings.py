@@ -3,15 +3,14 @@ from pathlib import Path
 from decouple import config
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
+from utils.get_env import get_env
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Security
-SECRET_KEY = config('SECRET_KEY', default=None)
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY is not set. Please define it in environment variables or .env file.")
-DEBUG = config('DEBUG', default=False, cast=bool)
-DOCS_ENABLED = config('DOCS_ENABLED', default=True, cast=bool)
+SECRET_KEY = get_env("SECRET_KEY", required=True)
+DEBUG = get_env("DEBUG", default=False, cast=bool)
+DOCS_ENABLED = get_env("DOCS_ENABLED", default=True, cast=bool)
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
@@ -20,7 +19,7 @@ ALLOWED_HOSTS = config(
 )
 
 # Applications
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+FRONTEND_URL = get_env('FRONTEND_URL', default='http://localhost:3000')
 
 FRONTEND_ROUTES = {
     "verify_email": "/auth/verify-email/{user_id}/{token}/",
@@ -105,8 +104,8 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
-TIME_ZONE = config('TIME_ZONE', default='UTC')
+LANGUAGE_CODE = get_env('LANGUAGE_CODE', default='en-us')
+TIME_ZONE = get_env('TIME_ZONE', default='UTC')
 USE_I18N = True
 USE_TZ = True
 
@@ -123,10 +122,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 # Sentry for monitoring
+SENTRY_DSN = get_env("SENTRY_DSN", default=None)
+
 sentry_sdk.init(
-    dsn=os.getenv("SENTRY_DSN"),
+    dsn=SENTRY_DSN,
     integrations=[DjangoIntegration()],
     traces_sample_rate=0.5,
     send_default_pii=True
 )
-
