@@ -179,4 +179,10 @@ class ViewedStartupSerializer(serializers.ModelSerializer):
     class Meta:
         model = ViewedStartup
         fields = ["id", "startup_id", "company_name", "viewed_at"]
-        
+
+class InvestorListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Investor
+        fields = [
+            'id', 'company_name', 'industry', 'stage', 'team_size', 'fund_size'
+        ]        

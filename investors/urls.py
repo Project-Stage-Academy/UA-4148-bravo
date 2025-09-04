@@ -5,10 +5,13 @@ from django.urls import path
 from .views import (
     ViewedStartupListView,
     ViewedStartupCreateView,
-    ViewedStartupClearView
+    ViewedStartupClearView,
+    InvestorListView,
+    InvestorDetailView
 )
 from investors.views import InvestorViewSet, SavedStartupViewSet, SaveStartupView
 from investors.views_saved import InvestorSavedStartupsList, UnsaveStartupView
+
 
 router = DefaultRouter()
 router.register(r'saved', SavedStartupViewSet, basename='saved-startup')
@@ -32,5 +35,11 @@ urlpatterns = [
 
     # DELETE /api/v1/investors/startups/<startup_id>/unsave/
     path("startups/<int:startup_id>/unsave/", UnsaveStartupView.as_view(), name="startup-unsave"),
+    
+    # GET /api/v1/investors/
+    path("investors/", InvestorListView.as_view(), name="investor-list"),
+
+    # GET /api/v1/investors/{id}/
+    path("investors/<int:pk>/", InvestorDetailView.as_view(), name="investor-detail")
 ] + router.urls
 
