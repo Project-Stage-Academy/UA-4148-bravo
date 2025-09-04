@@ -246,7 +246,7 @@ class OAuthTokenObtainPairViewTests(TestCase):
         mock_load_backend.return_value = mock_backend
 
         res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'},
-                               format='json')
+                               format='json', secure=True)
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertNotIn("access", res.data)
