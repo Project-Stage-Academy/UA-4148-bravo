@@ -105,47 +105,26 @@ def create_in_app_notification(user, type_code, title, message, related_project=
         return None
     
     try:
+        notification_kwargs = {
+            'user': user,
+            'notification_type': notification_type,
+            'title': title,
+            'message': message,
+        }
         if related_project:
-            kwargs['related_project'] = related_project
-
+            notification_kwargs['related_project'] = related_project
         if triggered_by_user:
-            kwargs['triggered_by_user'] = triggered_by_user
-
+            notification_kwargs['triggered_by_user'] = triggered_by_user
         if triggered_by_type:
-            kwargs['triggered_by_type'] = triggered_by_type
+            notification_kwargs['triggered_by_type'] = triggered_by_type
+        
+        notification_kwargs.update(kwargs)
             
-        return Notification.objects.create(
-            user=user,
-            notification_type=notification_type,
-            title=title,
-            message=message,
-            **kwargs
-        )
+        return Notification.objects.create(**notification_kwargs)
     
     except Exception as e:
-        logger.error(f"Error creating in-app notification for type '{type_code}': {e}")
+        logger.error(f"Error creating in-app notification for type '{type_code}': {e}", exc_info=True)
         return None
-    
-    related_project = None
-    if related_project_id:
-        try:
-            related_project = Project.objects.get(id=related_project_id)
-        except Project.DoesNotExist:
-            logger.warning(f"Related project with ID {related_project_id} not found.")
-
-
-    return Notification.objects.create(
-        user=user,
-        notification_type=ntype,
-        title=title,
-        message=message,
-        priority=priority or Notification._meta.get_field("priority").get_default(),
-        related_startup_id=related_startup_id,
-        related_project_id=related_project_id,
-        related_message_id=related_message_id,
-        triggered_by_user=triggered_by_user,
-        triggered_by_type=triggered_by_type,
-    )
 
 
 def should_send_email_notification(user, notification_type_code):
