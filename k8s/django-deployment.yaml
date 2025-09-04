@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: django-app
-        image: forum-project:latest
-        imagePullPolicy: Never
+        image: ghcr.io/raidriar28/forum-project:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
         envFrom:
@@ -24,6 +24,17 @@ spec:
             name: django-config
         - secretRef:
             name: django-secrets
-        command: ["/entrypoint.sh"]
-        args: ["gunicorn", "--log-level=debug", "core.wsgi:application", "--bind=0.0.0.0:8000", "--workers=3", "--timeout=120"]
+        command: ["sh", "-c"]
+        args:
+        - |
+          if [ ! -f /entrypoint.sh ]; then
+            echo "/entrypoint.sh not found!"
+            exit 1
+          fi
+          exec /entrypoint.sh gunicorn --log-level=debug core.wsgi:application --bind=0.0.0.0:8000 --workers=3 --timeout=120
+
+      imagePullSecrets:
+      - name: ghcr-credentials
+
+
 

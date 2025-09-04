@@ -38,17 +38,22 @@ spec:
                 secretKeyRef:
                   name: django-secrets
                   key: DB_PASSWORD
+            - name: EMAIL_HOST_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: django-config
+                  key: EMAIL_HOST_USER
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres"]
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER"]
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres"]
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER"]
             initialDelaySeconds: 30
             periodSeconds: 20
           resources:
@@ -66,6 +71,8 @@ spec:
         resources:
           requests:
             storage: 10Gi
+
+
 
 
 
