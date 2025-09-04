@@ -337,13 +337,17 @@ class InvestorListView(generics.ListAPIView):
             queryset = queryset.filter(fund_size__lte=max_fund_size)
 
         # --- Sorting ---
-        ordering = params.get("ordering")  # etc.: ?ordering=fund_size or ?ordering=-team_size
+        allowed_ordering_fields = ["company_name", "fund_size", "team_size", "stage"]
+        ordering = params.get("ordering")
+
         if ordering:
-            queryset = queryset.order_by(ordering)
+            field_name = ordering.lstrip("-")
+            if field_name in allowed_ordering_fields:
+                queryset = queryset.order_by(ordering)
+            else:
+                queryset = queryset.order_by("company_name")
         else:
             queryset = queryset.order_by("company_name")
-
-        return queryset
 
 
 class InvestorDetailView(generics.RetrieveAPIView):
