@@ -41,6 +41,22 @@ def get_or_create_user_pref(user: User) -> UserNotificationPreference:
         )
     return pref
 
+def get_or_create_email_pref(user: User) -> EmailNotificationPreference:
+    """Return user's email notification preferences, creating them if absent."""
+    email_pref, created = EmailNotificationPreference.objects.get_or_create(user=user)
+    if created:
+        active_types = NotificationType.objects.filter(is_active=True)
+        to_create = [
+            EmailNotificationTypePreference(
+                email_preference=email_pref,
+                notification_type=ntype,
+                enabled=True  # Default to enabled
+            ) for ntype in active_types
+        ]
+        if to_create:
+            EmailNotificationTypePreference.objects.bulk_create(to_create)
+    return email_pref
+
 
 def _get_type_pref(pref: UserNotificationPreference, ntype: NotificationType) -> Optional[UserNotificationTypePreference]:
     return pref.type_preferences.filter(notification_type=ntype).first()

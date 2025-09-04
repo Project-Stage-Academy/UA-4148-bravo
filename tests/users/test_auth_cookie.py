@@ -68,6 +68,7 @@ class AuthCookieTests(APITestCase):
             {"email": self.user.email, "password": TEST_USER_PASSWORD},
             HTTP_X_CSRFTOKEN=csrf_token,
             secure=True
+            HTTP_REFERER='https://testserver/
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotIn("access", response.data)
