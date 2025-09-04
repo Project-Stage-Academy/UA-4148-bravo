@@ -61,10 +61,17 @@ COMMUNICATIONS_NOTIFICATION_TYPES = [
         'is_active': True,
     },
     {
+        'code': 'activity_summarized',
+        'name': 'Activity Summarized',
+        'description': 'Weekly summary of your activity',
+        'default_frequency': 'weekly_summary',
+        'is_active': True,
+    },
+    {
         'code': 'project_updated',
         'name': 'Project Updated',
-        'description': 'Notification when a followed project is updated',
-        'default_frequency': 'daily_digest',
+        'description': 'Notification when a project you are subscribed to is updated',
+        'default_frequency': 'immediate',
         'is_active': True,
     },
 ]
@@ -74,4 +81,9 @@ FORBIDDEN_WORDS_SET = {
     "spam", "scam", "xxx", "viagra", "free money", "lottery", "bitcoin",
     "crypto", "click here", "subscribe", "buy now", "offer", "promotion",
     "gamble", "casino", "adult", "nsfw", "sex", "porn", "nude"
+}
+
+ALLOWED_TAGS = ["b", "i", "u", "a"]
+ALLOWED_ATTRIBUTES = {
+    "a": ["href", "title"]
 }

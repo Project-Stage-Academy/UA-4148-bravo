@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from projects.models import Project
 
 class TimeStampedModel(models.Model):
     """Abstract model for created_at and updated_at fields."""
@@ -146,7 +147,13 @@ class Notification(TimeStampedModel):
     )
 
     related_startup_id = models.CharField(max_length=64, null=True, blank=True)
-    related_message_id = models.CharField(max_length=64, null=True, blank=True)
+    related_project = models.ForeignKey(
+        Project, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='notifications'
+    )
     related_message_id = models.PositiveIntegerField(null=True, blank=True)
 
     priority = models.CharField(
@@ -222,3 +229,48 @@ class UserNotificationTypePreference(TimeStampedModel):
 
     def __str__(self):
         return f"{self.user_preference.user.email} - {self.notification_type.name}"
+
+
+class EmailNotificationPreference(TimeStampedModel):
+    """Model to store user email notification preferences."""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='email_notification_preferences',
+        primary_key=True
+    )
+
+    def __str__(self):
+        return f"Email Preferences for {self.user.email}"
+
+
+class EmailNotificationTypePreference(TimeStampedModel):
+    """Model to store user preferences for specific notification types via email."""
+    email_preference = models.ForeignKey(
+        EmailNotificationPreference,
+        on_delete=models.CASCADE,
+        related_name='types_enabled'
+    )
+    notification_type = models.ForeignKey(
+        NotificationType,
+        on_delete=models.CASCADE,
+        related_name='email_preferences'
+    )
+    enabled = models.BooleanField(
+        _('Enabled'),
+        default=True,
+        help_text=_('Whether email notifications for this type are enabled')
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['email_preference', 'notification_type'],
+                name='unique_email_preference_notification_type'
+            )
+        ]
+        verbose_name = _('Email Notification Type Preference')
+        verbose_name_plural = _('Email Notification Type Preferences')
+
+    def __str__(self):
+        return f"{self.email_preference.user.email} - {self.notification_type.name}"

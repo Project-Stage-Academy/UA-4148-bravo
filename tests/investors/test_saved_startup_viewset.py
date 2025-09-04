@@ -3,12 +3,13 @@ from django.contrib.auth.hashers import make_password
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-
+from django.test.utils import override_settings
 from investors.models import Investor, SavedStartup
 from startups.models import Startup, Industry, Location
 from users.models import UserRole
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class SavedStartupViewSetTests(APITestCase):
     """
     Tests for the SavedStartupViewSet registered under the basename 'saved-startup'.

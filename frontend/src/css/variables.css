@@ -69,6 +69,10 @@
     --benefits-panel-color: #F9F5EC;
     --for-whom-panel-color: #FFF;
 
+    /* Dropdown */
+    --dropdown-bcg-color: #f9f9f9;
+    --dropdown-item-hover: #f1f1f1;
+
     /* Participant card */
 
     --participant-card-color: #F9F5EC;

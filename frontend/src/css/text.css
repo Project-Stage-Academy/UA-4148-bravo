@@ -5,3 +5,7 @@
 .text-bold {
     font-weight: 600;
 }
+
+.text-danger {
+    color: var(--danger-text-color);
+}

@@ -452,6 +452,7 @@ class UserRole(models.Model):
         USER = 'user', 'User'
         MODERATOR = 'moderator', 'Moderator'
         INVESTOR = 'investor', 'Investor'
+        STARTUP = 'startup', 'Startup'
 
     role = models.CharField(max_length=20, unique=True, choices=Role.choices)
     created_at = models.DateTimeField(default=timezone.now)

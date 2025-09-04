@@ -1,11 +1,11 @@
 import { Validator } from '../../utils/validation/validate';
-import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button/button';
 import Panel, { PanelBody, PanelBodyTitle, PanelNavigation, PanelTitle } from '../../components/Panel/panel';
 import TextInput from '../../components/TextInput/textInput';
 import { useAuthContext } from '../../provider/AuthProvider/authProvider';
 import { useFormWithProtection } from '../../hooks/useFormWithProtection';
 import { useFormWithServerErrors } from '../../hooks/useFormWithServerErrors';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Component for reconfirming user registration by resending the activation email.

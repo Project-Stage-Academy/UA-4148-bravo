@@ -2,8 +2,9 @@ import logging
 from typing import Optional
 
 from django.contrib.auth import get_user_model
+from projects.models import Project
 
-from .models import (
+from communications.models import (
     Notification,
     NotificationType,
     UserNotificationPreference,
@@ -93,48 +94,142 @@ def is_type_allowed(user: User, ntype: NotificationType) -> bool:
     return type_pref.frequency != NotificationFrequency.DISABLED
 
 
-def create_in_app_notification(
+def create_in_app_notification(user, type_code, title, message, related_project=None, triggered_by_user=None, triggered_by_type=None, **kwargs):
+    """
+    Creates an in-app notification.
+    """
+    try:
+        notification_type = NotificationType.objects.get(code=type_code)
+    except NotificationType.DoesNotExist:
+        logger.error(f"Attempted to create notification with non-existent type_code: {type_code}")
+        return None
+    
+    try:
+        notification_kwargs = {
+            'user': user,
+            'notification_type': notification_type,
+            'title': title,
+            'message': message,
+        }
+        if related_project:
+            notification_kwargs['related_project'] = related_project
+        if triggered_by_user:
+            notification_kwargs['triggered_by_user'] = triggered_by_user
+        if triggered_by_type:
+            notification_kwargs['triggered_by_type'] = triggered_by_type
+        
+        notification_kwargs.update(kwargs)
+            
+        return Notification.objects.create(**notification_kwargs)
+    
+    except Exception as e:
+        logger.error(f"Error creating in-app notification for type '{type_code}': {e}", exc_info=True)
+        return None
+
+
+def should_send_email_notification(user, notification_type_code):
+    """
+    Check if an email notification should be sent to a user for a given notification type.
+    
+    Args:
+        user: User instance
+        notification_type_code: String code of the notification type
+        
+    Returns:
+        bool: True if email notification should be sent, False otherwise
+    """
+    from .models import NotificationType, EmailNotificationPreference, UserNotificationPreference
+    
+    try:
+        if not user:
+            return False
+            
+        try:
+            user_pref = UserNotificationPreference.objects.filter(user=user).first()
+            if user_pref and not user_pref.enable_email:
+                return False
+        except Exception:
+            pass
+        
+        if not hasattr(user, 'email_notification_preferences'):
+            try:
+                EmailNotificationPreference.objects.get_or_create(user=user)
+            except Exception:
+                return False
+            
+            if not hasattr(user, 'email_notification_preferences'):
+                return False
+        
+        email_pref = user.email_notification_preferences
+        
+        try:
+            notification_type = NotificationType.objects.get(code=notification_type_code)
+        except NotificationType.DoesNotExist:
+            return False
+        
+        type_pref = email_pref.types_enabled.filter(notification_type=notification_type).first()
+        
+        if not type_pref:
+            from .models import EmailNotificationTypePreference
+            type_pref = EmailNotificationTypePreference.objects.create(
+                email_preference=email_pref,
+                notification_type=notification_type,
+                enabled=True
+            )
+            
+        return type_pref.enabled
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception(f"Error checking email notification preferences: {e}")
+        return False
+
+
+def send_email_notification(
     *,
     user: User,
     type_code: str,
-    title: str,
+    subject: str,
     message: str,
-    priority: Optional[str] = None,
+    html_message: Optional[str] = None,
     related_startup_id: Optional[int] = None,
     related_project_id: Optional[int] = None,
     related_message_id: Optional[int] = None,
-    triggered_by_user: Optional[User] = None,
-    triggered_by_type: Optional[str] = None,
-) -> Optional[Notification]:
+) -> bool:
     """
-    Create an in-app Notification only if user's preferences allow it.
-    Returns the Notification instance or None if suppressed by preferences.
+    Send an email notification to the user if their preferences allow it.
+    
+    Args:
+        user: The recipient user
+        type_code: Notification type code
+        subject: Email subject
+        message: Plain text message
+        html_message: Optional HTML message
+        related_startup_id: Optional related startup ID
+        related_project_id: Optional related project ID
+        related_message_id: Optional related message ID
+        
+    Returns:
+        bool: True if the email was sent, False otherwise
     """
+    if not should_send_email_notification(user, type_code):
+        return False
+    
+    from django.core.mail import send_mail
+    
     try:
-        ntype = NotificationType.objects.get(code=type_code)
-    except NotificationType.DoesNotExist:
-        logger.warning("Unknown notification type code: %s", type_code)
-        return None
-
-    if not is_channel_enabled(user, "in_app"):
-        logger.info("Suppressing in-app notification for user=%s (channel disabled)", getattr(user, "id", None))
-        return None
-    if not is_type_allowed(user, ntype):
-        logger.info(
-            "Suppressing in-app notification for user=%s type=%s (type disabled)",
-            getattr(user, "id", None), ntype.code,
+        send_mail(
+            subject=subject,
+            message=message,
+            html_message=html_message,
+            from_email=None,
+            recipient_list=[user.email],
+            fail_silently=False,
         )
-        return None
-
-    return Notification.objects.create(
-        user=user,
-        notification_type=ntype,
-        title=title,
-        message=message,
-        priority=priority or Notification._meta.get_field("priority").get_default(),
-        related_startup_id=related_startup_id,
-        related_project_id=related_project_id,
-        related_message_id=related_message_id,
-        triggered_by_user=triggered_by_user,
-        triggered_by_type=triggered_by_type,
-    )
+        logger.info("Email notification sent to user=%s type=%s", 
+                   getattr(user, "id", None), type_code)
+        return True
+    except Exception as e:
+        logger.error("Failed to send email notification: %s", str(e))
+        return False
