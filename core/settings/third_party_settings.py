@@ -14,7 +14,6 @@ AUTHENTICATION_BACKENDS = [
     'social_core.backends.google.GoogleOAuth2',
     'social_core.backends.github.GithubOAuth2',
     'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = get_env('GOOGLE_CLIENT_ID')
@@ -23,47 +22,30 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = get_env('GOOGLE_CLIENT_SECRET')
 SOCIAL_AUTH_GITHUB_KEY = get_env('GITHUB_CLIENT_ID')
 SOCIAL_AUTH_GITHUB_SECRET = get_env('GITHUB_CLIENT_SECRET')
 
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]
+SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
+    'access_type': 'offline',
+    'prompt': 'consent',
+}
+
+SOCIAL_AUTH_GITHUB_SCOPE = ['user:email']
+
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
     'social_core.pipeline.social_auth.social_uid',
     'social_core.pipeline.social_auth.auth_allowed',
     'social_core.pipeline.social_auth.social_user',
     'social_core.pipeline.user.get_username',
+    'social_core.pipeline.social_auth.associate_by_email',
     'users.pipelines.create_or_update_user',
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
-    'social_core.pipeline.user.user_details',
+    'users.pipelines.activate_verified_user',
+    'users.pipelines.safe_user_details',
 )
-
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'APP': {
-            'client_id': SOCIAL_AUTH_GOOGLE_OAUTH2_KEY,
-            'secret': SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET,
-            'key': '',
-        },
-        'SCOPE': ['profile', 'email'],
-        'AUTH_PARAMS': {
-            'access_type': 'offline',
-            'prompt': 'consent',
-        },
-        'FETCH_USERINFO': True,
-    },
-
-    'github': {
-        'APP': {
-            'client_id': SOCIAL_AUTH_GITHUB_KEY,
-            'secret': SOCIAL_AUTH_GITHUB_SECRET,
-            'key': '',
-        },
-        'SCOPE': ['user:email'],
-    }
-}
-
-# Ensure email is saved and verified
-SOCIALACCOUNT_EMAIL_REQUIRED = True
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-SOCIALACCOUNT_AUTO_SIGNUP = True
 
 DEFAULT_SCHEMA_CLASS = 'drf_spectacular.openapi.AutoSchema'
 
