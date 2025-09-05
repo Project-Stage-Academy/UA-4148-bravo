@@ -17,6 +17,8 @@ import PropTypes from 'prop-types';
  * @property {string} last_name - Last name of the user
  * @property {string} email - Email of the user
  * @property {string | null} role - Role of the user (e.g., 'admin', 'user')
+ * @property {string | null} companyType - Type of company
+ * @property {number | null} companyId - ID of the company
  * @property {boolean} isAuthorized - Defines if user is authorized for visual context
  */
 
@@ -163,9 +165,12 @@ function AuthProvider({ children }) {
                 first_name: data.first_name,
                 last_name: data.last_name,
                 role: data.role,
+                companyType: data.company_type || null,
+                companyId: data.company_id || null,
                 isAuthorized: true,
             };
 
+            console.log(newUser)
             setUser(newUser);
 
             if (process.env.REACT_APP_NODE_ENV === 'development') {
