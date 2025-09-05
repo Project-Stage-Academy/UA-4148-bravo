@@ -94,39 +94,6 @@ def is_type_allowed(user: User, ntype: NotificationType) -> bool:
     return type_pref.frequency != NotificationFrequency.DISABLED
 
 
-def create_in_app_notification(user, type_code, title, message, related_project=None, triggered_by_user=None, triggered_by_type=None, **kwargs):
-    """
-    Creates an in-app notification.
-    """
-    try:
-        notification_type = NotificationType.objects.get(code=type_code)
-    except NotificationType.DoesNotExist:
-        logger.error(f"Attempted to create notification with non-existent type_code: {type_code}")
-        return None
-    
-    try:
-        notification_kwargs = {
-            'user': user,
-            'notification_type': notification_type,
-            'title': title,
-            'message': message,
-        }
-        if related_project:
-            notification_kwargs['related_project'] = related_project
-        if triggered_by_user:
-            notification_kwargs['triggered_by_user'] = triggered_by_user
-        if triggered_by_type:
-            notification_kwargs['triggered_by_type'] = triggered_by_type
-        
-        notification_kwargs.update(kwargs)
-            
-        return Notification.objects.create(**notification_kwargs)
-    
-    except Exception as e:
-        logger.error(f"Error creating in-app notification for type '{type_code}': {e}", exc_info=True)
-        return None
-
-
 def should_send_email_notification(user, notification_type_code):
     """
     Check if an email notification should be sent to a user for a given notification type.
@@ -250,8 +217,8 @@ logger = logging.getLogger(__name__)
 
 class NotificationService:
     """
-    Direct notification service for creating notifications without relying on signals.
-    More reliable for CI/CD environments and easier to test.
+    Centralized notification service - the single source of truth for all notification creation.
+    Replaces both signal-based and direct Notification.objects.create() calls.
     """
 
     @staticmethod
@@ -273,16 +240,17 @@ class NotificationService:
     @staticmethod
     def _check_duplicate_notification(
         user, notification_type, triggered_by_user=None, 
-        related_project_id=None, related_startup_id=None
+        related_project_id=None, related_startup_id=None,
+        time_window_seconds=30
     ) -> bool:
-        """Check if a similar notification already exists within the last 30 seconds."""
+        """Check if a similar notification already exists within the specified time window."""
         now = timezone.now()
-        thirty_seconds_ago = now - timedelta(seconds=30)
+        time_ago = now - timedelta(seconds=time_window_seconds)
 
         filters = {
             'user': user,
             'notification_type': notification_type,
-            'created_at__gte': thirty_seconds_ago,
+            'created_at__gte': time_ago,
         }
         
         if triggered_by_user:
@@ -293,6 +261,132 @@ class NotificationService:
             filters['related_startup_id'] = related_startup_id
 
         return Notification.objects.filter(**filters).exists()
+
+    @classmethod
+    def create_notification(
+        cls,
+        notification_type_code: str,
+        recipient_user,
+        title: str,
+        message: str,
+        triggered_by_user=None,
+        triggered_by_type=None,
+        priority=NotificationPriority.MEDIUM,
+        related_project=None,
+        related_startup_id=None,
+        related_message_id=None,
+        **kwargs
+    ) -> Optional[Notification]:
+        """
+        Universal notification creation method.
+        
+        Args:
+            notification_type_code: Code for the notification type
+            recipient_user: User who will receive the notification
+            title: Notification title
+            message: Notification message
+            triggered_by_user: User who triggered the notification (optional)
+            triggered_by_type: Type of trigger (investor/startup/system)
+            priority: Notification priority (low/medium/high)
+            related_project: Related project object (optional)
+            related_startup_id: Related startup ID (optional)
+            related_message_id: Related message ID (optional)
+            **kwargs: Additional fields for the notification
+            
+        Returns:
+            Notification instance if created, None if skipped (duplicate/error)
+        """
+        try:
+            logger.info(
+                f"Creating notification: {notification_type_code} for user {recipient_user.id}",
+                extra={
+                    'notification_type': notification_type_code,
+                    'recipient_id': recipient_user.id,
+                    'triggered_by': triggered_by_user.id if triggered_by_user else None
+                }
+            )
+
+            if not recipient_user:
+                logger.warning("Cannot create notification: recipient_user is required")
+                return None
+
+            if triggered_by_user and recipient_user.pk == triggered_by_user.pk:
+                logger.info(f"Skipping self-notification for user {recipient_user.pk}")
+                return None
+
+            ntype = cls._get_or_create_notification_type(
+                notification_type_code, 
+                kwargs.get('notification_type_name')
+            )
+
+            duplicate_exists = cls._check_duplicate_notification(
+                user=recipient_user,
+                notification_type=ntype,
+                triggered_by_user=triggered_by_user,
+                related_project_id=related_project.id if related_project else None,
+                related_startup_id=related_startup_id,
+                time_window_seconds=kwargs.get('deduplication_window', 30)
+            )
+            
+            if duplicate_exists:
+                logger.info(
+                    f"Duplicate notification prevented: {notification_type_code} for user {recipient_user.id}",
+                    extra={
+                        'notification_type': notification_type_code,
+                        'recipient_id': recipient_user.id,
+                        'reason': 'duplicate_within_window'
+                    }
+                )
+                return None
+
+            notification_data = {
+                'user': recipient_user,
+                'notification_type': ntype,
+                'title': title,
+                'message': message,
+                'priority': priority,
+            }
+            
+            if triggered_by_user:
+                notification_data['triggered_by_user'] = triggered_by_user
+            if triggered_by_type:
+                notification_data['triggered_by_type'] = triggered_by_type
+            if related_project:
+                notification_data['related_project'] = related_project
+            if related_startup_id:
+                notification_data['related_startup_id'] = str(related_startup_id)
+            if related_message_id:
+                notification_data['related_message_id'] = str(related_message_id)
+                
+            for key, value in kwargs.items():
+                if key not in ['notification_type_name', 'deduplication_window'] and hasattr(Notification, key):
+                    notification_data[key] = value
+
+            notification = Notification.objects.create(**notification_data)
+
+            logger.info(
+                f"Notification created successfully: {notification.notification_id}",
+                extra={
+                    'notification_id': str(notification.notification_id),
+                    'notification_type': notification_type_code,
+                    'recipient_id': recipient_user.id,
+                    'title': title
+                }
+            )
+            
+            return notification
+
+        except Exception as e:
+            logger.error(
+                f"Failed to create notification: {notification_type_code}",
+                extra={
+                    'notification_type': notification_type_code,
+                    'recipient_id': getattr(recipient_user, 'id', None),
+                    'error': str(e)
+                },
+                exc_info=True
+            )
+            return None
 
     @classmethod
     def create_project_followed_notification(
@@ -313,12 +407,9 @@ class NotificationService:
             Notification instance if created, None if skipped
         """
         try:
-            logger.info(f"Creating project follow notification for project {project.id} by user {investor_user.id}")
-            
             if not startup_user:
                 if hasattr(project, 'startup') and hasattr(project.startup, 'user'):
                     startup_user = project.startup.user
-                    logger.info(f"Derived startup user {startup_user.id} from project")
                 else:
                     logger.warning(f"Cannot derive startup user for project {project.id}")
                     return None
@@ -327,34 +418,12 @@ class NotificationService:
                 logger.warning("Missing required users for project follow notification")
                 return None
 
-            if startup_user.pk == investor_user.pk:
-                logger.info(f"Skipping self-follow notification for user {investor_user.pk}")
-                return None
-
-            ntype = cls._get_or_create_notification_type(
-                'project_followed', 
-                'project_followed'
-            )
-            logger.info(f"Got notification type: {ntype.name}")
-
-            duplicate_exists = cls._check_duplicate_notification(
-                user=startup_user,
-                notification_type=ntype,
-                triggered_by_user=investor_user,
-                related_project_id=project.id
-            )
-            logger.info(f"Duplicate check result: {duplicate_exists}")
-            
-            if duplicate_exists:
-                logger.info(f"Duplicate project follow notification prevented for project {project.id}")
-                return None
-
             investor_name = investor_user.first_name or investor_user.email
             project_title = getattr(project, 'title', 'your project')
             
-            notification = Notification.objects.create(
-                user=startup_user,
-                notification_type=ntype,
+            return cls.create_notification(
+                notification_type_code='project_followed',
+                recipient_user=startup_user,
                 title="New project follower",
                 message=f"{investor_name} started following your project '{project_title}'.",
                 triggered_by_user=investor_user,
@@ -362,9 +431,6 @@ class NotificationService:
                 priority=NotificationPriority.MEDIUM,
                 related_project=project,
             )
-
-            logger.info(f"Created project follow notification {notification.notification_id}")
-            return notification
 
         except Exception as e:
             logger.error(f"Failed to create project follow notification: {str(e)}", exc_info=True)
@@ -400,24 +466,6 @@ class NotificationService:
                 logger.warning("Missing required users for startup saved notification")
                 return None
 
-            if startup_user.pk == investor_user.pk:
-                logger.info(f"Skipping self-save notification for user {investor_user.pk}")
-                return None
-
-            ntype = cls._get_or_create_notification_type(
-                'startup_saved', 
-                'Startup Saved'
-            )
-
-            if cls._check_duplicate_notification(
-                user=startup_user,
-                notification_type=ntype,
-                triggered_by_user=investor_user,
-                related_startup_id=startup.id
-            ):
-                logger.info(f"Duplicate startup saved notification prevented for startup {startup.id}")
-                return None
-
             investor_name = (
                 f"{investor_user.first_name} {investor_user.last_name}".strip()
                 if hasattr(investor_user, 'first_name') and investor_user.first_name
@@ -426,9 +474,9 @@ class NotificationService:
                 else investor_user.email
             )
             
-            notification = Notification.objects.create(
-                user=startup_user,
-                notification_type=ntype,
+            return cls.create_notification(
+                notification_type_code='startup_saved',
+                recipient_user=startup_user,
                 title="New follower",
                 message=f"{investor_name} saved your startup.",
                 triggered_by_user=investor_user,
@@ -436,9 +484,6 @@ class NotificationService:
                 priority=NotificationPriority.LOW,
                 related_startup_id=startup.id,
             )
-
-            logger.info(f"Created startup saved notification {notification.notification_id}")
-            return notification
 
         except Exception as e:
             logger.error(f"Failed to create startup saved notification: {str(e)}", exc_info=True)

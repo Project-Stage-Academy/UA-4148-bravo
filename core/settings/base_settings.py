@@ -116,6 +116,46 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Tests
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
+# Notification System Configuration
+NOTIFICATION_SETTINGS = {
+    'DEDUPLICATION_WINDOW': 30,  # seconds
+    'MAX_NOTIFICATIONS_PER_USER': 1000,
+    'CLEANUP_AFTER_DAYS': 90,
+    'DEFAULT_PRIORITY': 'medium',
+}
+
+# Communications Notification Types
+COMMUNICATIONS_NOTIFICATION_TYPES = [
+    {
+        'code': 'project_followed',
+        'name': 'Project Followed',
+        'description': 'Notification when an investor follows a startup project',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
+    {
+        'code': 'startup_saved',
+        'name': 'Startup Saved',
+        'description': 'Notification when an investor saves a startup',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
+    {
+        'code': 'message_received',
+        'name': 'Message Received',
+        'description': 'Notification when a user receives a message',
+        'default_frequency': 'immediate',
+        'is_active': True,
+    },
+    {
+        'code': 'activity_summarized',
+        'name': 'Activity Summary',
+        'description': 'Daily or weekly activity summary notification',
+        'default_frequency': 'daily_digest',
+        'is_active': True,
+    },
+]
+
 # Sentry for monitoring
 SENTRY_DSN = get_env("SENTRY_DSN", default=None)
 

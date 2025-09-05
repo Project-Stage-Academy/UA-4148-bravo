@@ -4,16 +4,11 @@ from django.db import transaction
 from django.db.models.signals import post_save, post_migrate
 from django.apps import apps
 from django.dispatch import receiver
-from datetime import timedelta
-from django.utils import timezone
 
 from .models import (
     UserNotificationPreference,
     NotificationType,
     UserNotificationTypePreference,
-    Notification,
-    NotificationTrigger,
-    NotificationPriority,
 )
 
 logger = logging.getLogger(__name__)
@@ -133,6 +128,9 @@ def _get_or_create_ntype(code: str, name: str | None = None) -> NotificationType
     return ntype
 
 def _connect_saved_startup_signal():
+    """
+    Connect signal handler for SavedStartup creation using NotificationService.
+    """
     try:
         SavedStartup = apps.get_model("investors", "SavedStartup")
         logger.debug("[SIGNAL] investors.SavedStartup model resolved")
@@ -146,9 +144,10 @@ def _connect_saved_startup_signal():
         dispatch_uid="comm_saved_startup_created",
         weak=False,
     )
-    def notify_startup_followed(sender, instance, created, **kwargs):
+    def notify_startup_saved(sender, instance, created, **kwargs):
+        """Signal handler that delegates to NotificationService."""
         logger.debug(
-            "[SIGNAL] notify_startup_followed fired",
+            "[SIGNAL] notify_startup_saved fired",
             extra={"sig_created": bool(created), "savedstartup_id": getattr(instance, "pk", None)},
         )
         if not created:
@@ -196,112 +195,48 @@ def _connect_saved_startup_signal():
             )
             return
 
-        if startup_user.pk == investor_user.pk:
-            logger.info(
-                "[SIGNAL] Skip: user followed own startup",
-                extra={"user_id": startup_user.pk},
-            )
-            return
-
-        sid = _to_int(getattr(startup, "id", None))
-        if sid is None:
-            logger.warning("[SIGNAL] Skip: startup id is not int-like", extra={"raw_id": getattr(startup, "id", None)})
-            return
-        inv_name = getattr(investor_user, "get_full_name", lambda: "")() or getattr(investor_user, "email", "")
-        title = "New follower"
-        message = f"{inv_name} followed your startup."
-
-        # Ensure notification type
-        ntype = NotificationType.objects.filter(code="startup_followed", is_active=True).first()
-        if not ntype:
-            logger.debug("[SIGNAL] NotificationType 'startup_followed' not found, creating")
-            ntype = _get_or_create_ntype("startup_followed", "Startup Followed")
-            
-        now = timezone.now()
-        second_start = now.replace(microsecond=0)
-        second_end = second_start + timedelta(seconds=1)
-
-        # Deduplication
-        base_qs = Notification.objects.filter(
-            user=startup_user,
-            notification_type=ntype,
-            triggered_by_user=investor_user,
-            related_startup_id=sid,
-            created_at__gte=second_start,
-            created_at__lt=second_end,
-        )
-        if base_qs.exists():
-            logger.info(
-                "[SIGNAL] Duplicate",
-                extra={
-                    "startup_user_id": startup_user.pk,
-                    "investor_user_id": investor_user.pk,
-                    "startup_id": sid,
-                    "second_start": second_start.isoformat(),
-                },
-            )
-            return
-
-        def _create():
-            _now = timezone.now()
-            _second_start = _now.replace(microsecond=0)
-            _second_end = _second_start + timedelta(seconds=1)
-            
-            # double-check inside transaction/on_commit
-            if Notification.objects.filter(
-                user=startup_user,
-                notification_type=ntype,
-                triggered_by_user=investor_user,
-                related_startup_id=sid,
-                created_at__gte=_second_start,
-                created_at__lt=_second_end,
-            ).exists():
-                logger.info(
-                    "[SIGNAL] Duplicate within same second (re-check)",
-                    extra={"startup_id": sid, "second_start": _second_start.isoformat()},
-                )
-                return
-
-            notif = Notification.objects.create(
-                user=startup_user,
-                notification_type=ntype,
-                title=title,
-                message=message,
-                triggered_by_user=investor_user,
-                triggered_by_type=NotificationTrigger.INVESTOR,
-                priority=NotificationPriority.LOW,
-                related_startup_id=sid,
-            )
-            logger.info(
-                "[SIGNAL] Notification created",
-                extra={
-                    "notification_id": str(getattr(notif, "notification_id", "")),
-                    "user_id": startup_user.pk,
-                    "startup_id": sid,
-                    "investor_user_id": investor_user.pk,
-                },
-            )
-
-        def safe_create():
+        # Use NotificationService for consistent notification creation
+        def _create_notification():
+            from .services import NotificationService
             try:
-                _create()
-            except Exception:
-                logger.error("[SIGNAL] Failed to create notification", exc_info=True)
+                NotificationService.create_startup_saved_notification(
+                    startup=startup,
+                    investor_user=investor_user,
+                    startup_user=startup_user
+                )
+                logger.info(
+                    "[SIGNAL] Startup saved notification created via NotificationService",
+                    extra={
+                        "startup_id": startup.pk,
+                        "investor_user_id": investor_user.pk,
+                        "startup_user_id": startup_user.pk,
+                    }
+                )
+            except Exception as e:
+                logger.error(
+                    "[SIGNAL] Failed to create startup saved notification via NotificationService",
+                    extra={"error": str(e)},
+                    exc_info=True
+                )
 
+        # Handle transaction context
         conn = transaction.get_connection()
         if conn.in_atomic_block:
             logger.debug("[SIGNAL] In atomic block; scheduling on_commit")
-            transaction.on_commit(safe_create)
+            transaction.on_commit(_create_notification)
         else:
             logger.debug("[SIGNAL] Not in atomic block; creating immediately")
-            safe_create()
+            _create_notification()
 
-    _handlers.append(notify_startup_followed)
+    _handlers.append(notify_startup_saved)
     logger.info("[SIGNAL] _connect_saved_startup_signal handler registered",
                 extra={"handlers_count": len(_handlers)})
 
 
 def _connect_followed_project_signal():
+    """
+    Connect signal handler for FollowedProject creation using NotificationService.
+    """
     try:
         FollowedProject = apps.get_model("investors", "FollowedProject")
         logger.debug("[SIGNAL] investors.FollowedProject model resolved")
@@ -316,6 +251,7 @@ def _connect_followed_project_signal():
         weak=False,
     )
     def notify_project_followed(sender, instance, created, **kwargs):
+        """Signal handler that delegates to NotificationService."""
         logger.debug(
             "[SIGNAL] notify_project_followed fired",
             extra={"sig_created": bool(created), "followedproject_id": getattr(instance, "pk", None)},
@@ -369,107 +305,38 @@ def _connect_followed_project_signal():
             )
             return
 
-        if startup_user.pk == investor_user.pk:
-            logger.info(
-                "[SIGNAL] Skip: user followed own project",
-                extra={"user_id": startup_user.pk},
-            )
-            return
-
-        proj_id = _to_int(getattr(project, "id", None))
-        if proj_id is None:
-            logger.warning("[SIGNAL] Skip: project id is not int-like", extra={"raw_id": getattr(project, "id", None)})
-            return
-        
-        inv_name = getattr(investor_user, "get_full_name", lambda: "")() or getattr(investor_user, "email", "")
-        project_title = getattr(project, "title", "your project")
-        title = "New project follower"
-        message = f"{inv_name} started following your project '{project_title}'."
-
-        # Ensure notification type
-        ntype = NotificationType.objects.filter(code="project_followed", is_active=True).first()
-        if not ntype:
-            logger.debug("[SIGNAL] NotificationType 'project_followed' not found, creating")
-            ntype = _get_or_create_ntype("project_followed", "Project Followed")
-            
-        now = timezone.now()
-        second_start = now.replace(microsecond=0)
-        second_end = second_start + timedelta(seconds=1)
-
-        # Deduplication
-        base_qs = Notification.objects.filter(
-            user=startup_user,
-            notification_type=ntype,
-            triggered_by_user=investor_user,
-            related_project_id=proj_id,
-            created_at__gte=second_start,
-            created_at__lt=second_end,
-        )
-        if base_qs.exists():
-            logger.info(
-                "[SIGNAL] Duplicate",
-                extra={
-                    "startup_user_id": startup_user.pk,
-                    "investor_user_id": investor_user.pk,
-                    "project_id": proj_id,
-                    "second_start": second_start.isoformat(),
-                },
-            )
-            return
-
-        def _create():
-            _now = timezone.now()
-            _second_start = _now.replace(microsecond=0)
-            _second_end = _second_start + timedelta(seconds=1)
-            
-            # double-check inside transaction/on_commit
-            if Notification.objects.filter(
-                user=startup_user,
-                notification_type=ntype,
-                triggered_by_user=investor_user,
-                related_project_id=proj_id,
-                created_at__gte=_second_start,
-                created_at__lt=_second_end,
-            ).exists():
-                logger.info(
-                    "[SIGNAL] Duplicate within same second (re-check)",
-                    extra={"project_id": proj_id, "second_start": _second_start.isoformat()},
-                )
-                return
-
-            notif = Notification.objects.create(
-                user=startup_user,
-                notification_type=ntype,
-                title=title,
-                message=message,
-                triggered_by_user=investor_user,
-                triggered_by_type=NotificationTrigger.INVESTOR,
-                priority=NotificationPriority.MEDIUM,
-                related_project=project,
-            )
-            logger.info(
-                "[SIGNAL] Notification created",
-                extra={
-                    "notification_id": str(getattr(notif, "notification_id", "")),
-                    "user_id": startup_user.pk,
-                    "project_id": proj_id,
-                    "investor_user_id": investor_user.pk,
-                },
-            )
-
-        def safe_create():
+        # Use NotificationService for consistent notification creation
+        def _create_notification():
+            from .services import NotificationService
             try:
-                _create()
-            except Exception:
-                logger.error("[SIGNAL] Failed to create notification", exc_info=True)
+                NotificationService.create_project_followed_notification(
+                    project=project,
+                    investor_user=investor_user,
+                    startup_user=startup_user
+                )
+                logger.info(
+                    "[SIGNAL] Project followed notification created via NotificationService",
+                    extra={
+                        "project_id": project.pk,
+                        "investor_user_id": investor_user.pk,
+                        "startup_user_id": startup_user.pk,
+                    }
+                )
+            except Exception as e:
+                logger.error(
+                    "[SIGNAL] Failed to create project followed notification via NotificationService",
+                    extra={"error": str(e)},
+                    exc_info=True
+                )
 
+        # Handle transaction context
         conn = transaction.get_connection()
         if conn.in_atomic_block:
             logger.debug("[SIGNAL] In atomic block; scheduling on_commit")
-            transaction.on_commit(safe_create)
+            transaction.on_commit(_create_notification)
         else:
             logger.debug("[SIGNAL] Not in atomic block; creating immediately")
-            safe_create()
+            _create_notification()
 
     _handlers.append(notify_project_followed)
     logger.info("[SIGNAL] _connect_followed_project_signal handler registered",
@@ -479,7 +346,8 @@ def _connect_followed_project_signal():
 # Initialize handlers at import
 logger.info("[SIGNAL] Initializing communications signals")
 _connect_saved_startup_signal()
-if getattr(settings, "ENABLE_FOLLOWED_PROJECT_SIGNAL", False):
-    _connect_followed_project_signal()
-else:
-    logger.info("[SIGNAL] FollowedProject signal disabled via settings to prevent duplicate notifications")
+
+# Always enable FollowedProject signal now that it uses NotificationService
+# This eliminates the need for ENABLE_FOLLOWED_PROJECT_SIGNAL setting
+_connect_followed_project_signal()
+logger.info("[SIGNAL] All notification signals enabled and using NotificationService")

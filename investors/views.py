@@ -329,13 +329,6 @@ class FollowedProjectViewSet(viewsets.ModelViewSet):
             },
         )
 
-        try:
-            NotificationService.create_project_followed_notification(
-                project=project,
-                investor_user=user
-            )
-        except Exception as e:
-            logger.warning(f"Failed to create follow notification: {str(e)}")
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -466,13 +459,8 @@ class FollowProjectView(APIView):
             serializer.is_valid(raise_exception=True)
             obj = serializer.save()
             
-            try:
-                NotificationService.create_project_followed_notification(
-                    project=project,
-                    investor_user=request.user
-                )
-            except Exception as e:
-                logger.warning(f"Failed to create notification for project follow: {e}")
+            # Note: Notification creation is now handled by the post_save signal
+            # in communications/signals.py to ensure consistency across all creation paths
             
             return Response(FollowedProjectSerializer(obj).data, status=status.HTTP_201_CREATED)
             
