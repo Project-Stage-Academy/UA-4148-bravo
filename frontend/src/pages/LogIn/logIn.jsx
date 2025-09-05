@@ -49,10 +49,11 @@ function LogInPage() {
     const doSubmit = ({ form, handleError }) => {
         login(form.data.email, form.data.password)
             .then((result) => {
-                console.log(result.res);
-                console.log(result.newUser);
-
-                navigate('/');
+                if (result.newUser.companyId && result.newUser.companyType) {
+                    navigate('/');
+                } else {
+                    navigate('/auth/register/user-represent');
+                }
             })
             .catch((error) =>
                 bruteForce(error, {
