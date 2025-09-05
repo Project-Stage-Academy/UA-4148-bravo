@@ -2,8 +2,8 @@ import logging
 from http.cookies import SimpleCookie
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
-from validation.validate_token import safe_decode
 from users.models import User
+from users.tokens import safe_decode
 
 logger = logging.getLogger(__name__)
 

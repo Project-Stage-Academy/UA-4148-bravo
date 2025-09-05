@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from investors.models import SavedStartup
 from investors.serializers import SavedStartupSerializer
 from users.cookie_jwt import CookieJWTAuthentication
-from users.permissions import IsAuthenticatedOr401
+from users.permissions import IsAuthenticatedOr401, HasActiveCompanyAccount
 
 
 class SavedStartupFilter(django_filters.FilterSet):
@@ -27,7 +27,7 @@ class InvestorSavedStartupsList(generics.ListAPIView):
     - search by startup name/email
     - ordering by saved_at, status, startup name
     """
-    permission_classes = [IsAuthenticatedOr401]
+    permission_classes = [IsAuthenticatedOr401, HasActiveCompanyAccount]
     authentication_classes = [CookieJWTAuthentication]
     serializer_class = SavedStartupSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -53,7 +53,7 @@ class UnsaveStartupView(generics.GenericAPIView):
     DELETE /api/startups/<startup_id>/unsave/
     Idempotent: returns 200 with {"deleted": true/false}
     """
-    permission_classes = [IsAuthenticatedOr401]
+    permission_classes = [IsAuthenticatedOr401, HasActiveCompanyAccount]
     authentication_classes = [CookieJWTAuthentication]
     serializer_class = SavedStartupSerializer 
 

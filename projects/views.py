@@ -15,7 +15,7 @@ from django_elasticsearch_dsl_drf.filter_backends import (
 )
 
 from users.cookie_jwt import CookieJWTAuthentication
-from users.permissions import IsAuthenticatedOr401
+from users.permissions import IsAuthenticatedOr401, HasActiveCompanyAccount
 from projects.documents import ProjectDocument
 from projects.permissions import IsOwnerOrReadOnly
 from projects.serializers import ProjectDocumentSerializer, ProjectReadSerializer, ProjectWriteSerializer
@@ -44,7 +44,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         - Only the owner can modify or delete their projects.
     """
     queryset = Project.objects.select_related('startup', 'category').all()
-    permission_classes = [IsAuthenticatedOr401, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedOr401, IsOwnerOrReadOnly, HasActiveCompanyAccount]
     authentication_classes = [CookieJWTAuthentication]
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]

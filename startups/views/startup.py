@@ -9,7 +9,7 @@ from startups.serializers.startup_full import StartupSerializer
 from startups.serializers.startup_create import StartupCreateSerializer
 from startups.views.startup_base import BaseValidatedModelViewSet
 from users.cookie_jwt import CookieJWTAuthentication
-from users.permissions import IsStartupUser, CanCreateCompanyPermission, IsAuthenticatedOr401
+from users.permissions import IsStartupUser, CanCreateCompanyPermission, IsAuthenticatedOr401, HasActiveCompanyAccount
 from communications.serializers import (
     UserNotificationPreferenceSerializer,
     UserNotificationTypePreferenceSerializer,
@@ -22,7 +22,7 @@ class StartupViewSet(BaseValidatedModelViewSet):
         .prefetch_related('projects')
     
     serializer_class = StartupSerializer
-    permission_classes = [IsAuthenticatedOr401, IsStartupUser]
+    permission_classes = [IsAuthenticatedOr401, IsStartupUser, HasActiveCompanyAccount]
     authentication_classes = [CookieJWTAuthentication]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['industry', 'stage', 'location__country']

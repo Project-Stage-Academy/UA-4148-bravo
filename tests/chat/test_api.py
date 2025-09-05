@@ -4,7 +4,6 @@ from chat.documents import Room, Message
 from tests.chat.test_api_base_case import BaseChatTestCase
 from users.models import UserRole
 from utils.authenticate_client import authenticate_client
-from rest_framework.exceptions import ErrorDetail
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)

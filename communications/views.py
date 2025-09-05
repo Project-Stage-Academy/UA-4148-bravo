@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from users.cookie_jwt import CookieJWTAuthentication
+from users.permissions import HasActiveCompanyAccount
 from .models import (
     Notification,
     UserNotificationPreference,
@@ -22,14 +23,13 @@ from .serializers import (
     UserNotificationPreferenceSerializer,
     NotificationTypeSerializer,
     UserNotificationTypePreferenceSerializer,
-    EmailNotificationTypePreferenceSerializer,
-    UpdateEmailTypePreferenceSerializer,
     EmailNotificationPreferenceSerializer
 )
 
 
 class DefaultPageNumberPagination(PageNumberPagination):
     page_size = 10
+
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class NotificationViewSet(
     """
     serializer_class = NotificationSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasActiveCompanyAccount]
     lookup_field = 'notification_id'
     http_method_names = ['get', 'post', 'delete', 'head', 'options']
     pagination_class = DefaultPageNumberPagination
@@ -87,7 +87,6 @@ class NotificationViewSet(
         if ntype_code:
             qs = qs.filter(notification_type__code=ntype_code)
 
-
         priority = params.get('priority')
         if priority in {'low', 'medium', 'high'}:
             qs = qs.filter(priority=priority)
@@ -105,15 +104,13 @@ class NotificationViewSet(
                 qs = qs.filter(created_at__lte=dt)
 
         return qs
-    
-    
-    
+
     @action(detail=False, methods=['get'], url_path='unread_count')
     def unread_count(self, request):
         """Get the count of unread notifications for the current user."""
         count = self.get_queryset().filter(is_read=False).count()
         return Response({'unread_count': count})
-    
+
     @action(detail=True, methods=['post'], url_path='mark_as_read')
     def mark_as_read(self, request, notification_id=None):
         """
@@ -125,7 +122,7 @@ class NotificationViewSet(
         if not notification.is_read:
             notification.is_read = True
             notification.save(update_fields=['is_read', 'updated_at'])
-        
+
         logger.info(
             "notifications.mark_as_read user=%s notification_id=%s",
             getattr(request.user, 'user_id', getattr(request.user, 'id', None)),
@@ -150,7 +147,7 @@ class NotificationViewSet(
             str(notification.notification_id),
         )
         return Response({'status': 'notification marked as unread'})
-    
+
     @action(detail=False, methods=['post'], url_path='mark_all_as_read')
     def mark_all_as_read(self, request):
         """
@@ -205,7 +202,7 @@ class NotificationTypeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = NotificationType.objects.filter(is_active=True)
     serializer_class = NotificationTypeSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasActiveCompanyAccount]
     pagination_class = None
 
 
@@ -215,7 +212,7 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
     """
     serializer_class = UserNotificationPreferenceSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasActiveCompanyAccount]
     http_method_names = ['get', 'patch', 'head', 'options']
 
     def get_queryset(self):
@@ -228,10 +225,10 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
         """
         queryset = self.filter_queryset(self.get_queryset())
         obj = queryset.first()
-        
+
         if obj is None:
             obj = UserNotificationPreference.objects.create(user=self.request.user)
-            
+
             notification_types = NotificationType.objects.filter(is_active=True)
             for notification_type in notification_types:
                 UserNotificationTypePreference.objects.create(
@@ -239,7 +236,7 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
                     notification_type=notification_type,
                     frequency='immediate'
                 )
-        
+
         return obj
 
     @action(detail=True, methods=['patch'])
@@ -311,10 +308,11 @@ class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
             ]
         })
 
+
 class EmailNotificationPreferenceViewSet(viewsets.GenericViewSet,
-                                        mixins.RetrieveModelMixin,
-                                        mixins.UpdateModelMixin,
-                                        mixins.ListModelMixin):
+                                         mixins.RetrieveModelMixin,
+                                         mixins.UpdateModelMixin,
+                                         mixins.ListModelMixin):
     """
     API endpoint for managing email notification preferences.
     
@@ -323,23 +321,23 @@ class EmailNotificationPreferenceViewSet(viewsets.GenericViewSet,
     """
     serializer_class = EmailNotificationPreferenceSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasActiveCompanyAccount]
     http_method_names = ['get', 'patch', 'head', 'options']
-    
+
     def get_queryset(self):
         """Return only the current user's preferences."""
         return EmailNotificationPreference.objects.filter(user=self.request.user)
-    
+
     def get_object(self):
         """
         Return the current user's preferences, creating them if they don't exist.
         """
         queryset = self.filter_queryset(self.get_queryset())
         obj = queryset.first()
-        
+
         if obj is None:
             obj = EmailNotificationPreference.objects.create(user=self.request.user)
-            
+
             notification_types = NotificationType.objects.filter(is_active=True)
             for notification_type in notification_types:
                 EmailNotificationTypePreference.objects.create(
@@ -347,9 +345,9 @@ class EmailNotificationPreferenceViewSet(viewsets.GenericViewSet,
                     notification_type=notification_type,
                     enabled=True
                 )
-        
+
         return obj
-    
+
     def list(self, request, *args, **kwargs):
         """
         Get the user's email notification preferences.
@@ -358,7 +356,7 @@ class EmailNotificationPreferenceViewSet(viewsets.GenericViewSet,
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
-    
+
     def update(self, request, *args, **kwargs):
         """
         Update email notification type preferences.
@@ -372,16 +370,16 @@ class EmailNotificationPreferenceViewSet(viewsets.GenericViewSet,
         }
         """
         instance = self.get_object()
-        
+
         types_enabled_data = request.data.get('types_enabled', [])
         if not isinstance(types_enabled_data, list):
             return Response(
                 {'error': 'types_enabled must be a list'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
+
         serializer = self.get_serializer(instance, data=request.data, context={'request': request})
-        
+
         try:
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
