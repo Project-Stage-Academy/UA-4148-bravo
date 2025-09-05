@@ -11,8 +11,8 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Security
-SECRET_KEY = get_env("SECRET_KEY", required=True)
-DEBUG = get_env("DEBUG", default=False, cast=bool)
+SECRET_KEY = get_env("SECRET_KEY", required=True, use_decouple=True)
+DEBUG = get_env("DEBUG", default=False, cast=bool, use_decouple=True)
 DOCS_ENABLED = get_env("DOCS_ENABLED", default=True, cast=bool)
 
 ALLOWED_HOSTS = config(
