@@ -1,5 +1,6 @@
 from decimal import Decimal
 from unittest import mock
+import uuid
 
 from django.test import override_settings
 from django.urls import reverse
@@ -25,9 +26,9 @@ class SearchTests(APITestCase):
         )
         self.client.force_authenticate(user=self.user)
 
-        self.industry = Industry.objects.create(name="Healthcare")
+        self.industry = Industry.objects.create(name=f"Healthcare_{uuid.uuid4().hex[:8]}")
         self.location = Location.objects.create(country="UA", city="Kyiv")
-        self.category = Category.objects.create(name="Tech")
+        self.category = Category.objects.create(name=f"Tech_{uuid.uuid4().hex[:8]}")
 
         # Startup
         self.startup = Startup.objects.create(

@@ -8,7 +8,9 @@ class Stage(TextChoices):
     Stages:
     - IDEA: Initial concept phase
     - MVP: Minimum Viable Product developed
+    - SEED: Seed
     - LAUNCH: Public release, product is live
+    - GROWTH: Expanding user base or market
     - SCALE: Growth phase, expanding user base or market
     - EXIT: Final stage — acquisition, IPO, or shutdown
     """
@@ -16,6 +18,7 @@ class Stage(TextChoices):
     MVP = 'mvp', 'MVP'
     SEED = 'seed', 'Seed'
     LAUNCH = 'launch', 'Launch'
+    GROWTH = 'growth', 'Growth'
     SCALE = 'scale', 'Scale'
     EXIT = 'exit', 'Exit'
 

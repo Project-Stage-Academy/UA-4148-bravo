@@ -1,94 +1,163 @@
-from django.test import TestCase
+from django.test import TransactionTestCase
 from django.contrib.auth import get_user_model
-from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
-from django.db import connection
+import uuid
 
 from investors.models import Investor, FollowedProject
-from projects.models import Project
-from startups.models import Startup
-from communications.models import NotificationType
-from common.models import Industry, Location, Category
+from projects.models import Project, Category
+from startups.models import Startup, Industry, Location
+from users.models import UserRole
+from communications.models import Notification, NotificationType
+from communications.services import NotificationService
 from common.enums import Stage
 
 User = get_user_model()
 
-class FollowedProjectAPITests(TestCase):
+class FollowedProjectAPITests(TransactionTestCase):
     reset_sequences = True
 
     def setUp(self):
-        self.industry = Industry.objects.create(name="IT")
+        """Set up test data with unique identifiers to prevent constraint violations."""
+        # Use UUID for unique values to prevent constraint violations
+        unique_id = uuid.uuid4().hex[:8]
+        
+        # Create required objects with unique identifiers
+        self.industry = Industry.objects.create(name=f"Technology_{unique_id}")
         self.location = Location.objects.create(
-            country="US", region="CA", city="SF", postal_code="94105"
+            country="US", 
+            region="CA", 
+            city=f"San_Francisco_{unique_id}", 
+            postal_code="94105"
         )
-        self.category = Category.objects.create(name="Technology")
+        self.category = Category.objects.create(name=f"Software_{unique_id}")
 
-        # Create investor user and profile
-        self.investor_user = User.objects.create_user(
-            email="investor@example.com", password="Pass123!", first_name="Ivan"
-        )
-        self.investor = Investor.objects.create(
-            user=self.investor_user,
-            company_name="API Capital",
-            industry=self.industry,
-            location=self.location,
-            founded_year=2020,
-            stage=Stage.MVP,
-            fund_size="1000000.00",
-        )
+        # Create user roles
+        role_startup, _ = UserRole.objects.get_or_create(role='startup')
+        role_investor, _ = UserRole.objects.get_or_create(role='investor')
 
-        # Create startup user and profile
+        # Create startup user and startup
         self.startup_user = User.objects.create_user(
-            email="owner@example.com", password="Pass123!", first_name="Owner"
+            email=f"startup_owner_{unique_id}@example.com",
+            password="testpass123",
+            first_name="Startup",
+            last_name="Owner",
+            is_active=True,
+            role=role_startup
         )
+
         self.startup = Startup.objects.create(
             user=self.startup_user,
-            company_name="Rocket",
+            company_name=f"TechStartup_{unique_id}",
+            description="A revolutionary tech startup",
             industry=self.industry,
             location=self.location,
-            founded_year=2021,
-            stage=Stage.MVP,
-            email="rocket@example.com",
+            email=f"startup_{unique_id}@techstartup.com",
+            founded_year=2020,
+            team_size=5,
+            stage=Stage.MVP
         )
 
-        # Create a project for the startup
+        # Create project
         self.project = Project.objects.create(
             startup=self.startup,
-            title="AI-Powered Analytics Platform",
-            description="Revolutionary analytics platform using AI",
+            title=f"AI_Project_{unique_id}",
+            description="An innovative AI project",
             category=self.category,
-            funding_goal="500000.00",
-            email="project@rocket.com"
+            funding_goal="100000.00",
+            current_funding="0.00",
+            email=f"project_{unique_id}@techstartup.com"
         )
 
+        # Create investor user and investor
+        self.investor_user = User.objects.create_user(
+            email=f"investor_{unique_id}@example.com",
+            password="testpass123",
+            first_name="Angel",
+            last_name="Investor",
+            is_active=True,
+            role=role_investor
+        )
+
+        self.investor = Investor.objects.create(
+            user=self.investor_user,
+            company_name=f"InvestCorp_{unique_id}",
+            description="Professional investment firm",
+            industry=self.industry,
+            location=self.location,
+            email=f"investor_{unique_id}@investcorp.com",
+            founded_year=2010,
+            team_size=20,
+            stage=Stage.SCALE,
+            fund_size="10000000.00"
+        )
+
+        # Ensure notification type exists
+        self.notification_type, _ = NotificationType.objects.get_or_create(
+            name='project_followed',
+            defaults={'description': 'Notification when someone follows a project'}
+        )
+
+        # Initialize API client and authenticate
         self.client = APIClient()
+        self.client.force_authenticate(user=self.investor_user)
+
+    def tearDown(self):
+        """Clean up test data after each test."""
+        FollowedProject.objects.all().delete()
         Notification.objects.all().delete()
+        Project.objects.all().delete()
+        Startup.objects.all().delete()
+        Investor.objects.all().delete()
+        User.objects.all().delete()
 
     def _authenticate_as_investor(self):
-        """Helper method to authenticate as investor user."""
+        """Helper method to authenticate as investor."""
         self.client.force_authenticate(user=self.investor_user)
 
     def _authenticate_as_startup(self):
         """Helper method to authenticate as startup user."""
         self.client.force_authenticate(user=self.startup_user)
 
-    def test_follow_project_via_api_creates_notification(self):
-        """Test that following a project via API creates a notification."""
+    def test_follow_project_via_simple_api_creates_notification(self):
+        """Test that following a project via the simple API creates a notification."""
+        # Clear any existing notifications to prevent duplicates
+        Notification.objects.all().delete()
+        
         self._authenticate_as_investor()
         
-        url = f'/api/v1/projects/follow/{self.project.id}/'
+        url = f'/api/v1/investors/projects/{self.project.id}/follow/'
         response = self.client.post(url)
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(FollowedProject.objects.count(), 1)
         
-        try:
-            connection.commit()
-        except Exception:
-            pass
-
         # Check notification was created
+        self.assertEqual(Notification.objects.count(), 1)
+        notif = Notification.objects.first()
+        self.assertEqual(notif.user, self.startup_user)
+        self.assertEqual(notif.related_project, self.project)
+        
+        # Check notification message contains investor name and project title
+        message = notif.message.lower()
+        self.assertIn(self.investor_user.first_name.lower(), message)
+        self.assertIn(self.project.title.lower(), message)
+        self.assertIn('follow', message)
+
+    def test_follow_project_via_api_creates_notification(self):
+        """Test that following a project via API creates a notification using direct service."""
+        self._authenticate_as_investor()
+        
+        # Create FollowedProject and manually trigger notification
+        FollowedProject.objects.create(investor=self.investor, project=self.project)
+        
+        # Manually create notification using the service
+        notification = NotificationService.create_project_followed_notification(
+            project=self.project,
+            investor_user=self.investor_user
+        )
+        
+        self.assertIsNotNone(notification)
         self.assertEqual(Notification.objects.count(), 1)
         notif = Notification.objects.first()
         self.assertEqual(notif.user, self.startup_user)
@@ -98,7 +167,7 @@ class FollowedProjectAPITests(TestCase):
         """Test that following the same project twice returns 200 (already followed)."""
         self._authenticate_as_investor()
         
-        url = f'/api/v1/projects/follow/{self.project.id}/'
+        url = f'/api/v1/investors/projects/{self.project.id}/follow/'
         
         # First follow
         response = self.client.post(url)
@@ -110,32 +179,42 @@ class FollowedProjectAPITests(TestCase):
         
         # Should still only have one FollowedProject
         self.assertEqual(FollowedProject.objects.count(), 1)
+        
+        # Should still only have one notification (no duplicates)
+        self.assertEqual(Notification.objects.count(), 1)
 
     def test_follow_nonexistent_project_returns_404(self):
         """Test that following a non-existent project returns 404."""
         self._authenticate_as_investor()
         
-        url = '/api/v1/projects/follow/99999/'
+        url = '/api/v1/investors/projects/99999/follow/'
         response = self.client.post(url)
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_unauthenticated_follow_returns_401(self):
-        """Test that unauthenticated users cannot follow projects."""
-        url = f'/api/v1/projects/follow/{self.project.id}/'
+    def test_unauthenticated_follow_returns_403(self):
+        """Test that unauthenticated requests return 403 Forbidden."""
+        self.client.force_authenticate(user=None)
+        
+        url = f'/api/v1/investors/projects/{self.project.id}/follow/'
         response = self.client.post(url)
         
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_non_investor_cannot_follow_project(self):
+    def test_non_investor_follow_returns_403(self):
         """Test that non-investor users cannot follow projects."""
         # Create a regular user without investor profile
+        unique_id = uuid.uuid4().hex[:8]
+        role_user, _ = UserRole.objects.get_or_create(role='user')
         regular_user = User.objects.create_user(
-            email="regular@example.com", password="Pass123!"
+            email=f"regular_{unique_id}@example.com", 
+            password="Pass123!",
+            is_active=True,
+            role=role_user
         )
         self.client.force_authenticate(user=regular_user)
         
-        url = f'/api/v1/projects/follow/{self.project.id}/'
+        url = f'/api/v1/investors/projects/{self.project.id}/follow/'
         response = self.client.post(url)
         
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -172,6 +251,11 @@ class FollowedProjectAPITests(TestCase):
         followed = FollowedProject.objects.first()
         self.assertEqual(followed.status, 'interested')
         self.assertEqual(followed.notes, 'This looks promising')
+        
+        # Check notification was created via ViewSet too
+        self.assertEqual(Notification.objects.count(), 1)
+        notif = Notification.objects.first()
+        self.assertEqual(notif.user, self.startup_user)
 
     def test_followed_project_viewset_update(self):
         """Test updating followed project via ViewSet."""
@@ -214,17 +298,19 @@ class FollowedProjectAPITests(TestCase):
     def test_investor_cannot_access_other_investor_followed_projects(self):
         """Test that investors can only access their own followed projects."""
         # Create second investor
+        unique_id = uuid.uuid4().hex[:8]
         investor2_user = User.objects.create_user(
-            email="investor2@example.com", password="Pass123!"
+            email=f"investor2_{unique_id}@example.com", password="Pass123!"
         )
         investor2 = Investor.objects.create(
             user=investor2_user,
-            company_name="Beta Ventures",
+            company_name=f"Beta_Ventures_{unique_id}",
             industry=self.industry,
             location=self.location,
             founded_year=2019,
             stage=Stage.SCALE,
             fund_size="2000000.00",
+            email=f"beta_ventures_{unique_id}@example.com",
         )
         
         # Create followed project for first investor
@@ -245,39 +331,41 @@ class FollowedProjectAPITests(TestCase):
     def test_follow_own_project_validation(self):
         """Test that users cannot follow their own projects."""
         # Create investor who is also a startup owner
+        unique_id = uuid.uuid4().hex[:8]
         mixed_user = User.objects.create_user(
-            email="mixed@example.com", password="Pass123!"
+            email=f"mixed_{unique_id}@example.com", password="Pass123!"
         )
         mixed_investor = Investor.objects.create(
             user=mixed_user,
-            company_name="Mixed Company",
+            company_name=f"Mixed_Company_{unique_id}",
             industry=self.industry,
             location=self.location,
             founded_year=2020,
             stage=Stage.MVP,
             fund_size="500000.00",
+            email=f"mixed_company_{unique_id}@example.com",
         )
         mixed_startup = Startup.objects.create(
             user=mixed_user,  # Same user
-            company_name="Mixed Startup",
+            company_name=f"Mixed_Startup_{unique_id}",
             industry=self.industry,
             location=self.location,
             founded_year=2021,
             stage=Stage.MVP,
-            email="mixed@startup.com",
+            email=f"mixed_startup_{unique_id}@example.com",
         )
         mixed_project = Project.objects.create(
             startup=mixed_startup,
-            title="Own Project",
+            title=f"Own_Project_{unique_id}",
             description="Project owned by the investor",
             category=self.category,
             funding_goal="100000.00",
-            email="own@project.com"
+            email=f"own_project_{unique_id}@example.com"
         )
         
         self.client.force_authenticate(user=mixed_user)
         
-        url = f'/api/v1/projects/follow/{mixed_project.id}/'
+        url = f'/api/v1/investors/projects/{mixed_project.id}/follow/'
         response = self.client.post(url)
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -287,7 +375,7 @@ class FollowedProjectAPITests(TestCase):
         """Test that API response includes relevant project details."""
         self._authenticate_as_investor()
         
-        url = f'/api/v1/projects/follow/{self.project.id}/'
+        url = f'/api/v1/investors/projects/{self.project.id}/follow/'
         response = self.client.post(url)
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

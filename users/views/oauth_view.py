@@ -121,35 +121,58 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         try:
             user = backend.do_auth(access_token)
         except Exception as e:
-            logger.error("Backend authentication error", exc_info=True)
+            logger.error(f"Backend authentication error for {provider}: {str(e)}", exc_info=True)
             raise ValueError("Invalid or expired token") from e
 
         if not user:
+            logger.warning(f"No user returned from {provider} authentication")
             raise ValueError("Invalid or expired token")
 
-        if provider == "github" and not getattr(user, "email", None):
-            try:
-                emails = requests.get(
-                    "https://api.github.com/user/emails",
-                    headers={"Authorization": f"token {access_token}"},
-                    timeout=(3.05, 5)
-                ).json()
-            except Exception as e:
-                logger.error("Failed to fetch GitHub emails", exc_info=True)
-                raise ValueError("Cannot retrieve email from GitHub") from e
+        # Ensure user has an email address
+        if not getattr(user, "email", None):
+            if provider == "github":
+                try:
+                    emails = requests.get(
+                        "https://api.github.com/user/emails",
+                        headers={"Authorization": f"token {access_token}"},
+                        timeout=(3.05, 5)
+                    ).json()
+                    
+                    if not isinstance(emails, list):
+                        logger.error(f"GitHub API returned non-list response: {emails}")
+                        raise ValueError("Email not provided by provider")
+                        
+                except requests.exceptions.HTTPError as e:
+                    if e.response.status_code == 401:
+                        logger.error("GitHub token unauthorized - token may be expired")
+                        raise ValueError("Invalid or expired token") from e
+                    else:
+                        logger.error(f"GitHub API HTTP error: {e}")
+                        raise ValueError("Cannot retrieve email from GitHub") from e
+                except Exception as e:
+                    logger.error("Failed to fetch GitHub emails", exc_info=True)
+                    raise ValueError("Cannot retrieve email from GitHub") from e
 
-            primary_email = next(
-                (e["email"] for e in emails if e.get("primary") and e.get("verified")),
-                None
-            )
-            if not primary_email:
-                raise ValueError("Email not provided by GitHub")
-            user.email = primary_email
-            user.save()
+                primary_email = next(
+                    (e["email"] for e in emails if e.get("primary") and e.get("verified")),
+                    None
+                )
+                if not primary_email:
+                    logger.warning("No verified primary email found in GitHub response")
+                    raise ValueError("Email not provided by provider")
+                    
+                user.email = primary_email
+                user.save()
+                logger.info(f"Updated user {user.pk} with GitHub email: {primary_email}")
+            else:
+                logger.warning(f"No email provided by {provider} for user")
+                raise ValueError("Email not provided by provider")
 
+        # Ensure user has a role
         if not hasattr(user, "role") or user.role is None:
             user.role = get_default_user_role()
             user.save()
+            logger.info(f"Assigned default role to user {user.pk}")
 
         created = strategy.session_get('user_created')
         self.send_welcome_email(user, provider, created)

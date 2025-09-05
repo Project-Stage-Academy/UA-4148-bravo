@@ -7,7 +7,9 @@ from django.test.utils import override_settings
 from investors.models import Investor, SavedStartup
 from startups.models import Startup, Industry, Location
 from users.models import UserRole
+import uuid
 
+User = get_user_model()
 
 @override_settings(SECURE_SSL_REDIRECT=False)
 class SavedStartupViewSetTests(APITestCase):
@@ -30,29 +32,33 @@ class SavedStartupViewSetTests(APITestCase):
         - a startup owned by another user
         - authenticate as investor user
         """
-        User = get_user_model()
-
         # roles (many projects pre-seed these; create if missing)
         self.role_user, _ = UserRole.objects.get_or_create(role="user")
+        self.role_investor, _ = UserRole.objects.get_or_create(role="investor")
+
+        # Use UUID to ensure unique values
+        unique_id = uuid.uuid4().hex[:8]
 
         # base data for foreign keys
-        self.location = Location.objects.create(country="US", city="NYC", region="NY")
-        self.industry = Industry.objects.create(name="FinTech")
+        self.industry = Industry.objects.create(name=f"IT_{unique_id}")
+        self.location = Location.objects.create(
+            country="US", region="CA", city=f"SF_{unique_id}", postal_code="94105"
+        )
 
-        # investor user (the authenticated caller)
         self.user = User.objects.create(
-            email="inv@example.com",
+            email=f"inv_{unique_id}@example.com",
             password=make_password("Pass123!"),
             first_name="In",
             last_name="Vestor",
-            role=self.role_user,
+            role=self.role_investor,
+            is_active=True,
         )
         self.investor = Investor.objects.create(
             user=self.user,
             industry=self.industry,
-            company_name="API Capital",
+            company_name=f"API Capital_{unique_id}",
             location=self.location,
-            email="api.capital@example.com",
+            email=f"api.capital_{unique_id}@example.com",
             founded_year=2020,
             team_size=5,
             stage="mvp",
@@ -61,20 +67,21 @@ class SavedStartupViewSetTests(APITestCase):
 
         # startup owner (another user)
         self.startup_owner = User.objects.create(
-            email="startup.owner@example.com",
+            email=f"startup.owner_{unique_id}@example.com",
             password=make_password("Pass123!"),
             first_name="Star",
             last_name="Tup",
             role=self.role_user,
+            is_active=True,
         )
         self.startup = Startup.objects.create(
             user=self.startup_owner,
             industry=self.industry,
-            company_name="Cool Startup",
+            company_name=f"Cool Startup_{unique_id}",
             location=self.location,
-            email="info@coolstartup.com",
+            email=f"info_{unique_id}@coolstartup.com",
             founded_year=2020,
-            team_size=10,
+            team_size=3,
             stage="mvp",
         )
 
@@ -83,6 +90,13 @@ class SavedStartupViewSetTests(APITestCase):
 
         # authenticate as investor user
         self.client.force_authenticate(self.user)
+
+    def tearDown(self):
+        """Clean up test data after each test to prevent constraint violations."""
+        SavedStartup.objects.all().delete()
+        Startup.objects.all().delete()
+        Investor.objects.all().delete()
+        User.objects.all().delete()
 
     def test_create_saved_startup_returns_201(self):
         """First save should create a record and return 201 Created."""
@@ -109,16 +123,17 @@ class SavedStartupViewSetTests(APITestCase):
             SavedStartup.objects.filter(investor=self.investor, startup=self.startup).count(), 1
         )
 
-    def test_cannot_save_own_startup_returns_400(self):
-        """Investor is not allowed to save their own startup -> 400."""
+    def test_cannot_save_own_startup(self):
+        """An investor cannot save their own startup."""
+        unique_id = uuid.uuid4().hex[:8]
         my_startup = Startup.objects.create(
             user=self.user,
             industry=self.industry,
-            company_name="My Company",
+            company_name=f"My Company_{unique_id}",
             location=self.location,
-            email="me@myco.com",
+            email=f"me_{unique_id}@myco.com",
             founded_year=2021,
-            team_size=3,
+            team_size=1,
             stage="mvp",
         )
         resp = self.client.post(self.list_url, data={"startup": my_startup.id}, format="json")
@@ -133,7 +148,14 @@ class SavedStartupViewSetTests(APITestCase):
         """
         # Create a row for another investor
         User = get_user_model()
-        other_user = User.objects.create_user(email="other@ex.com", password="x", role=self.role_user)
+        role_investor, _ = UserRole.objects.get_or_create(role="investor")
+        other_user = User.objects.create_user(
+            email="other@ex.com", 
+            password="x", 
+            role=role_investor,
+            is_active=True
+        )
+        other_user.save()
         other_investor = Investor.objects.create(
             user=other_user,
             industry=self.industry,
@@ -201,7 +223,7 @@ class SavedStartupViewSetTests(APITestCase):
         Expect 403 when authenticated user has no investor profile.
         """
         User = get_user_model()
-        plain = User.objects.create_user(email="plain@ex.com", password="x", role=self.role_user)
+        plain = User.objects.create_user(email="plain@ex.com", password="x", is_active=True, role=self.role_user)
         self.client.force_authenticate(plain)
         r = self.client.get(self.list_url)
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
@@ -217,7 +239,14 @@ class SavedStartupViewSetTests(APITestCase):
 
         # switch to another investor
         User = get_user_model()
-        other_user = User.objects.create_user(email="evil@ex.com", password="x", role=self.role_user)
+        role_investor, _ = UserRole.objects.get_or_create(role="investor")
+        other_user = User.objects.create_user(
+            email="evil@ex.com", 
+            password="x", 
+            role=role_investor,
+            is_active=True
+        )
+        other_user.save()
         other_investor = Investor.objects.create(
             user=other_user,
             industry=self.industry,
@@ -240,3 +269,75 @@ class SavedStartupViewSetTests(APITestCase):
         # DELETE
         r2 = self.client.delete(detail_url)
         self.assertEqual(r2.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_cannot_delete_other_investor_saved_startup(self):
+        """An investor cannot delete another investor's saved startup."""
+        unique_id = uuid.uuid4().hex[:8]
+        role_investor, _ = UserRole.objects.get_or_create(role="investor")
+        other_user = User.objects.create(
+            email=f"other_{unique_id}@example.com",
+            password=make_password("Pass123!"),
+            first_name="Other",
+            last_name="Investor",
+            role=role_investor,
+            is_active=True,
+        )
+        other_investor = Investor.objects.create(
+            user=other_user,
+            industry=self.industry,
+            company_name=f"Other Capital_{unique_id}",
+            location=self.location,
+            email=f"other_{unique_id}@ex.com",
+            founded_year=2020,
+            team_size=2,
+            stage="mvp",
+            fund_size="500000.00",
+        )
+        SavedStartup.objects.create(investor=other_investor, startup=self.startup)
+
+        url = reverse("saved-startup-detail", args=[SavedStartup.objects.get(investor=other_investor, startup=self.startup).id])
+        r = self.client.delete(url)
+        self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_cannot_patch_other_investor_saved_startup(self):
+        """An investor cannot patch another investor's saved startup."""
+        unique_id = uuid.uuid4().hex[:8]
+        role_investor, _ = UserRole.objects.get_or_create(role="investor")
+        other_user = User.objects.create(
+            email=f"evil_{unique_id}@example.com",
+            password=make_password("Pass123!"),
+            first_name="Evil",
+            last_name="Investor",
+            role=role_investor,
+            is_active=True,
+        )
+        other_investor = Investor.objects.create(
+            user=other_user,
+            industry=self.industry,
+            company_name=f"Evil Capital_{unique_id}",
+            location=self.location,
+            email=f"evil_{unique_id}@ex.com",
+            founded_year=2020,
+            team_size=1,
+            stage="mvp",
+            fund_size="100000.00",
+        )
+        SavedStartup.objects.create(investor=other_investor, startup=self.startup)
+
+        url = reverse("saved-startup-detail", args=[SavedStartup.objects.get(investor=other_investor, startup=self.startup).id])
+        r = self.client.patch(url, data={"status": "contacted"}, format="json")
+        self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_create_saved_startup_with_duplicate_prevention(self):
+        """Test that creating duplicate SavedStartup entries is properly handled."""
+        # First creation should succeed
+        resp = self.client.post(self.list_url, {"startup": self.startup.id}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        
+        # Second creation should return existing record or handle gracefully
+        resp2 = self.client.post(self.list_url, {"startup": self.startup.id}, format="json")
+        # Should either return 201 (if handled) or 400 (if validation error)
+        self.assertIn(resp2.status_code, [status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST])
+        
+        # Should still only have one SavedStartup record
+        self.assertEqual(SavedStartup.objects.filter(investor=self.investor, startup=self.startup).count(), 1)

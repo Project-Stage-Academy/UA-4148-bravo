@@ -11,6 +11,7 @@ from projects.models import Project, Category
 from investments.models import Subscription
 from utils.authenticate_client import authenticate_client
 from django.test.utils import override_settings
+import uuid
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
@@ -27,6 +28,7 @@ class TestSubscriptionCreateAPI(TestCase):
             first_name="Test",
             last_name="Investor",
             role=cls.role_user,
+            is_active=True,
         )
 
         cls.startup_user = User.objects.create_user(
@@ -35,6 +37,7 @@ class TestSubscriptionCreateAPI(TestCase):
             first_name="Startup",
             last_name="Owner",
             role=cls.role_user,
+            is_active=True,
         )
 
         cls.industry = Industry.objects.create(name="Technology")
@@ -61,7 +64,7 @@ class TestSubscriptionCreateAPI(TestCase):
             stage=Stage.MVP,
             fund_size=Decimal("1000.00")
         )
-        cls.category = Category.objects.create(name="Fintech")
+        cls.category = Category.objects.create(name=f"Fintech_{uuid.uuid4().hex[:8]}")
         cls.project = Project.objects.create(
             startup=cls.startup,
             title="Funding Project",
@@ -146,6 +149,7 @@ class TestSubscriptionCreateAPI(TestCase):
             first_name="Owner",
             last_name="Investor",
             role=self.role_user,
+            is_active=True,
         )
         owner_investor = Investor.objects.create(
             user=owner_investor_user,

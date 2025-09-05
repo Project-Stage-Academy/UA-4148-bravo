@@ -140,7 +140,7 @@ class IsAuthenticatedInvestor403(BasePermission):
 
         if not is_investor:
             logger.warning(
-                "Permission denied: user %s is not an investor for %s.",
+                "Permission denied: user %s is not an investor for %s. Not an investor",
                 user.id,
                 view.__class__.__name__,
             )

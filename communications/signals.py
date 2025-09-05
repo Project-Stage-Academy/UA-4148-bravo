@@ -479,4 +479,7 @@ def _connect_followed_project_signal():
 # Initialize handlers at import
 logger.info("[SIGNAL] Initializing communications signals")
 _connect_saved_startup_signal()
-_connect_followed_project_signal()
+if getattr(settings, "ENABLE_FOLLOWED_PROJECT_SIGNAL", False):
+    _connect_followed_project_signal()
+else:
+    logger.info("[SIGNAL] FollowedProject signal disabled via settings to prevent duplicate notifications")

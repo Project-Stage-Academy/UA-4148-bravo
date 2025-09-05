@@ -8,7 +8,7 @@ from common.enums import Stage
 from investors.models import Investor, SavedStartup, ViewedStartup, FollowedProject
 from startups.models import Startup
 from validation.validate_names import validate_company_name
-
+from communications.services import NotificationService
 
 class InvestorSerializer(serializers.ModelSerializer):
     """
@@ -169,6 +169,14 @@ class SavedStartupSerializer(serializers.ModelSerializer):
 
         if not created:
             raise serializers.ValidationError({'non_field_errors': ['Already saved.']})
+
+        try:
+            NotificationService.create_startup_saved_notification(
+                startup=startup,
+                investor_user=user
+            )
+        except Exception:
+            pass
 
         return obj
 

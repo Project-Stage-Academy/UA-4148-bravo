@@ -11,9 +11,9 @@ from investors.views import InvestorViewSet, SavedStartupViewSet, SaveStartupVie
 from investors.views_saved import InvestorSavedStartupsList, UnsaveStartupView
 
 router = DefaultRouter()
+router.register(r'followed-projects', FollowedProjectViewSet, basename='followed-project')
 router.register(r'saved', SavedStartupViewSet, basename='saved-startup')
 router.register(r'', InvestorViewSet, basename='investor')
-router.register(r'followed-projects', FollowedProjectViewSet, basename='followed-project')
 
 urlpatterns = [
     # Endpoint 1: GET recently viewed startups
