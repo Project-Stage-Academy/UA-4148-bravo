@@ -9,19 +9,25 @@ if [ -z "${1:-}" ]; then
   exit 1
 fi
 
-host="$1"
-shift
+db_host="$1"
+shift  # Remove db_host from arguments
 
-port="${DB_PORT:-5432}"
-max_retries="${MAX_RETRIES:-30}"     # default 30 retries
-sleep_duration="${SLEEP_DURATION:-2}" # default 2 seconds
+# ------------------------------
+# Configuration
+# ------------------------------
+db_port="${DB_PORT:-5432}"
+max_retries="${MAX_RETRIES:-30}"       # default 30 retries
+sleep_duration="${SLEEP_DURATION:-2}"  # default 2 seconds
 count=0
 
-echo "Waiting for PostgreSQL to be ready at $host:$port..."
+# ------------------------------
+# Wait for PostgreSQL
+# ------------------------------
+echo "Waiting for PostgreSQL to be ready at $db_host:$db_port..."
 
-while ! pg_isready -h "$host" -p "$port" > /dev/null 2>&1; do
+while ! pg_isready -h "$db_host" -p "$db_port" > /dev/null 2>&1; do
   count=$((count + 1))
-  echo "Waiting for PostgreSQL at $host:$port... (attempt $count)"
+  echo "Waiting for PostgreSQL at $db_host:$db_port... (attempt $count)"
   if [ "$max_retries" -gt 0 ] && [ "$count" -ge "$max_retries" ]; then
     echo "PostgreSQL is still not available after $max_retries attempts, exiting."
     exit 1
@@ -38,7 +44,13 @@ python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
 # ------------------------------
-# Run the passed command (Gunicorn)
+# Execute the passed command, or default to gunicorn
 # ------------------------------
-exec "$@"
+if [ "$#" -eq 0 ]; then
+  echo "No command provided, defaulting to 'gunicorn myproject.wsgi:application'"
+  exec gunicorn myproject.wsgi:application
+else
+  exec "$@"
+fi
+
 

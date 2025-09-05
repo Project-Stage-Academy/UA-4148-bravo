@@ -8,7 +8,10 @@ data:
   DJANGO_SETTINGS_MODULE: "core.settings.production"
   DEBUG: "False"
   DOCS_ENABLED: "True"
-  ALLOWED_HOSTS: "127.0.0.1,localhost,forum.local"
+  ALLOWED_HOSTS: |
+    - "127.0.0.1"
+    - "localhost"
+    - "forum.local"
 
   # Database
   DB_NAME: "ua4148"
@@ -29,6 +32,7 @@ data:
 
   # Frontend URL
   FRONTEND_URL: "http://localhost:3000"
+
 
 
 
