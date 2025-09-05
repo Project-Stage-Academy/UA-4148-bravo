@@ -42,6 +42,7 @@ class NotificationConsumerTestCase(TestCase):
             first_name="First",
             last_name="User",
             role=role_startup,
+            is_active=True,
         )
         self.user2 = User.objects.create_user(
             email="user2@example.com",
@@ -49,6 +50,7 @@ class NotificationConsumerTestCase(TestCase):
             first_name="Second",
             last_name="User",
             role=role_investor,
+            is_active=True,
         )
 
     async def async_connect_user(self, user):
@@ -72,7 +74,7 @@ class NotificationConsumerTestCase(TestCase):
             communicator = await self.async_connect_user(self.user1)
             await communicator.disconnect()
 
-        self.run_async(run_test())
+        self.run_async(run_test)
 
     def test_send_notification(self):
         """Test that a notification sent to the user's group is received via WebSocket."""
@@ -96,7 +98,7 @@ class NotificationConsumerTestCase(TestCase):
 
             await communicator.disconnect()
 
-        self.run_async(run_test())
+        self.run_async(run_test)
 
     def test_unauthenticated_user_rejected(self):
         """Test that unauthenticated users cannot connect."""
@@ -108,7 +110,7 @@ class NotificationConsumerTestCase(TestCase):
             connected, _ = await communicator.connect()
             self.assertFalse(connected)
 
-        self.run_async(run_test())
+        self.run_async(run_test)
 
     def test_multiple_connections_same_user(self):
         """Test that multiple connections from the same user are supported."""
@@ -135,7 +137,7 @@ class NotificationConsumerTestCase(TestCase):
             await comm1.disconnect()
             await comm2.disconnect()
 
-        self.run_async(run_test())
+        self.run_async(run_test)
 
     def test_multiple_notifications(self):
         """Test that multiple notifications are received in order."""
@@ -163,4 +165,4 @@ class NotificationConsumerTestCase(TestCase):
 
             await communicator.disconnect()
 
-        self.run_async(run_test())
+        self.run_async(run_test)

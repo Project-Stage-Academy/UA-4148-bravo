@@ -2,50 +2,83 @@ from django.urls import reverse
 from django.contrib.auth.hashers import make_password
 from django.test import TransactionTestCase
 from django.db import IntegrityError
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APIClient
 from investors.models import Investor, SavedStartup
-from startups.models import Startup
-from users.models import User, UserRole
-from tests.test_base_case import BaseAPITestCase as BaseInvestorTestCase
+from startups.models import Startup, Industry, Location
+from users.models import UserRole
+from common.enums import Stage
 from utils.authenticate_client import authenticate_client
-from django.test.utils import override_settings
+import uuid
+
+User = get_user_model()
 
 
-@override_settings(SECURE_SSL_REDIRECT=False)
-class SavedStartupAPITests(BaseInvestorTestCase):
+class SavedStartupTests(TransactionTestCase):
+    """Test cases for SavedStartup API endpoints with proper cleanup."""
+    
+    reset_sequences = True
+
     def setUp(self):
-        super().setUp()
+        """Set up test data with unique identifiers to prevent constraint violations."""
+        # Clear any existing data to prevent conflicts
+        SavedStartup.objects.all().delete()
+        Startup.objects.all().delete()
+        Investor.objects.all().delete()
+        User.objects.all().delete()
+        
+        # Use UUID for unique values to prevent constraint violations
+        unique_id = uuid.uuid4().hex[:8]
+        
+        self.client = APIClient()
+        self.location = Location.objects.get_or_create(
+            country="US", region="CA", city=f"SF_{unique_id}", postal_code="94105"
+        )[0]
+        self.industry, _ = Industry.objects.get_or_create(name=f"IT_{unique_id}")
+        role_investor, _ = UserRole.objects.get_or_create(role="investor")
+        self.user = User.objects.create(
+            email=f"investor_{unique_id}@example.com",
+            password=make_password("Pass123!"),
+            first_name="In",
+            last_name="Vestor",
+            role=role_investor,
+            is_active=True,
+        )
         self.investor = Investor.objects.create(
             user=self.user,
             industry=self.industry,
-            company_name="API Capital",
+            company_name=f"API Capital_{unique_id}",
             location=self.location,
-            email="api.capital@example.com",
+            email=f"api.capital_{unique_id}@example.com",
             founded_year=2020,
             team_size=5,
             stage="mvp",
             fund_size="1000000.00",
         )
-        role_user = UserRole.objects.get(role="user")
+        role_user, _ = UserRole.objects.get_or_create(role="user")
         self.startup_owner = User.objects.create(
-            email="startup.owner@example.com",
+            email=f"startup.owner_{unique_id}@example.com",
             password=make_password("Pass123!"),
             first_name="Star",
             last_name="Tup",
             role=role_user,
+            is_active=True,
         )
         self.startup = Startup.objects.create(
             user=self.startup_owner,
             industry=self.industry,
-            company_name="Cool Startup",
+            company_name=f"Cool Startup_{unique_id}",
             location=self.location,
-            email="info@coolstartup.com",
+            email=f"info_{unique_id}@coolstartup.com",
             founded_year=2020,
             team_size=10,
             stage="mvp",
         )
         self.list_url = reverse("saved-startup-list")
+        
+        # Properly authenticate the investor user
+        self.client.force_authenticate(user=self.user)
 
     def test_investor_can_create_saved_startup(self):
         res = self.client.post(self.list_url, {"startup": self.startup.id, "status": "watching", "notes": "ok"}, format="json")
@@ -70,15 +103,16 @@ class SavedStartupAPITests(BaseInvestorTestCase):
         self.assertIn("startup", res.data)
 
     def test_investor_cannot_save_own_startup(self):
+        unique_id = uuid.uuid4().hex[:8]
         own = Startup.objects.create(
             user=self.user,
             industry=self.industry,
-            company_name="My Own",
+            company_name=f"My Own_{unique_id}",
             location=self.location,
-            email="me@own.com",
+            email=f"me_{unique_id}@own.com",
             founded_year=2024,
             team_size=1,
-            stage="idea",
+            stage="mvp",
         )
         res = self.client.post(self.list_url, {"startup": own.id}, format="json")
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST, res.data)
@@ -91,18 +125,20 @@ class SavedStartupAPITests(BaseInvestorTestCase):
         self.assertIn("Already saved", str(res.data))
 
     def test_only_investor_can_save(self):
-        role_user = UserRole.objects.get(role="user")
+        role_user, _ = UserRole.objects.get_or_create(role="user")
+        unique_id = uuid.uuid4().hex[:8]
         plain_user = User.objects.create(
-            email="plain@example.com",
+            email=f"plain_{unique_id}@example.com",
             password=make_password("Pass123!"),
             first_name="No",
             last_name="Investor",
             role=role_user,
+            is_active=True,
         )
         authenticate_client(self.client, plain_user)
         res = self.client.post(self.list_url, {"startup": self.startup.id}, format="json")
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
-        self.assertIn("you do not have permission to perform this action.", str(res.data['detail']).lower())
+        self.assertIn("only authenticated investors are allowed", str(res.data['detail']).lower())
 
     def test_auth_required_on_list(self):
         client = APIClient()
@@ -115,23 +151,25 @@ class SavedStartupAPITests(BaseInvestorTestCase):
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_list_only_current_investor(self):
-        role_user = UserRole.objects.get(role="user")
+        role_user, _ = UserRole.objects.get_or_create(role="user")
+        unique_id = uuid.uuid4().hex[:8]
         other_user = User.objects.create(
-            email="investor2@example.com",
+            email=f"investor2_{unique_id}@example.com",
             password=make_password("Pass123!"),
             first_name="Petro",
             last_name="Second",
             role=role_user,
+            is_active=True,
         )
         other_investor = Investor.objects.create(
             user=other_user,
             industry=self.industry,
-            company_name="Another Capital",
+            company_name=f"Other Capital_{unique_id}",
             location=self.location,
-            email="another.capital@example.com",
+            email=f"other_{unique_id}@capital.com",
             founded_year=2021,
             team_size=3,
-            stage="idea",
+            stage="mvp",
             fund_size="500000.00",
         )
         SavedStartup.objects.create(investor=other_investor, startup=self.startup, status="watching")
@@ -176,23 +214,25 @@ class SavedStartupAPITests(BaseInvestorTestCase):
         self.assertFalse(SavedStartup.objects.filter(id=obj.id).exists())
 
     def test_cannot_patch_savedstartup_of_another_investor(self):
-        role_user = UserRole.objects.get(role="user")
+        role_user, _ = UserRole.objects.get_or_create(role="user")
+        unique_id = uuid.uuid4().hex[:8]
         other_user = User.objects.create(
-            email="other@example.com",
+            email=f"other_{unique_id}@example.com",
             password=make_password("Pass123!"),
             first_name="Other",
             last_name="Investor",
-            role=role_user,
+            is_active=True,
+            role=role_user
         )
         other_investor = Investor.objects.create(
             user=other_user,
             industry=self.industry,
-            company_name="Other Capital",
+            company_name=f"Other Capital_{unique_id}",
             location=self.location,
-            email="other.cap@example.com",
+            email=f"other_{unique_id}@capital.com",
             founded_year=2021,
             team_size=3,
-            stage="idea",
+            stage="mvp",
             fund_size="500000.00",
         )
         foreign_obj = SavedStartup.objects.create(investor=other_investor, startup=self.startup, status="watching")
@@ -201,13 +241,14 @@ class SavedStartupAPITests(BaseInvestorTestCase):
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND, res.data)
 
     def test_cannot_delete_savedstartup_of_another_investor(self):
-        role_user = UserRole.objects.get(role="user")
+        role_user, _ = UserRole.objects.get_or_create(role="user")
         other_user = User.objects.create(
             email="other2@example.com",
             password=make_password("Pass123!"),
             first_name="Other2",
             last_name="Investor",
             role=role_user,
+            is_active=True,
         )
         other_investor = Investor.objects.create(
             user=other_user,
@@ -251,13 +292,14 @@ class SavedStartupAPITests(BaseInvestorTestCase):
         self.assertTrue(obj.notes in (None, ""))
 
     def test_only_investor_can_list(self):
-        role_user = UserRole.objects.get(role="user")
+        role_user, _ = UserRole.objects.get_or_create(role="user")
         plain_user = User.objects.create(
             email="plain2@example.com",
             password=make_password("Pass123!"),
             first_name="No",
             last_name="Investor",
             role=role_user,
+            is_active=True,
         )
         authenticate_client(self.client, plain_user)
         res = self.client.get(self.list_url)
@@ -288,39 +330,46 @@ class SavedStartupDBConstraintsTests(TransactionTestCase):
 
     def setUp(self):
         from startups.models import Industry, Location
-        self.industry = Industry.objects.create(name="IT")
-        self.location = Location.objects.create(country="US", city="NYC", region="NY")
+        unique_id = uuid.uuid4().hex[:8]
+        
+        self.industry, _ = Industry.objects.get_or_create(name=f"IT_{unique_id}")
+        self.location, _ = Location.objects.get_or_create(
+            country="US", region="CA", city=f"SF_{unique_id}", postal_code="94105"
+        )
+        role_user, _ = UserRole.objects.get_or_create(role="user")
         self.user = User.objects.create(
-            email="dbuser@example.com",
+            email=f"dbuser_{unique_id}@example.com",
             password=make_password("Pass123!"),
             first_name="Db",
             last_name="User",
-            role=self.role_user,
+            role=role_user,
+            is_active=True,
         )
         self.investor = Investor.objects.create(
             user=self.user,
             industry=self.industry,
-            company_name="DB Capital",
+            company_name=f"DB Capital_{unique_id}",
             location=self.location,
-            email="db.cap@example.com",
+            email=f"db.cap_{unique_id}@example.com",
             founded_year=2020,
             team_size=5,
             stage="mvp",
             fund_size="1000000.00",
         )
         self.owner = User.objects.create(
-            email="db.startup@example.com",
+            email=f"db.startup_{unique_id}@example.com",
             password=make_password("Pass123!"),
             first_name="Db",
             last_name="Startup",
-            role=self.role_user,
+            role=role_user,
+            is_active=True,
         )
         self.startup = Startup.objects.create(
             user=self.owner,
             industry=self.industry,
-            company_name="DB Startup",
+            company_name=f"DB Startup_{unique_id}",
             location=self.location,
-            email="db@startup.com",
+            email=f"db_{unique_id}@startup.com",
             founded_year=2020,
             team_size=3,
             stage="mvp",

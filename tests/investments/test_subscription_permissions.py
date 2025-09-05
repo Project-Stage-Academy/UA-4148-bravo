@@ -1,4 +1,5 @@
 from decimal import Decimal
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
@@ -59,9 +60,10 @@ class TestSubscriptionPermissions403Policy(TestCase):
         )
 
         # Dictionaries
-        self.industry = Industry.objects.create(name="IT")
+        unique_id = uuid.uuid4().hex[:8]
+        self.industry = Industry.objects.create(name=f"IT_{unique_id}")
         self.location = Location.objects.create(country="UA")
-        self.category = Category.objects.create(name="Tech")
+        self.category = Category.objects.create(name=f"Tech_{unique_id}")
 
         # Investor profile
         Investor.objects.create(

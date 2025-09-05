@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 from projects.models import Project, ProjectHistory
 from projects.documents import ProjectDocument
@@ -76,6 +77,8 @@ def handle_project_updates(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=Project)
 def delete_project(sender, instance, **kwargs):
+    if getattr(settings, 'DISABLE_ELASTICSEARCH_INDEXING', False):
+        return
     try:
         ProjectDocument().delete(id=instance.id)
     except (ConnectionError, NotFoundError) as e:

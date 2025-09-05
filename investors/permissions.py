@@ -16,3 +16,19 @@ class IsSavedStartupOwner(permissions.BasePermission):
         if not investor_profile:
             return False
         return obj.investor == investor_profile
+
+
+class IsFollowedProjectOwner(permissions.BasePermission):
+    """
+    Custom permission to allow only the owner of a FollowedProject (its investor) to modify or delete it.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Check if the request user's investor profile matches the
+        investor linked to the FollowedProject object.
+        """
+        investor_profile = getattr(request.user, 'investor', None)
+        if not investor_profile:
+            return False
+        return obj.investor == investor_profile

@@ -29,7 +29,8 @@ class SavedStartupsEndpointsTests(APITestCase):
     def setUp(self):
         User = get_user_model()
 
-        # Role (create if missing)
+        # Roles (create if missing)
+        self.role_investor, _ = UserRole.objects.get_or_create(role="investor")
         self.role_user, _ = UserRole.objects.get_or_create(role="user")
 
         # FK fixtures
@@ -40,7 +41,8 @@ class SavedStartupsEndpointsTests(APITestCase):
         self.user = User.objects.create(
             email="inv@example.com",
             password=make_password("Pass123!"),
-            role=self.role_user,
+            role=self.role_investor,
+            is_active=True,
         )
         self.investor = Investor.objects.create(
             user=self.user,
@@ -59,11 +61,13 @@ class SavedStartupsEndpointsTests(APITestCase):
             email="owner1@example.com",
             password=make_password("Pass123!"),
             role=self.role_user,
+            is_active=True,
         )
         self.owner2 = User.objects.create(
             email="owner2@example.com",
             password=make_password("Pass123!"),
             role=self.role_user,
+            is_active=True,
         )
 
         # Two startups with different owners (avoid OneToOne user clash)
@@ -115,7 +119,7 @@ class SavedStartupsEndpointsTests(APITestCase):
     def test_list_requires_investor_profile(self):
         """Non-investor user should get 403 (PermissionDenied in get_queryset)."""
         User = get_user_model()
-        plain = User.objects.create_user(email="plain@ex.com", password="x", role=self.role_user)
+        plain = User.objects.create_user(email="plain@ex.com", password="x", role=self.role_user, is_active=True)
         authenticate_client(self.client, plain)
 
         r = self.client.get(self.list_url)
