@@ -114,19 +114,20 @@ class ExtendedCurrentUserSerializer(CurrentUserSerializer):
         model = CurrentUserSerializer.Meta.model
         fields = CurrentUserSerializer.Meta.fields + ("company_type", "company_id")
 
+    def get_company(self, obj):
+        for attr in ("startup", "investor"):
+            val = getattr(obj, attr, None)
+            if val is not None:
+                return attr, val.id
+        return None, None
+
     def get_company_type(self, obj):
-        if hasattr(obj, "startup") and obj.startup is not None:
-            return "startup"
-        elif hasattr(obj, "investor") and obj.investor is not None:
-            return "investor"
-        return None
+        company_type, _ = self.get_company(obj)
+        return company_type
 
     def get_company_id(self, obj):
-        if hasattr(obj, "startup") and obj.startup is not None:
-            return obj.startup.id
-        elif hasattr(obj, "investor") and obj.investor is not None:
-            return obj.investor.id
-        return None
+        _, company_id = self.get_company(obj)
+        return company_id
 
 class ResendEmailSerializer(serializers.Serializer):
     """
