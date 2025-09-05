@@ -106,6 +106,27 @@ class CurrentUserSerializer(serializers.ModelSerializer):
         fields = ("user_id", "email", "first_name", "last_name", "user_phone", "title", "role")
         read_only_fields = ("user_id", "email", "first_name", "last_name", "user_phone", "title", "role")
 
+class ExtendedCurrentUserSerializer(CurrentUserSerializer):
+    company_type = serializers.SerializerMethodField()
+    company_id = serializers.SerializerMethodField()
+
+    class Meta(CurrentUserSerializer.Meta):
+        model = CurrentUserSerializer.Meta.model
+        fields = CurrentUserSerializer.Meta.fields + ("company_type", "company_id")
+
+    def get_company_type(self, obj):
+        if hasattr(obj, "startup") and obj.startup is not None:
+            return "startup"
+        elif hasattr(obj, "investor") and obj.investor is not None:
+            return "investor"
+        return None
+
+    def get_company_id(self, obj):
+        if hasattr(obj, "startup") and obj.startup is not None:
+            return obj.startup.id
+        elif hasattr(obj, "investor") and obj.investor is not None:
+            return obj.investor.id
+        return None
 
 class ResendEmailSerializer(serializers.Serializer):
     """
