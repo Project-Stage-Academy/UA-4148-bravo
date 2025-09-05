@@ -9,11 +9,13 @@ User = get_user_model()
 class NotificationModelTests(TestCase):
     """Unit tests for the Notification and NotificationType models."""
 
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
+        """Set up data once for the entire test class."""
         NotificationType.objects.all().delete()
         
-        self.user = UserFactory()
-        self.notification_type = NotificationTypeFactory(code="test_event")
+        cls.user = UserFactory()
+        cls.notification_type = NotificationTypeFactory(code="test_event")
 
     def test_create_notification_type(self):
         """Ensure a NotificationType can be created successfully."""
@@ -50,5 +52,5 @@ class NotificationModelTests(TestCase):
             title="Second",
             message="Second message."
         )
-        notifications = Notification.objects.filter(user=self.user)
+        notifications = Notification.objects.filter(user=self.user).order_by('-created_at')
         self.assertEqual(list(notifications), [notification2, notification1])

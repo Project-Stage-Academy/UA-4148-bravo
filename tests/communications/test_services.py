@@ -65,20 +65,34 @@ class NotificationServicesTests(TestCase):
         
     def test_should_send_email_notification(self):
         """Test the logic for deciding whether to send an email."""
-
         get_or_create_email_pref(self.user)
-
-        self.assertTrue(should_send_email_notification(self.user, self.nt_immediate.code))
+        self.assertTrue(should_send_email_notification(self.user, self.nt_immediate.code),
+                        "Should send when all preferences are enabled by default.")
 
         user_pref = UserNotificationPreference.objects.get(user=self.user)
         user_pref.enable_email = False
         user_pref.save()
-        self.assertFalse(should_send_email_notification(self.user, self.nt_immediate.code))
+        self.assertFalse(should_send_email_notification(self.user, self.nt_immediate.code),
+                         "Should not send when global email preference is disabled.")
 
         user_pref.enable_email = True
         user_pref.save()
+
         email_pref = EmailNotificationPreference.objects.get(user=self.user)
         type_pref = email_pref.types_enabled.get(notification_type=self.nt_immediate)
         type_pref.enabled = False
         type_pref.save()
-        self.assertFalse(should_send_email_notification(self.user, self.nt_immediate.code))
+        self.assertFalse(should_send_email_notification(self.user, self.nt_immediate.code),
+                         "Should not send when specific email notification type is disabled.")
+
+        self.assertTrue(should_send_email_notification(self.user, self.nt_disabled.code),
+                        "Should send for type with 'disabled' frequency if its email preference is enabled.")
+
+        disabled_email_pref = email_pref.types_enabled.get(notification_type=self.nt_disabled)
+        disabled_email_pref.enabled = False
+        disabled_email_pref.save()
+        self.assertFalse(should_send_email_notification(self.user, self.nt_disabled.code),
+                         "Should not send when email preference for the type is explicitly disabled.")
+
+        self.assertFalse(should_send_email_notification(self.user, "non_existent_type"),
+                         "Should not send for a non-existent notification type code.")
