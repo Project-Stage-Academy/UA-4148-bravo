@@ -1,6 +1,7 @@
 from django.utils import timezone
 import logging
 from django.db import IntegrityError
+from rest_framework.exceptions import ParseError
 from rest_framework import viewsets, status, generics, pagination
 from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -19,6 +20,10 @@ from startups.models import Startup
 from users.views.base_protected_view import CookieJWTProtectedView
 from rest_framework import generics, permissions
 from django.db.models import Q
+from .filters import InvestorFilter
+from django_filters.rest_framework import DjangoFilterBackend
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -305,50 +310,29 @@ class SaveStartupView(CookieJWTProtectedView):
 
 class InvestorListView(generics.ListAPIView):
     """
-    Returns a list of all investors with filtering support.
-    Only authenticated users can access.
+    API view to list investors with filtering and strict ordering validation.
+    Only authenticated users can access. Invalid ordering fields return 400.
     """
+    queryset = Investor.objects.all()
     serializer_class = InvestorListSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = InvestorFilter
+
     def get_queryset(self):
         queryset = Investor.objects.all()
-        params = self.request.query_params
-
-        # --- Filters ---
-        industry = params.get("industry")
-        stage = params.get("stage")
-        min_team_size = params.get("min_team_size")
-        max_team_size = params.get("max_team_size")
-        min_fund_size = params.get("min_fund_size")
-        max_fund_size = params.get("max_fund_size")
-
-        if industry:
-            queryset = queryset.filter(industry__name__icontains=industry)
-        if stage:
-            queryset = queryset.filter(stage=stage)
-        if min_team_size:
-            queryset = queryset.filter(team_size__gte=min_team_size)
-        if max_team_size:
-            queryset = queryset.filter(team_size__lte=max_team_size)
-        if min_fund_size:
-            queryset = queryset.filter(fund_size__gte=min_fund_size)
-        if max_fund_size:
-            queryset = queryset.filter(fund_size__lte=max_fund_size)
-
-        # --- Sorting ---
-        allowed_ordering_fields = ["company_name", "fund_size", "team_size", "stage"]
-        ordering = params.get("ordering")
+        ordering = self.request.query_params.get("ordering")
+        allowed_ordering_fields = [f.name for f in Investor._meta.fields]
 
         if ordering:
             field_name = ordering.lstrip("-")
-            if field_name in allowed_ordering_fields:
-                queryset = queryset.order_by(ordering)
-            else:
-                queryset = queryset.order_by("company_name")
+            if field_name not in allowed_ordering_fields:
+                raise ValidationError({"error": "Invalid ordering field"})
+            queryset = queryset.order_by(ordering)
         else:
             queryset = queryset.order_by("company_name")
-
+        return queryset
 
 class InvestorDetailView(generics.RetrieveAPIView):
     """

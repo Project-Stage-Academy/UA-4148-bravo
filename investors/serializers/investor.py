@@ -184,5 +184,5 @@ class InvestorListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Investor
         fields = [
-            'id', 'company_name', 'industry', 'stage', 'team_size', 'fund_size'
+            'id', 'company_name', 'industry', 'stage', 'team_size',
         ]        
