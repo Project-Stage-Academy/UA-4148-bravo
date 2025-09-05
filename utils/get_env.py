@@ -27,8 +27,16 @@ def get_env(
     """
     value = None
 
-    if value is None:
-        value = os.environ.get(name, None)
+    if use_decouple:
+        try:
+            return decouple_config(name, default=default, cast=cast)
+        except Exception:
+            if required:
+                raise ValueError(f"Required environment variable '{name}' is not set.")
+            return default
+        return
+
+    value = os.environ.get(name, None)
 
     if value is None:
         if required:
