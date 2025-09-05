@@ -19,22 +19,53 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
-        envFrom:
-        - configMapRef:
-            name: django-config
-        - secretRef:
-            name: django-secrets
-        command: ["sh", "-c"]
-        args:
-        - |
-          if [ ! -f /entrypoint.sh ]; then
-            echo "/entrypoint.sh not found!"
-            exit 1
-          fi
-          exec /entrypoint.sh gunicorn --log-level=debug core.wsgi:application --bind=0.0.0.0:8000 --workers=3 --timeout=120
-
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: django-config
+                key: DB_HOST
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: django-config
+                key: DB_PORT
+          - name: MAX_RETRIES
+            valueFrom:
+              configMapKeyRef:
+                name: django-config
+                key: MAX_RETRIES
+          - name: SLEEP_DURATION
+            valueFrom:
+              configMapKeyRef:
+                name: django-config
+                key: SLEEP_DURATION
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: django-config
+                key: DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: django-config
+                key: DB_USER
+          - name: REDIS_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: django-config
+                key: REDIS_HOST
+          - name: REDIS_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: django-config
+                key: REDIS_PORT
       imagePullSecrets:
-      - name: ghcr-credentials
+        - name: ghcr-credentials
+
+
+
+
 
 
 

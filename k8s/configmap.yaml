@@ -33,6 +33,10 @@ data:
   # Frontend URL
   FRONTEND_URL: "http://localhost:3000"
 
+  # Custom for entrypoint.sh
+  MAX_RETRIES: "5"
+  SLEEP_DURATION: "2"
+
 
 
 

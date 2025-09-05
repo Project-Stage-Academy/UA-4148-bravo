@@ -2,22 +2,12 @@
 set -eu
 
 # ------------------------------
-# Check for DB host argument
-# ------------------------------
-if [ -z "${1:-}" ]; then
-  echo "Usage: $0 <db_host> [command...]"
-  exit 1
-fi
-
-db_host="$1"
-shift  # Remove db_host from arguments
-
-# ------------------------------
 # Configuration
 # ------------------------------
+db_host="${DB_HOST:?Error: DB_HOST is not set}"
 db_port="${DB_PORT:-5432}"
-max_retries="${MAX_RETRIES:-30}"       # default 30 retries
-sleep_duration="${SLEEP_DURATION:-2}"  # default 2 seconds
+max_retries="${MAX_RETRIES:-30}"
+sleep_duration="${SLEEP_DURATION:-2}"
 count=0
 
 # ------------------------------
@@ -47,10 +37,12 @@ python manage.py collectstatic --noinput
 # Execute the passed command, or default to gunicorn
 # ------------------------------
 if [ "$#" -eq 0 ]; then
-  echo "No command provided, defaulting to 'gunicorn myproject.wsgi:application'"
-  exec gunicorn myproject.wsgi:application
+  echo "No command provided, defaulting to 'gunicorn core.wsgi:application'"
+  exec gunicorn core.wsgi:application --bind=0.0.0.0:8000 --workers=3 --timeout=120
 else
   exec "$@"
 fi
+
+
 
 
