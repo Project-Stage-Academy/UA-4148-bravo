@@ -34,6 +34,7 @@ def get_env(
             if required:
                 raise ValueError(f"Required environment variable '{name}' is not set.")
             return default
+        return
 
     value = os.environ.get(name, None)
 
