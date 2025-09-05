@@ -1,22 +1,20 @@
-from django.utils import timezone
 import logging
 from django.db import IntegrityError
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import viewsets, status, generics, pagination
-from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
 from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer, ViewedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
-from django.shortcuts import get_object_or_404
-from .models import ViewedStartup
 from startups.models import Startup
 from users.cookie_jwt import CookieJWTAuthentication
 from users.permissions import IsInvestor, CanCreateCompanyPermission, IsAuthenticatedOr401, HasActiveCompanyAccount
-from startups.models import Startup
-from users.views.base_protected_view import CookieJWTProtectedView
+from .models import ViewedStartup
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +244,7 @@ class ViewedStartupCreateView(APIView):
     Log that the authenticated investor has viewed a specific startup.
     Return the serialized ViewedStartup instance.
     """
-    permission_classes = [IsAuthenticated, IsInvestor, HasActiveCompanyAccount]
+    permission_classes = [IsAuthenticated, IsInvestor]
 
     def post(self, request, startup_id):
         startup = get_object_or_404(Startup, id=startup_id)
@@ -282,8 +280,9 @@ class ViewedStartupClearView(APIView):
         )
 
 
-class SaveStartupView(CookieJWTProtectedView):
-    permission_classes = [HasActiveCompanyAccount]
+class SaveStartupView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedOr401, HasActiveCompanyAccount]
 
     def post(self, request, startup_id: int):
         """

@@ -60,7 +60,8 @@ def check_unbound_inactive_users():
     unbound_users = User.objects.filter(
         is_active=True,
         startup__isnull=True,
-        investor__isnull=True
+        investor__isnull=True,
+        is_deleted=False
     )
     for user in unbound_users:
         send_mail(

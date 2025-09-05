@@ -1,9 +1,15 @@
+import os
 from django.test import TestCase, RequestFactory
-from django.contrib.auth import get_user_model
 from tests.factories import StartupFactory, InvestorFactory
+from users.models import UserRole, User
 from users.permissions import HasActiveCompanyAccount
+from dotenv import load_dotenv
 
-User = get_user_model()
+load_dotenv()
+TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
+TEST_EMAIL = "test@example.com"
+TEST_FIRST_NAME = "Test"
+TEST_LAST_NAME = "User"
 
 
 class HasActiveCompanyAccountTests(TestCase):
@@ -19,7 +25,15 @@ class HasActiveCompanyAccountTests(TestCase):
         Test that a user with is_active=False is denied permission,
         regardless of company affiliation.
         """
-        user = User.objects.create(is_active=False)
+        role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.STARTUP)
+        user = User.objects.create_user(
+            email=TEST_EMAIL,
+            password=TEST_USER_PASSWORD,
+            first_name=TEST_FIRST_NAME,
+            last_name=TEST_LAST_NAME,
+            role=role_user,
+            is_active=False
+        )
         request = self.factory.get("/")
         request.user = user
         self.assertFalse(self.permission.has_permission(request, None))
@@ -29,7 +43,15 @@ class HasActiveCompanyAccountTests(TestCase):
         Test that an active user not linked to Startup or Investor
         is denied permission.
         """
-        user = User.objects.create(is_active=True)
+        role_user, _ = UserRole.objects.get_or_create(role=UserRole.Role.STARTUP)
+        user = User.objects.create_user(
+            email="active_nocomp@example.com",
+            password=TEST_USER_PASSWORD,
+            first_name="Active",
+            last_name="NoCompany",
+            role=role_user,
+            is_active=True
+        )
         request = self.factory.get("/")
         request.user = user
         self.assertFalse(self.permission.has_permission(request, None))

@@ -16,7 +16,7 @@ app.conf.beat_schedule = {
         'schedule': 604800.0,
     },
     'check-unbound-inactive-users-every-day': {
-        'task': 'users.tasks.check_unbound_users',
+        'task': 'users.tasks.check_unbound_inactive_users',
         'schedule': crontab(hour=0, minute=0),
     },
 }
