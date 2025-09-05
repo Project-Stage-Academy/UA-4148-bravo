@@ -4,7 +4,8 @@ from startups.views.startup import StartupViewSet
 from startups.views.startup_elasticsearch import StartupDocumentView
 
 router = DefaultRouter()
-router.register(r'', StartupViewSet, basename='startup')
+# /api/v1/startups/search/
 router.register(r'search', StartupDocumentView, basename='startups-search')
-
+# /api/v1/startups/ , /api/v1/startups/{id}/
+router.register(r'', StartupViewSet, basename='startup')
 urlpatterns = router.urls

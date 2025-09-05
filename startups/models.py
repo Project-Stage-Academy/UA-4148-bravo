@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import UniqueConstraint, F
 from django_countries.fields import CountryField
+from decimal import Decimal
 
 from common.company import Company
 from common.enums import Stage
@@ -186,6 +187,10 @@ class Startup(Company):
         verbose_name="Development Stage",
         help_text="Current development stage of the startup"
     )
+    funding_needed = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+    is_public = models.BooleanField(default=True)
+
 
     def clean(self):
         """
@@ -198,6 +203,10 @@ class Startup(Company):
             ValidationError: If social_links are invalid.
         """
         super().clean()
+        if self.team_size is not None and self.team_size < 1:
+            raise ValidationError({'team_size': 'Team size must be at least 1.'})
+        if self.funding_needed is not None and self.funding_needed < Decimal('0'):
+            raise ValidationError({'funding_needed': 'Funding needed must be >= 0.'})
 
     def __str__(self):
         return self.company_name
@@ -208,6 +217,11 @@ class Startup(Company):
         verbose_name = "Startup"
         verbose_name_plural = "Startups"
         indexes = [
-            models.Index(fields=['company_name']),
-            models.Index(fields=['stage']),
+            models.Index(fields=['company_name'], name="startup_company_name_idx"),
+            models.Index(fields=['stage'], name="startup_stage_idx"),
+            models.Index(fields=['industry'], name="startup_industry_idx"),
+            models.Index(fields=['team_size'], name="startup_team_size_idx"),
+            models.Index(fields=['funding_needed'], name="startup_funding_needed_idx"),
+            models.Index(fields=['location'], name="startup_location_idx"),
+            models.Index(fields=['is_verified'], name="startup_is_verified_idx"),
         ]

@@ -16,17 +16,26 @@ from communications.serializers import (
     UpdateTypePreferenceSerializer,
 )
 from communications.services import get_or_create_user_pref
+from startups.serializers.startup_list import StartupListSerializer
+from startups.serializers.startup_detail import StartupDetailSerializer
+from decimal import Decimal, InvalidOperation
+from django.db.models import Q
+from rest_framework.filters import OrderingFilter
+from rest_framework import status
+from startups.filters import StartupFilter
+from django_filters import rest_framework as filters
+from startups.filters import StartupFilter
 
 class StartupViewSet(BaseValidatedModelViewSet):
     queryset = Startup.objects.select_related('user', 'industry', 'location') \
         .prefetch_related('projects')
     
-    serializer_class = StartupSerializer
-    permission_classes = [IsAuthenticatedOr401, IsStartupUser]
+    serializer_class = StartupListSerializer
+    permission_classes = [IsAuthenticatedOr401]
     authentication_classes = [CookieJWTAuthentication]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ['industry', 'stage', 'location__country']
-    search_fields = ['company_name', 'user__first_name', 'user__last_name', 'email']
+    filterset_class = StartupFilter 
+    search_fields = ['company_name', 'user__first_name', 'user__last_name', 'email', 'industry__name']
 
     def _get_or_create_user_pref(self, request):
         """Fetch the current user's notification preferences, creating defaults if absent.
@@ -180,7 +189,11 @@ class StartupViewSet(BaseValidatedModelViewSet):
         """
         if self.action == 'create':
             return [IsAuthenticatedOr401(), CanCreateCompanyPermission()]
-        return [IsAuthenticatedOr401(), IsStartupUser()]
+        if self.action in ('update', 'partial_update', 'destroy'):
+            return [IsAuthenticatedOr401(), IsStartupUser()]
+        if self.action in ('preferences', 'update_type_preference'):
+            return [IsAuthenticatedOr401(), IsStartupUser()]
+        return [IsAuthenticatedOr401()]
 
     def get_serializer_class(self):
         """
@@ -189,4 +202,49 @@ class StartupViewSet(BaseValidatedModelViewSet):
         if self.action == 'create':
             return StartupCreateSerializer
         return StartupSerializer
-        
+    
+    def _to_bool(self, val: str) -> bool:
+        return str(val).lower() in ('1', 'true', 'yes', 'y')
+
+    def get_queryset(self):
+        qs = Startup.objects.select_related('user', 'industry', 'location').prefetch_related('projects')
+
+        user = getattr(self.request, 'user', None)
+        if user and user.is_authenticated:
+            qs = qs.filter(Q(is_public=True) | Q(user=user))
+        else:
+            qs = qs.filter(is_public=True)
+
+        params = self.request.query_params
+
+        industry_name = params.get('industry')
+        if industry_name:
+            qs = qs.filter(industry__name__iexact=industry_name)
+
+        min_team = params.get('min_team_size')
+        if min_team:
+            try:
+                qs = qs.filter(team_size__gte=int(min_team))
+            except (TypeError, ValueError):
+                return Startup.objects.none()
+
+        fn_lte = params.get('funding_needed__lte')
+        if fn_lte:
+            try:
+                qs = qs.filter(funding_needed__lte=Decimal(fn_lte))
+            except (InvalidOperation, TypeError):
+                return Startup.objects.none()
+
+        is_verified = params.get('is_verified')
+        if is_verified is not None:
+            qs = qs.filter(is_verified=self._to_bool(is_verified))
+
+        country = params.get('country')
+        if country:
+            qs = qs.filter(location__country=country)
+
+        city = params.get('city')
+        if city:
+            qs = qs.filter(location__city__iexact=city)
+
+        return qs
