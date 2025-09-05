@@ -1,3 +1,4 @@
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -11,7 +12,7 @@ from rest_framework.test import APIRequestFactory
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.request import Request
 
-
+@override_settings(APPEND_SLASH=False, SECURE_SSL_REDIRECT=False)
 class InvestorAPITestCase(APITestCase):
     """
     TestCase for Investor API endpoints.
