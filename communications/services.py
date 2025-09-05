@@ -53,9 +53,10 @@ def get_or_create_user_pref(user: User) -> UserNotificationPreference:
 
 def get_or_create_email_pref(user: User) -> EmailNotificationPreference:
     """Return user's email notification preferences, creating them if absent."""
-    email_pref, created = EmailNotificationPreference.objects.get_or_create(user=user)
-    if created:
-        with transaction.atomic():
+    with transaction.atomic():
+        email_pref, created = EmailNotificationPreference.objects.get_or_create(user=user)
+
+        if created:
             active_types = NotificationType.objects.filter(is_active=True)
             to_create = [
                 EmailNotificationTypePreference(
@@ -80,7 +81,8 @@ def _canonical_channel(channel: str) -> Optional[str]:
     "push", "push-notification", "push_notification".
     Returns one of NotificationChannel.IN_APP/EMAIL/PUSH or None if unknown.
     """
-    s = str(channel or "").strip().lower().replace(" ", "_").replace("-", "_")
+    import re
+    s = re.sub(r"[\s\-]+", "_", str(channel or "").strip().lower())
     if s in {"in_app", "inapp"}:
         return NotificationChannel.IN_APP
     if s in {"email", "e_mail", "mail"}:
@@ -162,7 +164,7 @@ def should_send_email_notification(user, notification_type_code):
     Returns:
         bool: True if email notification should be sent, False otherwise
     """
-    if not user or not user.is_authenticated:
+    if not user or not getattr(user, 'is_authenticated', False):
         return False
 
     user_pref = get_or_create_user_pref(user)
@@ -173,7 +175,7 @@ def should_send_email_notification(user, notification_type_code):
         email_pref = get_or_create_email_pref(user)
         type_pref = email_pref.types_enabled.get(notification_type__code=notification_type_code)
         return type_pref.enabled
-    except (EmailNotificationTypePreference.DoesNotExist, NotificationType.DoesNotExist):
+    except (EmailNotificationTypePreference.DoesNotExist, NotificationType.DoesNotExist, EmailNotificationPreference.DoesNotExist):
         logger.warning(
             f"Email notification preference for type '{notification_type_code}' not found for user {user.id}."
         )
@@ -220,5 +222,5 @@ def send_email_notification(
                    getattr(user, "id", None), type_code)
         return True
     except Exception as e:
-        logger.error("Failed to send email notification to %s: %s", user.email, str(e), exc_info=True)
+        logger.error("Failed to send email notification to user %s: %s", getattr(user, "id", None), str(e), exc_info=True)
         return False
