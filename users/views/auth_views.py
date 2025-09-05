@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 # Local application imports
-from users.serializers.user_serializers import CurrentUserSerializer
+from users.serializers.user_serializers import ExtendedCurrentUserSerializer
 from users.serializers.user_serializers import CustomUserCreateSerializer
 from users.views.base_protected_view import CookieJWTProtectedView
 
@@ -143,7 +143,7 @@ User = get_user_model()
             "If the token is missing or invalid, returns 401 Unauthorized."
     ),
     responses={
-        200: CurrentUserSerializer,
+        200: ExtendedCurrentUserSerializer,
         401: OpenApiResponse(description="Unauthorized - missing or invalid token"),
         403: OpenApiResponse(description="Forbidden - user account is inactive"),
         404: OpenApiResponse(description="Not Found - user no longer exists"),
@@ -154,5 +154,5 @@ class MeView(CookieJWTProtectedView):
     """Returns profile info of the currently authenticated user."""
 
     def get(self, request):
-        serializer = CurrentUserSerializer(request.user)
+        serializer = ExtendedCurrentUserSerializer(request.user)
         return Response(serializer.data)

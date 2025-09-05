@@ -6,6 +6,7 @@ from rest_framework import serializers
 from users.models import UserRole
 from users.validators import CustomPasswordValidator
 from django.contrib.auth.password_validation import validate_password
+from users.constants import CompanyType
 
 User = get_user_model()
 custom_password_validator = CustomPasswordValidator()
@@ -106,6 +107,28 @@ class CurrentUserSerializer(serializers.ModelSerializer):
         fields = ("user_id", "email", "first_name", "last_name", "user_phone", "title", "role")
         read_only_fields = ("user_id", "email", "first_name", "last_name", "user_phone", "title", "role")
 
+class ExtendedCurrentUserSerializer(CurrentUserSerializer):
+    company_type = serializers.SerializerMethodField()
+    company_id = serializers.SerializerMethodField()
+
+    class Meta(CurrentUserSerializer.Meta):
+        model = CurrentUserSerializer.Meta.model
+        fields = CurrentUserSerializer.Meta.fields + ("company_type", "company_id")
+
+    def get_company(self, obj):
+        for attr, ctype in (("startup", CompanyType.STARTUP), ("investor", CompanyType.INVESTOR)):
+            val = getattr(obj, attr, None)
+            if val is not None:
+                return attr, val.id
+        return None, None
+
+    def get_company_type(self, obj):
+        company_type, _ = self.get_company(obj)
+        return company_type
+
+    def get_company_id(self, obj):
+        _, company_id = self.get_company(obj)
+        return company_id
 
 class ResendEmailSerializer(serializers.Serializer):
     """
