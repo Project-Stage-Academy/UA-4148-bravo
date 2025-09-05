@@ -6,6 +6,7 @@ from rest_framework import serializers
 from users.models import UserRole
 from users.validators import CustomPasswordValidator
 from django.contrib.auth.password_validation import validate_password
+from users.constants import CompanyType
 
 User = get_user_model()
 custom_password_validator = CustomPasswordValidator()
@@ -115,7 +116,7 @@ class ExtendedCurrentUserSerializer(CurrentUserSerializer):
         fields = CurrentUserSerializer.Meta.fields + ("company_type", "company_id")
 
     def get_company(self, obj):
-        for attr in ("startup", "investor"):
+        for attr, ctype in (("startup", CompanyType.STARTUP), ("investor", CompanyType.INVESTOR)):
             val = getattr(obj, attr, None)
             if val is not None:
                 return attr, val.id
