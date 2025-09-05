@@ -5,9 +5,6 @@ import mongoengine
 from typing import Any
 from core.settings.base_settings import DEBUG, SECRET_KEY
 from utils.get_env import get_env
-from dotenv import load_dotenv
-
-load_dotenv()
 
 AUTHENTICATION_BACKENDS = [
     'users.backends.EmailBackend',
