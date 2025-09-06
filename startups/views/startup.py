@@ -207,44 +207,10 @@ class StartupViewSet(BaseValidatedModelViewSet):
         return str(val).lower() in ('1', 'true', 'yes', 'y')
 
     def get_queryset(self):
-        qs = Startup.objects.select_related('user', 'industry', 'location').prefetch_related('projects')
+        qs = Startup.objects.select_related('user', 'industry', 'location') \
+            .prefetch_related('projects')
 
         user = getattr(self.request, 'user', None)
         if user and user.is_authenticated:
-            qs = qs.filter(Q(is_public=True) | Q(user=user))
-        else:
-            qs = qs.filter(is_public=True)
-
-        params = self.request.query_params
-
-        industry_name = params.get('industry')
-        if industry_name:
-            qs = qs.filter(industry__name__iexact=industry_name)
-
-        min_team = params.get('min_team_size')
-        if min_team:
-            try:
-                qs = qs.filter(team_size__gte=int(min_team))
-            except (TypeError, ValueError):
-                return Startup.objects.none()
-
-        fn_lte = params.get('funding_needed__lte')
-        if fn_lte:
-            try:
-                qs = qs.filter(funding_needed__lte=Decimal(fn_lte))
-            except (InvalidOperation, TypeError):
-                return Startup.objects.none()
-
-        is_verified = params.get('is_verified')
-        if is_verified is not None:
-            qs = qs.filter(is_verified=self._to_bool(is_verified))
-
-        country = params.get('country')
-        if country:
-            qs = qs.filter(location__country=country)
-
-        city = params.get('city')
-        if city:
-            qs = qs.filter(location__city__iexact=city)
-
-        return qs
+            return qs.filter(Q(is_public=True) | Q(user=user))
+        return qs.filter(is_public=True)
