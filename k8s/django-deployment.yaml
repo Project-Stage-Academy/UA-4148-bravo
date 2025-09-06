@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-app-dev
+  namespace: forum
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: django-app-dev
+  template:
+    metadata:
+      labels:
+        app: django-app-dev
+    spec:
+      containers:
+      - name: django-app-dev
+        image: ghcr.io/raidriar28/forum-project:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+
+        envFrom:
+        - configMapRef:
+            name: django-config
+        - secretRef:
+            name: django-secrets
+
+        readinessProbe:
+          httpGet:
+            path: /health/elasticsearch/
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+
+        livenessProbe:
+          httpGet:
+            path: /health/elasticsearch/
+            port: 8000
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        startupProbe:
+          httpGet:
+            path: /health/elasticsearch/
+            port: 8000
+          failureThreshold: 30
+          periodSeconds: 10
+
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+
+        volumeMounts:
+        - name: media-storage
+          mountPath: /app/media
+        - name: static-storage
+          mountPath: /app/staticfiles
+
+      imagePullSecrets:
+      - name: ghcr-credentials
+
+      volumes:
+      - name: media-storage
+        persistentVolumeClaim:
+          claimName: media-storage
+      - name: static-storage
+        persistentVolumeClaim:
+          claimName: static-storage
+
+
+
+
+
+
+
+
+
