@@ -13,8 +13,10 @@ class BaseValidatedModelViewSet(viewsets.ModelViewSet):
     """
 
     def _validate_and_log(self, serializer, action):
-        """ Validates the model and saves the instance. """
-        instance = serializer.instance or serializer.Meta.model(**serializer.validated_data)
+        Model = serializer.Meta.model
+        instance = serializer.instance or Model(**serializer.validated_data)
+        if action == 'create' and hasattr(instance, 'user') and not getattr(instance, 'user_id', None):
+            instance.user = self.request.user
 
         try:
             instance.clean()
@@ -24,10 +26,10 @@ class BaseValidatedModelViewSet(viewsets.ModelViewSet):
 
         if action == 'create':
             instance = serializer.save(user=self.request.user)
-        elif action == 'update':
+        else:
             instance = serializer.save()
 
-        logger.info(f"Startup {action}d: {instance}")
+        logger.info(f"{instance.__class__.__name__} {action}d: {instance}")
         return instance
 
     def perform_create(self, serializer):
