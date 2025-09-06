@@ -1,5 +1,6 @@
 import logging
 from django.db import IntegrityError
+from rest_framework.exceptions import ParseError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import viewsets, status, generics, pagination
@@ -9,10 +10,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
-from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer, ViewedStartupSerializer
+from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer, ViewedStartupSerializer, InvestorListSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
 from startups.models import Startup
 from users.cookie_jwt import CookieJWTAuthentication
+from startups.models import Startup
+from users.views.base_protected_view import CookieJWTProtectedView
+from rest_framework import generics, permissions
+from django.db.models import Q
+from .filters import InvestorFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from users.permissions import IsInvestor, CanCreateCompanyPermission, IsAuthenticatedOr401, HasActiveCompanyAccount
 from .models import ViewedStartup
 
@@ -305,3 +312,38 @@ class SaveStartupView(APIView):
                 obj = SavedStartup.objects.get(investor=request.user.investor, startup=startup)
                 return Response(SavedStartupSerializer(obj).data, status=status.HTTP_200_OK)
             raise
+
+class InvestorListView(generics.ListAPIView):
+    """
+    API view to list investors with filtering and strict ordering validation.
+    Only authenticated users can access. Invalid ordering fields return 400.
+    """
+    queryset = Investor.objects.all()
+    serializer_class = InvestorListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = InvestorFilter
+
+    def get_queryset(self):
+        queryset = Investor.objects.all()
+        ordering = self.request.query_params.get("ordering")
+        allowed_ordering_fields = [f.name for f in Investor._meta.fields]
+
+        if ordering:
+            field_name = ordering.lstrip("-")
+            if field_name not in allowed_ordering_fields:
+                raise ValidationError({"error": "Invalid ordering field"})
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by("company_name")
+        return queryset
+
+class InvestorDetailView(generics.RetrieveAPIView):
+    """
+    Returns a single investor profile.
+    Only authenticated users can access.
+    """
+    queryset = Investor.objects.all()
+    serializer_class = InvestorSerializer
+    permission_classes = [permissions.IsAuthenticated]
