@@ -12,30 +12,22 @@ from django.core.cache import cache
 class CheckUnboundInactiveUsersTests(TestCase):
     """Unit tests for the check_unbound_inactive_users Celery task."""
 
-    from django.core.cache import cache
-    from unittest.mock import patch
-    from django.test import TestCase
-    from users.tasks import check_unbound_inactive_users
-    from users.tests.factories import UserFactory
+    @patch("users.tasks.send_mail")
+    def test_unbound_users_receive_email(self, mock_send_mail):
+        """
+        Test that active users without a linked Startup or Investor
+        receive a reminder email.
+        """
+        cache.clear()
 
-    class CheckUnboundInactiveUsersTests(TestCase):
+        user = UserFactory(is_active=True)
 
-        @patch("users.tasks.send_mail")
-        def test_unbound_users_receive_email(self, mock_send_mail):
-            """
-            Test that active users without a linked Startup or Investor
-            receive a reminder email.
-            """
-            cache.clear()
+        check_unbound_inactive_users()
 
-            user = UserFactory(is_active=True)
+        self.assertTrue(mock_send_mail.called)
 
-            check_unbound_inactive_users()
-
-            self.assertTrue(mock_send_mail.called)
-
-            called_emails = [args[3][0] for args, kwargs in mock_send_mail.call_args_list]
-            self.assertIn(user.email, called_emails)
+        called_emails = [args[3][0] for args, kwargs in mock_send_mail.call_args_list]
+        self.assertIn(user.email, called_emails)
 
     @patch("users.tasks.send_mail")
     def test_inactive_recent_users_receive_email(self, mock_send_mail):

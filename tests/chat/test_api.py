@@ -15,7 +15,8 @@ class ConversationCreateViewTests(BaseChatTestCase):
         super().setUp()
         self.url = '/api/v1/chat/conversations/'
 
-    def test_create_room_success(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_create_room_success(self, mocked_permission):
         """Test creating a valid private conversation."""
         role_startup, role_investor = self.create_roles()
         industry = IndustryFactory.create(name="Fintech")
@@ -63,7 +64,8 @@ class ConversationCreateViewTests(BaseChatTestCase):
 
         self.assertEqual(str(error_message), f"{{'error': ErrorDetail(string='{expected_message}', code='invalid')}}")
 
-    def test_create_room_duplicate_name(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_create_room_duplicate_name(self, mocked_permission):
         """Test room creation fails if room name already exists."""
         role_startup, role_investor = self.create_roles()
         industry = IndustryFactory.create(name="Fintech")
