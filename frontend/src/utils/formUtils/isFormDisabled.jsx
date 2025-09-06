@@ -6,8 +6,18 @@
  * @return {boolean}
  */
 export function isFormDisabled(filteredFormEntries, filteredErrorKeys, errors) {
+
     const hasEmptyField = filteredFormEntries.some(
-        ([, value]) => !value.trim()
+        ([, value]) => {
+            switch (typeof value) {
+                case 'string':
+                    return !value.trim();
+                case 'object':
+                    return !Object.values(value).some(v => v);
+                default:
+                    return true;
+            }
+        }
     );
 
     const hasError = filteredErrorKeys.some(
