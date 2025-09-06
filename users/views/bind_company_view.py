@@ -244,4 +244,3 @@ class CompanyBindingView(CookieJWTProtectedView):
             stage=Stage.MVP,
             fund_size=0
         )
-

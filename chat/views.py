@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from chat.documents import Room, Message
 from chat.permissions import IsOwnerOrRecipient
-from chat.views.base_protected_view import ChatCookieJWTProtectedView
+from rest_framework.views import APIView
 from users.cookie_jwt import CookieJWTAuthentication
 from chat.serializers import RoomSerializer, MessageSerializer
 from rest_framework.pagination import LimitOffsetPagination
@@ -16,6 +16,8 @@ import sentry_sdk
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
 from rest_framework import serializers
+
+from users.permissions import HasActiveCompanyAccount, IsAuthenticatedOr401
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ class ConversationCreateView(generics.CreateAPIView):
     one Investor and one Startup.
     """
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOr401, HasActiveCompanyAccount]
     serializer_class = RoomSerializer
 
     def perform_create(self, serializer):
@@ -134,11 +136,12 @@ class ConversationCreateView(generics.CreateAPIView):
         ),
     },
 )
-class SendMessageView(ChatCookieJWTProtectedView):
+class SendMessageView(APIView):
     """
     Send a new message within a conversation.
     """
-
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedOr401, IsOwnerOrRecipient, HasActiveCompanyAccount]
     def post(self, request, *args, **kwargs):
         serializer = MessageSerializer(data=request.data, context={"sender_email": request.user.email})
         try:
@@ -233,7 +236,7 @@ class ConversationMessagesView(generics.ListAPIView):
     Only participants can access.
     """
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated, IsOwnerOrRecipient]
+    permission_classes = [IsAuthenticated, IsOwnerOrRecipient, HasActiveCompanyAccount]
     serializer_class = MessageSerializer
     pagination_class = LimitOffsetPagination
 

@@ -1,22 +1,20 @@
-from django.utils import timezone
 import logging
 from django.db import IntegrityError
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import viewsets, status, generics, pagination
-from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from investors.models import Investor, SavedStartup
 from investors.permissions import IsSavedStartupOwner
 from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer, ViewedStartupSerializer
 from investors.serializers.investor_create import InvestorCreateSerializer
-from django.shortcuts import get_object_or_404
-from .models import ViewedStartup
 from startups.models import Startup
 from users.cookie_jwt import CookieJWTAuthentication
-from users.permissions import IsInvestor, CanCreateCompanyPermission, IsAuthenticatedOr401
-from startups.models import Startup
-from users.views.base_protected_view import CookieJWTProtectedView
+from users.permissions import IsInvestor, CanCreateCompanyPermission, IsAuthenticatedOr401, HasActiveCompanyAccount
+from .models import ViewedStartup
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +28,7 @@ class InvestorViewSet(viewsets.ModelViewSet):
     serializer_class = InvestorSerializer
     authentication_classes = [CookieJWTAuthentication]
     permission_classes_by_action = {
-        "create": [IsAuthenticatedOr401, CanCreateCompanyPermission],
+        "create": [IsAuthenticatedOr401, CanCreateCompanyPermission, HasActiveCompanyAccount],
         "default": [IsAuthenticatedOr401],
     }
 
@@ -55,7 +53,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
     ViewSet for managing SavedStartup instances.
     Only authenticated investors who own the SavedStartup can modify/delete it.
     """
-    permission_classes = [IsAuthenticatedOr401, IsInvestor, IsSavedStartupOwner]
+    permission_classes = [IsAuthenticatedOr401, IsInvestor, IsSavedStartupOwner, HasActiveCompanyAccount]
     authentication_classes = [CookieJWTAuthentication]
     serializer_class = SavedStartupSerializer
 
@@ -215,6 +213,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
         )
         super().perform_destroy(instance)
 
+
 class ViewedStartupPagination(pagination.PageNumberPagination):
     """
     Pagination class for recently viewed startups.
@@ -231,11 +230,14 @@ class ViewedStartupListView(generics.ListAPIView):
     Retrieve a paginated list of recently viewed startups for the authenticated investor.
     """
     serializer_class = ViewedStartupSerializer
-    permission_classes = [IsAuthenticated, IsInvestor]
+    permission_classes = [IsAuthenticated, IsInvestor, HasActiveCompanyAccount]
     pagination_class = ViewedStartupPagination
 
     def get_queryset(self):
-        return ViewedStartup.objects.filter(investor=self.request.user.investor).select_related('startup').order_by("-viewed_at")
+        return ViewedStartup.objects.filter(investor=self.request.user.investor).select_related('startup').order_by(
+            "-viewed_at")
+
+
 class ViewedStartupCreateView(APIView):
     """
     POST /api/v1/startups/view/{startup_id}/
@@ -248,7 +250,7 @@ class ViewedStartupCreateView(APIView):
         startup = get_object_or_404(Startup, id=startup_id)
         if not hasattr(request.user, "investor"):
             return Response({"detail": "User is not an investor."}, status=status.HTTP_403_FORBIDDEN)
-        investor = request.user.investor 
+        investor = request.user.investor
 
         viewed_obj, created = ViewedStartup.objects.update_or_create(
             investor=investor,
@@ -266,7 +268,7 @@ class ViewedStartupClearView(APIView):
     Clear the authenticated investor's viewed startups history.
     Return number of deleted entries.
     """
-    permission_classes = [IsAuthenticated, IsInvestor]
+    permission_classes = [IsAuthenticated, IsInvestor, HasActiveCompanyAccount]
 
     def delete(self, request):
         investor = request.user.investor
@@ -277,7 +279,10 @@ class ViewedStartupClearView(APIView):
             status=status.HTTP_200_OK
         )
 
-class SaveStartupView(CookieJWTProtectedView):
+
+class SaveStartupView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedOr401, HasActiveCompanyAccount]
 
     def post(self, request, startup_id: int):
         """

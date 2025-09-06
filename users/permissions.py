@@ -116,6 +116,7 @@ class IsAuthenticatedOr401(BasePermission):
     def authenticate_header(self, request):
         return 'Bearer'
 
+
 class IsAuthenticatedInvestor403(BasePermission):
     """
     Permission that enforces:
@@ -152,3 +153,22 @@ class IsAuthenticatedInvestor403(BasePermission):
             view.__class__.__name__,
         )
         return True
+
+
+class HasActiveCompanyAccount(BasePermission):
+    """
+    Custom permission to ensure:
+    - User account is active
+    - User is linked to a Startup OR Investor entity
+    """
+
+    message = "You must have an active account and be linked to a company (Startup or Investor)."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+
+        return user.is_active and (
+                hasattr(user, "startup") or hasattr(user, "investor")
+        )

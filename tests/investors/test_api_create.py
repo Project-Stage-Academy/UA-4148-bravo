@@ -5,7 +5,7 @@ from investors.models import Investor
 from startups.models import Industry, Location
 from utils.authenticate_client import authenticate_client
 from django.test.utils import override_settings
-
+from unittest.mock import patch
 
 @override_settings(SECURE_SSL_REDIRECT=False)
 class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
@@ -39,7 +39,8 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
             "website": "https://capitalventures.com"
         }
 
-    def test_successful_investor_creation(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_successful_investor_creation(self, mocked_permission):
         """
         Ensure an authenticated user can create a new investor with valid data.
         """
@@ -67,7 +68,8 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         response = self.client.post(self.url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_create_with_duplicate_name_fails(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_create_with_duplicate_name_fails(self, mocked_permission):
         """
         Ensure creating an investor with an already existing name fails.
         """
@@ -76,7 +78,9 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         self.assertEqual(response1.status_code, status.HTTP_201_CREATED, "First investor creation failed")
 
         second_user = self.get_or_create_user(
-            email="second-investor-creator@example.com", first_name="Second", last_name="Creator"
+            email="second-investor-creator@example.com",
+            first_name="Second",
+            last_name="Creator"
         )
         authenticate_client(self.client, second_user)
 
@@ -87,7 +91,8 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         self.assertIn("company_name", response2.data)
         self.assertIn("already exists", str(response2.data['company_name']))
 
-    def test_user_cannot_create_more_than_one_investor(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_user_cannot_create_more_than_one_investor(self, mocked_permission):
         """
         Ensure a user who already owns an investor profile cannot create another one.
         """
@@ -102,7 +107,8 @@ class InvestorCreateAPITests(BaseCompanyCreateAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn("You have already created a company profile", response.data['detail'])
 
-    def test_creation_with_invalid_fund_size_fails(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_creation_with_invalid_fund_size_fails(self, mocked_permission):
         """
         Ensure creating an investor with a negative fund size fails validation.
         """

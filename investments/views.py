@@ -6,7 +6,8 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from users.cookie_jwt import CookieJWTAuthentication
-from users.permissions import IsAuthenticatedInvestor403  # always 403 for any unauthorized access
+from users.permissions import IsAuthenticatedInvestor403, \
+    HasActiveCompanyAccount  # always 403 for any unauthorized access
 from investments.models import Subscription
 from investments.serializers import SubscriptionCreateSerializer
 from projects.models import Project
@@ -29,7 +30,7 @@ class SubscriptionCreateView(CreateAPIView):
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionCreateSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticatedInvestor403]
+    permission_classes = [IsAuthenticatedInvestor403, HasActiveCompanyAccount]
 
     def _get_project_or_404_payload(self):
         """
