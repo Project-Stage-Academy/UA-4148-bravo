@@ -45,7 +45,7 @@ class BaseChatTestCase(APITestCase):
         self.patcher_decode = patch('users.cookie_jwt.safe_decode', return_value={'user_id': str(self.user.id)})
         self.mock_decode = self.patcher_decode.start()
 
-        self.patcher_channel = patch('chat.views.chat_views.get_channel_layer')
+        self.patcher_channel = patch('chat.views.get_channel_layer')
         self.mock_channel_layer = self.patcher_channel.start()
 
         mock_layer_instance = self.mock_channel_layer.return_value

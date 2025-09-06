@@ -15,9 +15,9 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_protect
+from users.tokens import safe_decode
 from utils.cookies import set_auth_cookies, clear_auth_cookies
-from validation.validate_token import safe_decode
-from django.contrib.auth import authenticate
+
 
 logger = logging.getLogger(__name__)
 

@@ -27,6 +27,7 @@ class TestSubscriptionCreateAPI(TestCase):
             first_name="Test",
             last_name="Investor",
             role=cls.role_user,
+            is_active=True
         )
 
         cls.startup_user = User.objects.create_user(
@@ -35,6 +36,7 @@ class TestSubscriptionCreateAPI(TestCase):
             first_name="Startup",
             last_name="Owner",
             role=cls.role_user,
+            is_active=True
         )
 
         cls.industry = Industry.objects.create(name="Technology")
@@ -146,8 +148,9 @@ class TestSubscriptionCreateAPI(TestCase):
             first_name="Owner",
             last_name="Investor",
             role=self.role_user,
+            is_active=True
         )
-        owner_investor = Investor.objects.create(
+        Investor.objects.create(
             user=owner_investor_user,
             industry=self.project.startup.industry,
             company_name="Owner As Investor",
