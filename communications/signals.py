@@ -301,6 +301,184 @@ def _connect_saved_startup_signal():
                 extra={"handlers_count": len(_handlers)})
 
 
+def _connect_project_follow_signal():
+    """Connect signal handler for ProjectFollow model to trigger notifications."""
+    try:
+        ProjectFollow = apps.get_model("investors", "ProjectFollow")
+        logger.debug("[SIGNAL] investors.ProjectFollow model resolved")
+    except Exception as e:
+        logger.warning("Could not resolve investors.ProjectFollow", exc_info=True)
+        return
+
+    @receiver(
+        post_save,
+        sender=ProjectFollow,
+        dispatch_uid="comm_project_followed_created",
+        weak=False,
+    )
+    def notify_project_followed(sender, instance, created, **kwargs):
+        """
+        Send notification to startup when an investor follows their project.
+        
+        This signal is triggered when a new ProjectFollow instance is created.
+        It sends a notification to the startup team informing them that an
+        investor has followed their project.
+        """
+        logger.debug(
+            "[SIGNAL] notify_project_followed fired",
+            extra={"sig_created": bool(created), "project_follow_id": getattr(instance, "pk", None)},
+        )
+        
+        if not created:
+            logger.debug("[SIGNAL] Instance was updated, not created. Skip.")
+            return
+
+        project = getattr(instance, "project", None)
+        investor = getattr(instance, "investor", None)
+
+        if not project or not getattr(project, "pk", None):
+            logger.warning(
+                "[SIGNAL] Skip: project missing/unsaved",
+                extra={"project_follow_id": getattr(instance, "pk", None)},
+            )
+            return
+        if not investor or not getattr(investor, "pk", None):
+            logger.warning(
+                "[SIGNAL] Skip: investor missing/unsaved",
+                extra={"project_follow_id": getattr(instance, "pk", None)},
+            )
+            return
+
+        startup = getattr(project, "startup", None)
+        if not startup:
+            logger.warning(
+                "[SIGNAL] Skip: startup missing from project",
+                extra={"project_id": getattr(project, "pk", None)},
+            )
+            return
+            
+        startup_user = getattr(startup, "user", None)
+        investor_user = getattr(investor, "user", None)
+
+        if not getattr(startup_user, "pk", None):
+            logger.warning(
+                "[SIGNAL] Skip: startup_user missing",
+                extra={"startup_id": getattr(startup, "pk", None)},
+            )
+            return
+        if not getattr(investor_user, "pk", None):
+            logger.warning(
+                "[SIGNAL] Skip: investor_user missing",
+                extra={"investor_id": getattr(investor, "pk", None)},
+            )
+            return
+
+        if startup_user.pk == investor_user.pk:
+            logger.info(
+                "[SIGNAL] Skip: user followed own project",
+                extra={"user_id": startup_user.pk},
+            )
+            return
+
+        project_id = _to_int(getattr(project, "id", None))
+        if project_id is None:
+            logger.warning("[SIGNAL] Skip: project id is not int-like", extra={"raw_id": getattr(project, "id", None)})
+            return
+            
+        investor_name = getattr(investor_user, "get_full_name", lambda: "")() or getattr(investor_user, "email", "")
+        project_title = getattr(project, "title", "your project")
+        
+        title = "New Project Follower"
+        message = f"{investor_name} is now following your project '{project_title}'."
+
+        ntype = NotificationType.objects.filter(code="project_followed", is_active=True).first()
+        if not ntype:
+            logger.debug("[SIGNAL] NotificationType 'project_followed' not found, creating")
+            ntype = _get_or_create_ntype("project_followed", "Project Followed")
+            
+        now = timezone.now()
+        second_start = now.replace(microsecond=0)
+        second_end = second_start + timedelta(seconds=1)
+
+        base_qs = Notification.objects.filter(
+            user=startup_user,
+            notification_type=ntype,
+            triggered_by_user=investor_user,
+            related_project=project,
+            created_at__gte=second_start,
+            created_at__lt=second_end,
+        )
+        if base_qs.exists():
+            logger.info(
+                "[SIGNAL] Duplicate project follow notification",
+                extra={
+                    "startup_user_id": startup_user.pk,
+                    "investor_user_id": investor_user.pk,
+                    "project_id": project_id,
+                    "second_start": second_start.isoformat(),
+                },
+            )
+            return
+
+        def _create():
+            _now = timezone.now()
+            _second_start = _now.replace(microsecond=0)
+            _second_end = _second_start + timedelta(seconds=1)
+            
+            if Notification.objects.filter(
+                user=startup_user,
+                notification_type=ntype,
+                triggered_by_user=investor_user,
+                related_project=project,
+                created_at__gte=_second_start,
+                created_at__lt=_second_end,
+            ).exists():
+                logger.info(
+                    "[SIGNAL] Duplicate project follow notification within same second (re-check)",
+                    extra={"project_id": project_id, "second_start": _second_start.isoformat()},
+                )
+                return
+
+            notif = Notification.objects.create(
+                user=startup_user,
+                notification_type=ntype,
+                title=title,
+                message=message,
+                triggered_by_user=investor_user,
+                triggered_by_type=NotificationTrigger.INVESTOR,
+                priority=NotificationPriority.MEDIUM,
+                related_project=project,
+            )
+            logger.info(
+                "[SIGNAL] Project follow notification created",
+                extra={
+                    "notification_id": str(getattr(notif, "notification_id", "")),
+                    "user_id": startup_user.pk,
+                    "project_id": project_id,
+                    "investor_user_id": investor_user.pk,
+                },
+            )
+
+        def safe_create():
+            try:
+                _create()
+            except Exception:
+                logger.error("[SIGNAL] Failed to create project follow notification", exc_info=True)
+
+        conn = transaction.get_connection()
+        if conn.in_atomic_block:
+            logger.debug("[SIGNAL] In atomic block; scheduling on_commit")
+            transaction.on_commit(safe_create)
+        else:
+            logger.debug("[SIGNAL] Not in atomic block; creating immediately")
+            safe_create()
+
+    _handlers.append(notify_project_followed)
+    logger.info("[SIGNAL] _connect_project_follow_signal handler registered",
+                extra={"handlers_count": len(_handlers)})
+
+
 # Initialize handlers at import
 logger.info("[SIGNAL] Initializing communications signals")
 _connect_saved_startup_signal()
+_connect_project_follow_signal()

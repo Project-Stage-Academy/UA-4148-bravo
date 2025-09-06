@@ -1,13 +1,16 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 from startups.views.startup import StartupViewSet
-from django.urls import path
 from .views import (
     ViewedStartupListView,
     ViewedStartupCreateView,
     ViewedStartupClearView,
     InvestorListView,
-    InvestorDetailView
+    InvestorDetailView,
+    ProjectFollowCreateView,
+    ProjectFollowListView,
+    ProjectFollowDetailView,
+    ProjectFollowersListView
 )
 from investors.views import InvestorViewSet, SavedStartupViewSet, SaveStartupView
 from investors.views_saved import InvestorSavedStartupsList, UnsaveStartupView
@@ -40,6 +43,13 @@ urlpatterns = [
     path("investors/", InvestorListView.as_view(), name="investor-list"),
 
     # GET /api/v1/investors/{id}/
-    path("investors/<int:pk>/", InvestorDetailView.as_view(), name="investor-detail")
+    path("investors/<int:pk>/", InvestorDetailView.as_view(), name="investor-detail"),
+   
+    # GET /api/v1/investors/follows/ - List followed projects
+    path("follows/", ProjectFollowListView.as_view(), name="project-follow-list"),
+    
+    # GET /api/v1/investors/follows/{id}/ - Get follow details
+    # PATCH /api/v1/investors/follows/{id}/ - Unfollow project
+    path("follows/<int:pk>/", ProjectFollowDetailView.as_view(), name="project-follow-detail"),
 ] + router.urls
 
