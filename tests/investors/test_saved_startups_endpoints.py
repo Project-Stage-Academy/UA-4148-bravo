@@ -41,6 +41,7 @@ class SavedStartupsEndpointsTests(APITestCase):
             email="inv@example.com",
             password=make_password("Pass123!"),
             role=self.role_user,
+            is_active=True
         )
         self.investor = Investor.objects.create(
             user=self.user,
@@ -59,11 +60,13 @@ class SavedStartupsEndpointsTests(APITestCase):
             email="owner1@example.com",
             password=make_password("Pass123!"),
             role=self.role_user,
+            is_active=True
         )
         self.owner2 = User.objects.create(
             email="owner2@example.com",
             password=make_password("Pass123!"),
             role=self.role_user,
+            is_active=True
         )
 
         # Two startups with different owners (avoid OneToOne user clash)

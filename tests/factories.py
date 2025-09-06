@@ -1,7 +1,7 @@
 import factory
 from decimal import Decimal
 from django.contrib.auth import get_user_model
-
+from django.utils import timezone
 from investors.models import Investor
 from projects.models import Project, Category
 from startups.models import Startup, Industry, Location
@@ -29,6 +29,7 @@ class UserFactory(factory.django.DjangoModelFactory):
     email = factory.Sequence(lambda n: f"user{n}@example.com")
     password = factory.PostGenerationMethodCall('set_password', 'password123')
     is_active = True
+    last_action_at = factory.LazyFunction(timezone.now)
 
 
 class IndustryFactory(factory.django.DjangoModelFactory):

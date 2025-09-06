@@ -7,6 +7,7 @@ from django.test.utils import override_settings
 from investors.models import Investor, SavedStartup
 from startups.models import Startup, Industry, Location
 from users.models import UserRole
+from unittest.mock import patch
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
@@ -46,6 +47,7 @@ class SavedStartupViewSetTests(APITestCase):
             first_name="In",
             last_name="Vestor",
             role=self.role_user,
+            is_active=True
         )
         self.investor = Investor.objects.create(
             user=self.user,
@@ -66,6 +68,7 @@ class SavedStartupViewSetTests(APITestCase):
             first_name="Star",
             last_name="Tup",
             role=self.role_user,
+            is_active=True
         )
         self.startup = Startup.objects.create(
             user=self.startup_owner,
@@ -133,7 +136,12 @@ class SavedStartupViewSetTests(APITestCase):
         """
         # Create a row for another investor
         User = get_user_model()
-        other_user = User.objects.create_user(email="other@ex.com", password="x", role=self.role_user)
+        other_user = User.objects.create_user(
+            email="other@ex.com",
+            password="x",
+            role=self.role_user,
+            is_active=True
+        )
         other_investor = Investor.objects.create(
             user=other_user,
             industry=self.industry,
@@ -201,12 +209,18 @@ class SavedStartupViewSetTests(APITestCase):
         Expect 403 when authenticated user has no investor profile.
         """
         User = get_user_model()
-        plain = User.objects.create_user(email="plain@ex.com", password="x", role=self.role_user)
+        plain = User.objects.create_user(
+            email="plain@ex.com",
+            password="x",
+            role=self.role_user,
+            is_active=True
+        )
         self.client.force_authenticate(plain)
         r = self.client.get(self.list_url)
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_cannot_update_or_delete_others_row(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_cannot_update_or_delete_others_row(self, mocked_permission):
         """
         Ensure a different investor cannot update/delete someone else's saved row.
         With get_queryset filtering to current investor, this should 404.
@@ -217,8 +231,13 @@ class SavedStartupViewSetTests(APITestCase):
 
         # switch to another investor
         User = get_user_model()
-        other_user = User.objects.create_user(email="evil@ex.com", password="x", role=self.role_user)
-        other_investor = Investor.objects.create(
+        other_user = User.objects.create_user(
+            email="evil@ex.com",
+            password="x",
+            role=self.role_user,
+            is_active=True
+        )
+        Investor.objects.create(
             user=other_user,
             industry=self.industry,
             company_name="Evil Capital",

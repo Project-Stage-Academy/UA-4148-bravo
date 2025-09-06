@@ -9,7 +9,7 @@ from startups.serializers.startup_full import StartupSerializer
 from startups.serializers.startup_create import StartupCreateSerializer
 from startups.views.startup_base import BaseValidatedModelViewSet
 from users.cookie_jwt import CookieJWTAuthentication
-from users.permissions import IsStartupUser, CanCreateCompanyPermission, IsAuthenticatedOr401
+from users.permissions import IsStartupUser, CanCreateCompanyPermission, IsAuthenticatedOr401, HasActiveCompanyAccount
 from communications.serializers import (
     UserNotificationPreferenceSerializer,
     UserNotificationTypePreferenceSerializer,
@@ -26,10 +26,10 @@ from startups.filters import StartupFilter
 from django_filters import rest_framework as filters
 from startups.filters import StartupFilter
 
+
 class StartupViewSet(BaseValidatedModelViewSet):
     queryset = Startup.objects.select_related('user', 'industry', 'location') \
-        .prefetch_related('projects')
-    
+        .prefetch_related('projects')    
     serializer_class = StartupListSerializer
     permission_classes = [IsAuthenticatedOr401]
     authentication_classes = [CookieJWTAuthentication]
@@ -84,7 +84,8 @@ class StartupViewSet(BaseValidatedModelViewSet):
         try:
             nt_id = int(notification_type_id)
         except (TypeError, ValueError):
-            return Response({'notification_type_id': ['A valid integer is required.']}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'notification_type_id': ['A valid integer is required.']},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         serializer = UpdateTypePreferenceSerializer(
             data={'notification_type_id': nt_id, 'frequency': frequency},
@@ -98,7 +99,8 @@ class StartupViewSet(BaseValidatedModelViewSet):
                     for err in non_field:
                         code = getattr(err, 'code', None)
                         if code == 'not_found' or str(err) == 'Notification type preference not found':
-                            return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
+                            return Response({'error': 'Notification type preference not found'},
+                                            status=status.HTTP_404_NOT_FOUND)
                 return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         except NotFound:
             return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -108,7 +110,6 @@ class StartupViewSet(BaseValidatedModelViewSet):
 
         type_pref = serializer.save()
         return Response(UserNotificationTypePreferenceSerializer(type_pref, context={'request': request}).data)
-
 
     def _get_or_create_user_pref(self, request):
         """Fetch the current user's notification preferences, creating defaults if absent.
@@ -157,7 +158,8 @@ class StartupViewSet(BaseValidatedModelViewSet):
         try:
             nt_id = int(notification_type_id)
         except (TypeError, ValueError):
-            return Response({'notification_type_id': ['A valid integer is required.']}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'notification_type_id': ['A valid integer is required.']},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         serializer = UpdateTypePreferenceSerializer(
             data={'notification_type_id': nt_id, 'frequency': frequency},
@@ -171,7 +173,8 @@ class StartupViewSet(BaseValidatedModelViewSet):
                     for err in non_field:
                         code = getattr(err, 'code', None)
                         if code == 'not_found' or str(err) == 'Notification type preference not found':
-                            return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
+                            return Response({'error': 'Notification type preference not found'},
+                                            status=status.HTTP_404_NOT_FOUND)
                 return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         except NotFound:
             return Response({'error': 'Notification type preference not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -181,7 +184,6 @@ class StartupViewSet(BaseValidatedModelViewSet):
 
         type_pref = serializer.save()
         return Response(UserNotificationTypePreferenceSerializer(type_pref, context={'request': request}).data)
-
 
     def get_permissions(self):
         """
@@ -202,7 +204,7 @@ class StartupViewSet(BaseValidatedModelViewSet):
         if self.action == 'create':
             return StartupCreateSerializer
         return StartupSerializer
-    
+      
     def _to_bool(self, val: str) -> bool:
         return str(val).lower() in ('1', 'true', 'yes', 'y')
 
@@ -214,3 +216,4 @@ class StartupViewSet(BaseValidatedModelViewSet):
         if user and user.is_authenticated:
             return qs.filter(Q(is_public=True) | Q(user=user))
         return qs.filter(is_public=True)
+

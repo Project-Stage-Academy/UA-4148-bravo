@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 import logging
 from django.test.utils import override_settings
 from utils.authenticate_client import authenticate_client
+from unittest.mock import patch
 
 User = get_user_model()
 
@@ -36,7 +37,8 @@ class NotificationPreferencesTestCase(APITestCase):
         self.user = UserFactory()
         authenticate_client(self.client, self.user)
 
-    def test_get_notification_types(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_get_notification_types(self, mocked_permission):
         """Test retrieving notification types."""
         url = reverse('communications:notification-type-list')
         response = self.client.get(url)
@@ -47,7 +49,8 @@ class NotificationPreferencesTestCase(APITestCase):
         self.assertIn(self.notification_type1.code, codes)
         self.assertIn(self.notification_type2.code, codes)
 
-    def test_get_user_preferences(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_get_user_preferences(self, mocked_permission):
         """Test retrieving user notification preferences."""
         url = reverse('communications:user-notification-preference-list')
         response = self.client.get(url)
@@ -66,7 +69,8 @@ class NotificationPreferencesTestCase(APITestCase):
         self.assertIn('type_preferences', user_prefs)
         self.assertIsInstance(user_prefs['type_preferences'], list)
 
-    def test_update_user_preferences(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_update_user_preferences(self, mocked_permission):
         """Test updating user notification preferences."""
         pref = UserNotificationPreference.objects.get(user=self.user)
         url = reverse('communications:user-notification-preference-detail',
@@ -89,8 +93,9 @@ class NotificationPreferencesTestCase(APITestCase):
         self.assertFalse(pref.enable_email)
         self.assertTrue(pref.enable_push)
 
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
     @ddt.data('immediate', 'daily_digest', 'weekly_summary')
-    def test_update_notification_type_preference(self, frequency):
+    def test_update_notification_type_preference(self, frequency, mocked_permission):
         """
         Test updating a specific notification type preference (parameterized over valid frequencies).
         """
@@ -114,7 +119,8 @@ class NotificationPreferencesTestCase(APITestCase):
         type_pref.refresh_from_db()
         self.assertEqual(type_pref.frequency, frequency)
 
-    def test_update_type_preference_invalid_frequency(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_update_type_preference_invalid_frequency(self, mocked_permission):
         """Test that an invalid frequency value returns 400 with serializer errors."""
         pref = UserNotificationPreference.objects.get(user=self.user)
         type_pref = pref.type_preferences.first()
@@ -131,7 +137,8 @@ class NotificationPreferencesTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('frequency', response.data)
 
-    def test_update_type_preference_invalid_notification_type_id_non_integer(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_update_type_preference_invalid_notification_type_id_non_integer(self, mocked_permission):
         """Test that a non-integer notification_type_id returns 400."""
         url = reverse(
             'communications:user-notification-preference-update-type-preference',
@@ -145,7 +152,8 @@ class NotificationPreferencesTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data.get('error'), 'notification_type_id must be an integer')
 
-    def test_update_type_preference_not_found(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_update_type_preference_not_found(self, mocked_permission):
         """Test that updating a non-existent user preference returns 404."""
         another_type = NotificationTypeFactory()
         url = reverse(

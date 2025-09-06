@@ -1,8 +1,10 @@
 import logging
-from typing import Optional
+import jwt
+from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from .models import User
 
 logger = logging.getLogger(__name__)
@@ -66,25 +68,27 @@ def make_uidb64(user_id: int) -> str:
     return urlsafe_base64_encode(force_bytes(str(user_id)))
 
 
-def decode_uidb64(uidb64: str) -> Optional[int]:
+def safe_decode(token: str):
     """
-    Decode a base64 string back to user_id.
-
-    Args:
-        uidb64 (str): Base64 encoded user ID.
-
-    Returns:
-        Optional[Union[int, str]]: Decoded user ID as int if numeric, else str.
-                                   Returns None if decoding fails. 
+    Safely decode a JWT and verify its signature and expiration.
+    Raises InvalidToken or TokenExpired if the token is invalid or expired.
     """
+    if not token or len(token.split(".")) != 3:
+        raise InvalidToken("Token is malformed.")
+
     try:
-        decoded = force_str(urlsafe_base64_decode(uidb64))
-        if decoded.isdigit():
-            return int(decoded)
-        return decoded
-    except (TypeError, ValueError, OverflowError) as e:
-        logger.error(f"Failed to decode uidb64 '{uidb64}': {e}", exc_info=True)
-        return None
+        payload = jwt.decode(
+            token,
+            key=settings.SECRET_KEY,
+            algorithms=["HS256"],
+            options={"verify_exp": True}
+        )
+    except jwt.ExpiredSignatureError:
+        raise TokenError("Token has expired.")
+    except Exception as e:
+        raise InvalidToken(f"Could not decode token: {str(e)}")
+
+    return payload
 
 
 def make_token(user: User) -> str:
