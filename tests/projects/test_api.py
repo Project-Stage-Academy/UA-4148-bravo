@@ -7,6 +7,7 @@ from common.enums import ProjectStatus
 from projects.models import Project
 from tests.test_base_case import BaseAPITestCase
 from rest_framework.test import APIClient
+from unittest.mock import patch
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
@@ -66,7 +67,8 @@ class ProjectAPICRUDTests(BaseAPITestCase):
         self.assertIn("created_at", response.data)
         self.assertIn("updated_at", response.data)
 
-    def test_get_project_list(self):
+    @patch('users.permissions.HasActiveCompanyAccount.has_permission', return_value=True)
+    def test_get_project_list(self, mocked_permission):
         """
         Test retrieving a list of projects via GET request.
         Ensures HTTP 200 status and that the list contains at least one project.

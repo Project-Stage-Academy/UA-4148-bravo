@@ -118,6 +118,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False, help_text="Soft delete flag")
     pending_email = models.EmailField(null=True, blank=True)
     verified_at = models.DateTimeField(null=True, blank=True,
         help_text="Timestamp when the user's email was verified"
@@ -136,6 +137,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True,
         blank=True,
         help_text="When the verification email was sent"
+    )
+    last_action_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp of the user's last activity"
     )
 
     EMAIL_FIELD = 'email'

@@ -1,5 +1,5 @@
 from django.urls import path
-from chat.views.chat_views import ConversationCreateView, SendMessageView, ConversationMessagesView
+from chat.views import ConversationCreateView, SendMessageView, ConversationMessagesView
 
 urlpatterns = [
     path("conversations/", ConversationCreateView.as_view(), name="create_conversation"),

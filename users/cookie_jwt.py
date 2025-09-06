@@ -2,7 +2,7 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework import exceptions
 from users.models import User
 import logging
-from validation.validate_token import safe_decode
+from users.tokens import safe_decode
 
 logger = logging.getLogger(__name__)
 
