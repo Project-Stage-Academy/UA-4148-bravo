@@ -30,8 +30,9 @@ echo "PostgreSQL is ready - continuing..."
 # ------------------------------
 # Django setup
 # ------------------------------
+export DJANGO_SETTINGS_MODULE=core.settings
 python manage.py migrate --noinput
-python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput || true
 
 # ------------------------------
 # Execute the passed command, or default to gunicorn
@@ -42,6 +43,7 @@ if [ "$#" -eq 0 ]; then
 else
   exec "$@"
 fi
+
 
 
 

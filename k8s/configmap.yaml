@@ -5,7 +5,7 @@ metadata:
   namespace: forum
 data:
   # Django
-  DJANGO_SETTINGS_MODULE: "core.settings.production"
+  DJANGO_SETTINGS_MODULE: "core.settings.third_party_settings"
   DEBUG: "False"
   DOCS_ENABLED: "True"
   ALLOWED_HOSTS: |
@@ -16,7 +16,7 @@ data:
   # Database
   DB_NAME: "ua4148"
   DB_USER: "postgres"
-  DB_HOST: "postgres-service"
+  DB_HOST: "postgres"
   DB_PORT: "5432"
 
   # Redis (for Celery & Channels)
@@ -36,6 +36,8 @@ data:
   # Custom for entrypoint.sh
   MAX_RETRIES: "5"
   SLEEP_DURATION: "2"
+
+
 
 
 
