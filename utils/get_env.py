@@ -45,6 +45,8 @@ def get_env(
 
     if cast == bool:
         return str(value).strip().lower() in ("true", "1", "yes", "y", "on")
+    elif cast == list:
+        return [s.strip() for s in str(value).split(",") if s.strip()]
     else:
         try:
             return cast(value)
