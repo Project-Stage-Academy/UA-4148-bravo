@@ -1,24 +1,37 @@
-import os
 import sys
-from decouple import config
+import uuid
 from datetime import timedelta
 import mongoengine
 from typing import Any
 from core.settings.base_settings import DEBUG, SECRET_KEY
+from utils.get_env import get_env
+from dotenv import load_dotenv
+
+load_dotenv()
 
 AUTHENTICATION_BACKENDS = [
     'users.backends.EmailBackend',
     'social_core.backends.google.GoogleOAuth2',
     'social_core.backends.github.GithubOAuth2',
     'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('GOOGLE_CLIENT_ID')
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('GOOGLE_CLIENT_SECRET')
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = get_env('GOOGLE_CLIENT_ID')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = get_env('GOOGLE_CLIENT_SECRET')
 
-SOCIAL_AUTH_GITHUB_KEY = config('GITHUB_CLIENT_ID')
-SOCIAL_AUTH_GITHUB_SECRET = config('GITHUB_CLIENT_SECRET')
+SOCIAL_AUTH_GITHUB_KEY = get_env('GITHUB_CLIENT_ID')
+SOCIAL_AUTH_GITHUB_SECRET = get_env('GITHUB_CLIENT_SECRET')
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]
+SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
+    'access_type': 'offline',
+    'prompt': 'consent',
+}
+
+SOCIAL_AUTH_GITHUB_SCOPE = ['user:email']
 
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
@@ -26,41 +39,13 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.auth_allowed',
     'social_core.pipeline.social_auth.social_user',
     'social_core.pipeline.user.get_username',
+    'social_core.pipeline.social_auth.associate_by_email',
     'users.pipelines.create_or_update_user',
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
-    'social_core.pipeline.user.user_details',
+    'users.pipelines.activate_verified_user',
+    'users.pipelines.safe_user_details',
 )
-
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'APP': {
-            'client_id': config('GOOGLE_CLIENT_ID'),
-            'secret': config('GOOGLE_CLIENT_SECRET'),
-            'key': '',
-        },
-        'SCOPE': ['profile', 'email'],
-        'AUTH_PARAMS': {
-            'access_type': 'offline',
-            'prompt': 'consent',
-        },
-        'FETCH_USERINFO': True,
-    },
-
-    'github': {
-        'APP': {
-            'client_id': config('GITHUB_CLIENT_ID'),
-            'secret': config('GITHUB_CLIENT_SECRET'),
-            'key': '',
-        },
-        'SCOPE': ['user:email'],
-    }
-}
-
-# Ensure email is saved and verified
-SOCIALACCOUNT_EMAIL_REQUIRED = True
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-SOCIALACCOUNT_AUTO_SIGNUP = True
 
 DEFAULT_SCHEMA_CLASS = 'drf_spectacular.openapi.AutoSchema'
 
@@ -71,7 +56,6 @@ REST_FRAMEWORK: dict[str, Any] = {
     "DEFAULT_PERMISSION_CLASSES": (
         "users.permissions.IsAuthenticatedOr401",
     ),
-    "UNAUTHENTICATED_USER": None,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.UserRateThrottle",
         "rest_framework.throttling.AnonRateThrottle",
@@ -118,8 +102,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=get_env("ACCESS_TOKEN_MINUTES", default=30, cast=int)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=get_env("REFRESH_TOKEN_DAYS", default=1, cast=int)),
     'BLACKLIST_AFTER_ROTATION': True,
     'ROTATE_REFRESH_TOKENS': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -148,11 +132,7 @@ CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
-SECURE_SSL_REDIRECT = True
-
-# Avoid HTTPS redirects during test runs (prevents 301 in API tests)
-if 'test' in sys.argv:
-    SECURE_SSL_REDIRECT = False
+SECURE_SSL_REDIRECT = False
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
@@ -187,23 +167,23 @@ if DEBUG:
     DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = config('EMAIL_HOST')
-    EMAIL_PORT = 587
-    EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-    EMAIL_USE_TLS = True
-    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+    EMAIL_HOST = get_env('EMAIL_HOST')
+    EMAIL_PORT = get_env("EMAIL_PORT", default=587, cast=int)
+    EMAIL_HOST_USER = get_env('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = get_env('EMAIL_HOST_PASSWORD')
+    EMAIL_USE_TLS = get_env("EMAIL_USE_TLS", default=True, cast=bool)
+    DEFAULT_FROM_EMAIL = get_env('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+        'NAME': get_env('DB_NAME', required=True),
+        'USER': get_env('DB_USER', required=True),
+        'PASSWORD': get_env('DB_PASSWORD', required=True),
+        'HOST': get_env('DB_HOST', default='localhost'),
+        'PORT': get_env('DB_PORT', default='5432'),
         'TEST': {
-            'NAME': 'test_db',
+            'NAME': f'test_db_{uuid.uuid4().hex[:8]}',
         },
     }
 }
@@ -247,19 +227,23 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # Elasticsearch DSL Configuration
+ELASTICSEARCH_HOST = get_env('ELASTICSEARCH_HOST', default='http://localhost:9200')
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': config('ELASTICSEARCH_HOST', default='http://localhost:9200'),
+        'hosts': ELASTICSEARCH_HOST,
     },
 }
 
 # Override Elasticsearch index names for testing
 if 'users' in sys.argv:
-    ELASTICSEARCH_DSL['default']['hosts'] = config('ELASTICSEARCH_HOST', default='http://localhost:9200')
+    ELASTICSEARCH_DSL = {
+        'default': {'hosts': ELASTICSEARCH_HOST}
+    }
 
 # Celery
-CELERY_BROKER_URL = "redis://redis:6379/0"
-CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+REDIS_URL = get_env("REDIS_URL", default="redis://127.0.0.1:6379/0")
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
 
 if 'test' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
@@ -267,8 +251,8 @@ if 'test' in sys.argv:
 
 # Chat
 ASGI_APPLICATION = "core.asgi.application"
-REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_HOST = get_env("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = get_env("REDIS_PORT", default=6379, cast=int)
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -278,9 +262,9 @@ CHANNEL_LAYERS = {
     },
 }
 
-MONGO_DB = os.getenv("MONGO_DB", "chat")
-MONGO_HOST = os.getenv("MONGO_HOST", "127.0.0.1")
-MONGO_PORT = int(os.getenv("MONGO_PORT") or 27017)
+MONGO_DB = get_env("MONGO_DB", "chat")
+MONGO_HOST = get_env("MONGO_HOST", "127.0.0.1")
+MONGO_PORT = get_env("MONGO_PORT", default=27017, cast=int)
 
 mongoengine.connect(
     db=MONGO_DB,

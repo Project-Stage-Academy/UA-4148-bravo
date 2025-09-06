@@ -9,9 +9,9 @@ It is organized by module to allow each developer to maintain and extend their r
 ## Authentication
 
 All endpoints require JWT authentication.  
-Include the token in the `Authorization` header using the following format:
+Include the token in the `access_token` header using the following format:
 
-Authorization: Bearer <your_access_token>
+access_token: <your_access_token>
 
 ---
 

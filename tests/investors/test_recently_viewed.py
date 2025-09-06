@@ -1,10 +1,16 @@
+import os
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from investors.models import Investor, ViewedStartup
 from startups.models import Startup, Industry, Location, Stage
-from users.models import User
+from users.models import User, UserRole
 from django.test import override_settings
+from dotenv import load_dotenv
+
+load_dotenv()
+TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "default_test_password")
+
 
 @override_settings(APPEND_SLASH=False, SECURE_SSL_REDIRECT=False)
 class ViewedStartupTests(APITestCase):
@@ -14,10 +20,16 @@ class ViewedStartupTests(APITestCase):
         """Set up test data: an investor user and two startups."""
         self.client = APIClient()
 
+        role_investor, _ = UserRole.objects.get_or_create(role=UserRole.Role.INVESTOR)
+
         # Create investor user
         self.user = User.objects.create_user(
             email="investor@example.com",
-            password="password123"
+            password=TEST_USER_PASSWORD,
+            first_name="Active",
+            last_name="InvestorCompany",
+            role=role_investor,
+            is_active=True
         )
         self.investor = Investor.objects.create(
             user=self.user,
@@ -31,13 +43,23 @@ class ViewedStartupTests(APITestCase):
         )
 
         # Create startup users
+        role_startup, _ = UserRole.objects.get_or_create(role=UserRole.Role.STARTUP)
+
         self.startup_user1 = User.objects.create_user(
             email="startup1user@example.com",
-            password="password123"
+            password=TEST_USER_PASSWORD,
+            first_name="Active",
+            last_name="StartupCompanyOne",
+            role=role_startup,
+            is_active=True
         )
         self.startup_user2 = User.objects.create_user(
             email="startup2user@example.com",
-            password="password123"
+            password=TEST_USER_PASSWORD,
+            first_name="Active",
+            last_name="StartupCompanyTwo",
+            role=role_startup,
+            is_active=True
         )
 
         # Create startups

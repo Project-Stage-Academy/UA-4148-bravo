@@ -6,6 +6,7 @@ from communications.models import NotificationType, EmailNotificationPreference,
 import logging
 import ddt
 
+from startups.models import Location, Industry, Startup
 from tests.factories import UserFactory
 from tests.communications.factories import NotificationTypeFactory
 from utils.authenticate_client import authenticate_client
@@ -51,6 +52,21 @@ class EmailNotificationPreferencesTestCase(APITestCase):
         )
 
         self.user = UserFactory()
+
+        location = Location.objects.create(country="US", city="NYC", region="NY")
+        industry = Industry.objects.create(name="Tech")
+
+        Startup.objects.create(
+            user=self.user,
+            company_name="Test Startup",
+            location=location,
+            industry=industry,
+            email="startup@example.com",
+            founded_year=2020,
+            team_size=5,
+            stage="mvp"
+        )
+
         authenticate_client(self.client, self.user)
 
         self.email_pref = EmailNotificationPreference.objects.create(user=self.user)

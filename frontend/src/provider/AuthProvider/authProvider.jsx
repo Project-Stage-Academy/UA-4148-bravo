@@ -2,7 +2,9 @@ import {
     createContext,
     useCallback,
     useContext,
+    useEffect,
     useMemo,
+    useRef,
     useState,
 } from 'react';
 import { api } from '../../api/client';
@@ -15,6 +17,9 @@ import PropTypes from 'prop-types';
  * @property {string} last_name - Last name of the user
  * @property {string} email - Email of the user
  * @property {string | null} role - Role of the user (e.g., 'admin', 'user')
+ * @property {string | null} companyType - Type of company
+ * @property {number | null} companyId - ID of the company
+ * @property {boolean} isAuthorized - Defines if user is authorized for visual context
  */
 
 /**
@@ -127,15 +132,62 @@ function AuthProvider({ children }) {
      * @param {string} company_name
      * @param {'startup'|'investor'} company_type
      */
-    const bindCompanyToUser = useCallback(async (company_name, company_type) => {
+    const bindCompanyToUser = useCallback(
+        async (company_name, company_type) => {
+            try {
+                await api.post(`/api/v1/auth/bind-company/`, {
+                    company_name,
+                    company_type,
+                });
+            } catch (err) {
+                console.error(err);
+                throw err;
+            }
+        }, []
+    );
+
+    /**
+     * Me
+     * URL: /api/v1/auth/me/
+     * Req: {  }
+     * Res: 200 { id, email, role, ... }
+     *
+     * @returns {Promise<void|User>}
+     */
+    const loadUser = useCallback(async () => {
         try {
-            await api.post(`/api/v1/auth/bind-company/`, {
-                company_name,
-                company_type
-            });
+            const res = await api.get('/api/v1/auth/me/');
+            const data = res.data;
+
+            const newUser = {
+                id: data.id || data.user_id,
+                email: data.email,
+                first_name: data.first_name,
+                last_name: data.last_name,
+                role: data.role,
+                companyType: data.company_type || null,
+                companyId: data.company_id || null,
+                isAuthorized: true,
+            };
+
+            console.log(newUser)
+            setUser(newUser);
+
+            if (process.env.REACT_APP_NODE_ENV === 'development') {
+                console.log('User is authorized');
+            }
+
+            return newUser;
         } catch (err) {
             console.error(err);
-            throw err;
+
+            if (err.response?.status === 404) {
+                setUser(null);
+            } else {
+                throw err;
+            }
+
+            return null;
         }
     }, []);
 
@@ -147,48 +199,25 @@ function AuthProvider({ children }) {
      *
      * @param {string} email
      * @param {string} password
-     * @returns {Promise<AxiosResponse<any>>}
+     * @returns {Promise<Object<AxiosResponse<any>,User|null>>}
      */
-    const login = useCallback(async (email, password) => {
-        const res = await api
-            .post('/api/v1/auth/jwt/create/', {
-                email,
-                password,
-            })
-            .catch((err) => {
-                console.error(err);
-                throw err;
-            });
-
-        /*
-        TODO
-        await loadUser();
-        */
-        return res;
-    }, []);
-
-    /**
-     * Me
-     * URL: /api/v1/auth/me/
-     * Req: {  }
-     * Res: 200 { id, email, role, ... }
-     *
-     * @returns {Promise<void>}
-     */
-    // eslint-disable-next-line
-    const loadUser = useCallback(async () => {
-        const { data } = await api.get('/api/v1/auth/me/')
-            .then(() => {
-                setUser(data);
-            })
-            .catch((err) => {
-                if (err.response?.status === 404) {
-                    setUser(null);
-                } else {
+    const login = useCallback(
+        async (email, password) => {
+            const res = await api
+                .post('/api/v1/auth/jwt/create/', {
+                    email,
+                    password,
+                })
+                .catch((err) => {
+                    console.error(err);
                     throw err;
-                }
-            });
-    }, []);
+                });
+
+            const newUser = await loadUser();
+            return { res, newUser };
+        },
+        [loadUser]
+    );
 
     /**
      * Logout
@@ -197,10 +226,13 @@ function AuthProvider({ children }) {
      * Res: 205
      */
     const logout = useCallback(async () => {
-        await api.post('/api/v1/auth/logout/').catch(() => {
-            console.log('Logout');
-        });
-        setUser(null);
+        await api
+            .post('/api/v1/auth/logout/')
+            .then(() => setUser(null))
+            .catch((err) => {
+                console.log('Logout error\n', err);
+                if (err.response?.status === 401) setUser(null);
+            });
     }, []);
 
     /**
@@ -243,6 +275,53 @@ function AuthProvider({ children }) {
                 console.error(err);
             });
     }, []);
+
+    /**
+     * Refresh
+     * URL: /api/v1/auth/jwt/refresh/
+     * Req: {  }
+     * Res: 200 {  }
+     */
+    const refreshToken = useCallback(async () => {
+        try {
+            await api.post('/api/v1/auth/jwt/refresh/');
+        } catch (err) {
+            if (err.response) {
+                console.log(
+                    'Refresh token missing or invalid:',
+                    err.response.status
+                );
+
+                if (err.response?.status === 500) {
+                    console.log('Server do not know this token [500]');
+                    await logout();
+                }
+
+                if (err.response?.status === 404) {
+                    console.log('Server do not know this token [404]');
+                    await logout();
+                }
+            } else {
+                console.error(err);
+            }
+            throw err;
+        }
+    }, [logout]);
+
+    const isRefreshing = useRef(false);
+    useEffect(() => {
+        if (isRefreshing.current) return;
+        isRefreshing.current = true;
+
+        (async () => {
+            try {
+                await refreshToken();
+                await loadUser();
+            } catch {
+                await logout();
+            }
+        })();
+    });
 
     return (
         <AuthCtx.Provider

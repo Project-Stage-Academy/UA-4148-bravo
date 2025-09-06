@@ -48,13 +48,21 @@ function LogInPage() {
     // Function to handle form submission with brute force protection
     const doSubmit = ({ form, handleError }) => {
         login(form.data.email, form.data.password)
-            .then(() => navigate('/'))
-            .catch((error) => bruteForce(error, {
-                attempts: form.attempts,
-                setAttempts: form.setAttempts,
-                setIsLocked: form.setIsLocked,
-                handleError
-            }))
+            .then((result) => {
+                if (result.newUser.companyId && result.newUser.companyType) {
+                    navigate('/');
+                } else {
+                    navigate('/auth/register/user-represent');
+                }
+            })
+            .catch((error) =>
+                bruteForce(error, {
+                    attempts: form.attempts,
+                    setAttempts: form.setAttempts,
+                    setIsLocked: form.setIsLocked,
+                    handleError,
+                })
+            )
             .finally(() => form.setIsLocked(false));
     };
 

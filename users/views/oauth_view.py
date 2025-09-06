@@ -127,24 +127,12 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
         if not user:
             raise ValueError("Invalid or expired token")
 
-        existing = User.objects.filter(email=user.email).first()
-        if existing:
-            updated = False
-            if user.first_name and user.first_name != existing.first_name:
-                existing.first_name = user.first_name
-                updated = True
-            if user.last_name and user.last_name != existing.last_name:
-                existing.last_name = user.last_name
-                updated = True
-            if updated:
-                existing.save()
-            user = existing
-
         if provider == "github" and not getattr(user, "email", None):
             try:
                 emails = requests.get(
                     "https://api.github.com/user/emails",
-                    headers={"Authorization": f"token {access_token}"}
+                    headers={"Authorization": f"token {access_token}"},
+                    timeout=(3.05, 5)
                 ).json()
             except Exception as e:
                 logger.error("Failed to fetch GitHub emails", exc_info=True)
@@ -163,16 +151,18 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
             user.role = get_default_user_role()
             user.save()
 
-        self.send_welcome_email(user, provider)
+        created = strategy.session_get('user_created')
+        self.send_welcome_email(user, provider, created)
         return user
 
-    def send_welcome_email(self, user, provider):
+    def send_welcome_email(self, user, provider, created):
         """
         Send welcome email after OAuth login/registration.
         """
         PROVIDER_MAP = {"google": "Google", "github": "GitHub"}
         provider_name = PROVIDER_MAP.get(provider, provider)
-        action = "registered" if not user.last_login else "logged in"
+
+        action = "registered" if created else "logged in"
 
         subject = "Welcome to Forum — your space for innovation!"
         message = render_to_string(
@@ -203,7 +193,7 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
                 {"detail": "Account is not active. Please verify your email."},
                 status=403
             )
-
+        
         refresh = RefreshToken.for_user(user)
         refresh_token = str(refresh)
         access = str(refresh.access_token)
@@ -211,4 +201,5 @@ class OAuthTokenObtainPairView(TokenObtainPairView):
             "user": UserSerializer(user).data
         })
         set_auth_cookies(response, access, refresh_token)
+        
         return response

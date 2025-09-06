@@ -115,3 +115,60 @@ class IsAuthenticatedOr401(BasePermission):
 
     def authenticate_header(self, request):
         return 'Bearer'
+
+
+class IsAuthenticatedInvestor403(BasePermission):
+    """
+    Permission that enforces:
+      - User must be authenticated.
+      - An Investor record must exist for this user.
+    Any failure → 403 Forbidden (per acceptance criteria).
+    """
+
+    message = "Only authenticated investors are allowed to perform this action."
+
+    def has_permission(self, request, view) -> bool:
+        user = getattr(request, "user", None)
+
+        if not user or not user.is_authenticated:
+            logger.warning(
+                "Permission denied: unauthenticated user tried to access %s.",
+                view.__class__.__name__,
+            )
+            return False
+
+        is_investor = hasattr(user, "investor") or Investor.objects.filter(user=user).exists()
+
+        if not is_investor:
+            logger.warning(
+                "Permission denied: user %s is not an investor for %s.",
+                user.id,
+                view.__class__.__name__,
+            )
+            return False
+
+        logger.debug(
+            "Permission granted: user %s is an investor for %s.",
+            user.id,
+            view.__class__.__name__,
+        )
+        return True
+
+
+class HasActiveCompanyAccount(BasePermission):
+    """
+    Custom permission to ensure:
+    - User account is active
+    - User is linked to a Startup OR Investor entity
+    """
+
+    message = "You must have an active account and be linked to a company (Startup or Investor)."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+
+        return user.is_active and (
+                hasattr(user, "startup") or hasattr(user, "investor")
+        )

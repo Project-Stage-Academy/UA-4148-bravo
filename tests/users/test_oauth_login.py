@@ -11,6 +11,7 @@ from django.core.cache import cache
 from users.tasks import send_welcome_oauth_email_task
 from tests.factories import UserFactory
 from uuid import uuid4
+from django.db import connection
 
 User = get_user_model()
 
@@ -39,9 +40,11 @@ class OAuthTokenObtainPairViewTests(TestCase):
         )
         self.oauth_user.set_unusable_password()
         self.oauth_user.save()
-
-    def tearDown(self):
-        self.oauth_user.delete()
+   
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        connection.close()
 
     def test_invalid_payloads(self):
         """Test failure for malformed/incomplete payloads"""
@@ -56,27 +59,29 @@ class OAuthTokenObtainPairViewTests(TestCase):
                 res = self.client.post(self.auth_url, payload, format='json')
                 self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertIn("error", res.data)
-
     def test_unsupported_provider(self):
         """Test failure for unsupported OAuth provider"""
         res = self.client.post(self.auth_url, {'provider': 'twitter', 'access_token': 'token'}, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(res.data['error'], "Unsupported OAuth provider")
 
+
+    @patch('users.pipelines.create_or_update_user')  
     @patch('users.views.oauth_view.load_backend')
-    def test_google_oauth_sets_user_active_based_on_email_verified(self, mock_load_backend):
+    def test_google_oauth_sets_user_active(self, mock_load_backend, mock_create_or_update_user):
         """Test Google OAuth login sets is_active correctly based on email_verified"""
         mock_backend = MagicMock()
 
         active_user = User.objects.get(pk=self.oauth_user.pk)
         active_user.first_name = "Updated"
         active_user.last_name = "Name"
+        active_user.save()
         mock_backend.do_auth.return_value = active_user
-
         mock_load_backend.return_value = mock_backend
 
-        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'},
-                               format='json')
+        mock_create_or_update_user.retuen_value = {'user': active_user}
+
+        res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'}, format='json')
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         user = User.objects.get(email=active_user.email)
@@ -85,7 +90,6 @@ class OAuthTokenObtainPairViewTests(TestCase):
         self.assertTrue(user.is_active)
 
         access_token = res.cookies.get("access_token").value
-        print(access_token)
         client = APIClient()
         client.cookies['access_token'] = access_token
         protected_response = client.get('/api/v1/auth/me/')
@@ -123,15 +127,18 @@ class OAuthTokenObtainPairViewTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['user']['email'], new_user.email)
 
+    @patch('users.pipelines.create_or_update_user')  
     @patch('users.views.oauth_view.load_backend')
-    def test_google_oauth_existing_user(self, mock_load_backend):
+    def test_google_oauth_existing_user(self, mock_load_backend, mock_create_or_update_user):
         """Test Google OAuth login for existing user and profile update"""
         mock_backend = MagicMock()
         updated_user = User.objects.get(pk=self.oauth_user.pk)
         updated_user.first_name = "Updated"
         updated_user.last_name = "Name"
+        updated_user.save()
         mock_backend.do_auth.return_value = updated_user
         mock_load_backend.return_value = mock_backend
+        mock_create_or_update_user.return_value = {'user': updated_user}
 
         res = self.client.post(self.auth_url, {'provider': self.GOOGLE_PROVIDER, 'access_token': 'token'},
                                format='json')
@@ -166,15 +173,18 @@ class OAuthTokenObtainPairViewTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['user']['email'], new_user.email)
 
+    @patch('users.pipelines.create_or_update_user')
     @patch('users.views.oauth_view.load_backend')
-    def test_github_oauth_existing_user(self, mock_load_backend):
+    def test_github_oauth_existing_user(self, mock_load_backend, mock_create_or_update_user):
         """Test GitHub OAuth login for existing user and profile update"""
         mock_backend = MagicMock()
         updated_user = User.objects.get(pk=self.oauth_user.pk)
         updated_user.first_name = "Updated"
         updated_user.last_name = "Full Name"
+        updated_user.save()
         mock_backend.do_auth.return_value = updated_user
         mock_load_backend.return_value = mock_backend
+        mock_create_or_update_user.return_value = {'user': updated_user}
 
         res = self.client.post(self.auth_url, {'provider': self.GITHUB_PROVIDER, 'access_token': 'token'},
                                format='json')
@@ -204,7 +214,6 @@ class OAuthTokenObtainPairViewTests(TestCase):
                     )
                     self.assertEqual(res.status_code, expected_status)
                     self.assertIn('Email not provided', res.data['detail'])
-
     @patch('users.views.oauth_view.load_backend')
     def test_oauth_expired_token(self, mock_load_backend):
         """
@@ -223,7 +232,6 @@ class OAuthTokenObtainPairViewTests(TestCase):
                 )
                 self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertIn("OAuth authentication failed", res.data['error'])
-
     # --- Edge & safety ---
     @patch("users.views.oauth_view.requests.get")
     def test_no_real_http_calls(self, mock_get):
@@ -240,7 +248,6 @@ class OAuthTokenObtainPairViewTests(TestCase):
     def test_jwt_response_sets_cookie(self, mock_load_backend):
         """Test that JWT response properly sets refresh token cookie"""
         mock_backend = MagicMock()
-
         active_user = self.oauth_user
         mock_backend.do_auth.return_value = active_user
         mock_load_backend.return_value = mock_backend
@@ -263,15 +270,12 @@ class TestSendWelcomeEmail(TestCase):
         """Enable Celery eager mode for synchronous task execution during tests."""
         self._orig_always_eager = third_party_settings.CELERY_TASK_ALWAYS_EAGER
         self._orig_eager_propagates = third_party_settings.CELERY_TASK_EAGER_PROPAGATES
-
         third_party_settings.CELERY_TASK_ALWAYS_EAGER = True
         third_party_settings.CELERY_TASK_EAGER_PROPAGATES = True
-
     def tearDown(self):
         """Restore original Celery settings."""
         third_party_settings.CELERY_TASK_ALWAYS_EAGER = self._orig_always_eager
         third_party_settings.CELERY_TASK_EAGER_PROPAGATES = self._orig_eager_propagates
-
     @patch("users.tasks.send_mail")
     def test_send_email_task_success(self, mock_send_mail):
         """
@@ -280,7 +284,6 @@ class TestSendWelcomeEmail(TestCase):
         """
         test_recipient_list = ["you@example.com"]
         result = send_welcome_oauth_email_task.delay("Subject", "Hello", test_recipient_list)
-
         self.assertEqual(result.status, "SUCCESS")
         self.assertEqual(result.result, f"Email sent to {test_recipient_list}")
         mock_send_mail.assert_called_once_with(
@@ -290,18 +293,15 @@ class TestSendWelcomeEmail(TestCase):
             test_recipient_list,
             fail_silently=False
         )
-
     @patch("users.tasks.send_mail")
     def test_send_email_task_missing_params(self, mock_send_mail):
         """
         Test that the task handles missing parameters gracefully without sending an email.
         """
         result = send_welcome_oauth_email_task.delay("", "", [])
-
         self.assertEqual(result.status, "SUCCESS")
         self.assertEqual(result.result, "Invalid email parameters")
         mock_send_mail.assert_not_called()
-
     @patch("users.tasks.send_mail", side_effect=Exception("SMTP error"))
     def test_send_email_failure(self, mock_send_mail):
         """

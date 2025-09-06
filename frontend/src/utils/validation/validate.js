@@ -11,7 +11,7 @@ export class Validator {
      * @type {Object<string, function(value: any, data?: Object): boolean>}
      */
     static validators = {
-        companyName: (value) => /^[\p{L}’ʼ-]{2,}$/u.test(value),
+        companyName: (value) => /^\p{L}+(?:[ ’ʼ-]\p{L}+)*$/u.test(value),
         email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
         password: (value) => /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(value),
         confirmPassword: (value, data) => typeof value === "string" && value.trim() !== "" && value === data.password,
@@ -73,6 +73,7 @@ export class Validator {
         companyAlreadyExist: "Компанія з такою назвою вже зареєстрована",
         noUserFoundByProvidedData: "Облікового запис за вказаними обліковими даними не знайдено",
         emailNotExists: "Зазначена електронна адреса не зареєстрована",
+        userAlreadyBound: 'Користувач вже пов’язаний з компанією',
         unexpected: "Сталася непередбачена помилка. Будь ласка, спробуйте ще раз пізніше"
     }
 

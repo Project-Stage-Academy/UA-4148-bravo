@@ -5,8 +5,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.test.utils import override_settings
 from communications.models import Notification, NotificationPriority, NotificationType
+from startups.models import Location, Industry, Startup
 from tests.factories import UserFactory
-from tests.communications.factories import NotificationTypeFactory
 from utils.authenticate_client import authenticate_client
 
 User = get_user_model()
@@ -15,9 +15,22 @@ User = get_user_model()
 @override_settings(SECURE_SSL_REDIRECT=False)
 class NotificationsApiTestCase(APITestCase):
     def setUp(self):
-        # Users
         self.user = UserFactory()
         self.other_user = UserFactory()
+
+        location = Location.objects.create(country="US", city="NYC", region="NY")
+        industry = Industry.objects.create(name="Tech")
+
+        Startup.objects.create(
+            user=self.user,
+            company_name="Test Startup",
+            location=location,
+            industry=industry,
+            email="startup@example.com",
+            founded_year=2020,
+            team_size=5,
+            stage="mvp"
+        )
 
         # Auth as self.user (same pattern as other tests)
         authenticate_client(self.client, self.user)
@@ -148,7 +161,7 @@ class NotificationsApiTestCase(APITestCase):
         self.assertIn('redirect', resp.data)
         redirect = resp.data['redirect']
         self.assertEqual(redirect.get('kind'), 'message')
-        self.assertEqual(redirect.get('id'), 99)
+        self.assertEqual(redirect.get('id'), '99')
 
     def test_delete_notification(self):
         url = reverse('communications:notification-detail',

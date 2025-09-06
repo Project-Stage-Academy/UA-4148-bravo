@@ -26,7 +26,6 @@ urlpatterns = [
 
     # Health & allauth
     path('health/elasticsearch/', elasticsearch_healthcheck),
-    path('accounts/', include('allauth.urls')),
 
     path("api/v1/chat/", include("chat.urls")),
 
