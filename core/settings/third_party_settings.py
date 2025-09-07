@@ -262,13 +262,15 @@ CHANNEL_LAYERS = {
     },
 }
 
-MONGO_DB = get_env("MONGO_DB", "chat")
+MONGO_DB = get_env("MONGO_DB", "chat_test")
 MONGO_HOST = get_env("MONGO_HOST", "127.0.0.1")
 MONGO_PORT = get_env("MONGO_PORT", default=27017, cast=int)
+MONGO_USER = get_env("MONGO_INITDB_ROOT_USERNAME", "root")
+MONGO_PASSWORD = get_env("MONGO_INITDB_ROOT_PASSWORD", "secret")
 
-mongoengine.connect(
-    db=MONGO_DB,
-    host=MONGO_HOST,
-    port=MONGO_PORT,
-    serverSelectionTimeoutMS=5000
-)
+if MONGO_USER and MONGO_PASSWORD:
+    uri = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource=admin"
+else:
+    uri = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}"
+
+mongoengine.connect(db=MONGO_DB, host=uri, alias="chat", serverSelectionTimeoutMS=5000)
