@@ -9,9 +9,9 @@ It is organized by module to allow each developer to maintain and extend their r
 ## Authentication
 
 All endpoints require JWT authentication.  
-Include the token in the `Authorization` header using the following format:
+Include the token in the `access_token` header using the following format:
 
-Authorization: Bearer <your_access_token>
+access_token: <your_access_token>
 
 ---
 
@@ -835,5 +835,151 @@ registration. Users can either bind to an existing company or create a new one.
 ```json
 {
   "detail": "Room 'investor_startup_chat' does not exist."
+}
+```
+
+---
+
+## Investors API
+
+### Project Follow Endpoints
+
+#### Follow a Project
+
+- `POST /api/v1/projects/{project_id}/follow/`
+  
+Allows authenticated investors to follow a project to receive notifications about project updates.
+
+**Authentication**: Required (Investor only)
+
+**Request Parameters**:
+- `project_id` (path): ID of the project to follow
+
+**Response**: 201 Created
+
+```json
+{
+  "id": 1,
+  "investor": 5,
+  "project": 3,
+  "followed_at": "2025-09-06T19:00:00Z",
+  "is_active": true,
+  "investor_name": "Tech Ventures Inc",
+  "project_title": "AI Healthcare Platform",
+  "startup_name": "HealthTech Solutions"
+}
+```
+
+**Error Responses**:
+
+- 400 Bad Request - Already following or self-follow attempt:
+```json
+{
+  "detail": "You are already following this project."
+}
+```
+
+- 403 Forbidden - Not authenticated or not an investor:
+```json
+{
+  "detail": "Authentication credentials were not provided."
+}
+```
+
+- 404 Not Found - Project doesn't exist:
+```json
+{
+  "detail": "Project not found."
+}
+```
+
+#### List Followed Projects
+
+- `GET /api/v1/investors/follows/`
+
+Returns a paginated list of projects followed by the authenticated investor.
+
+**Authentication**: Required (Investor only)
+
+**Response**: 200 OK
+
+```json
+{
+  "count": 25,
+  "next": "http://api.example.com/api/v1/investors/follows/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "investor": 5,
+      "project": 3,
+      "followed_at": "2025-09-06T19:00:00Z",
+      "is_active": true,
+      "investor_name": "Tech Ventures Inc",
+      "project_title": "AI Healthcare Platform",
+      "startup_name": "HealthTech Solutions"
+    }
+  ]
+}
+```
+
+#### Unfollow a Project
+
+- `PATCH /api/v1/investors/follows/{follow_id}/`
+
+Allows an investor to unfollow a project (soft delete).
+
+**Authentication**: Required (Investor only)
+
+**Request Body**:
+```json
+{
+  "is_active": false
+}
+```
+
+**Response**: 200 OK
+
+```json
+{
+  "detail": "Successfully unfollowed the project."
+}
+```
+
+**Error Responses**:
+
+- 400 Bad Request - Not currently following:
+```json
+{
+  "detail": "You are not currently following this project."
+}
+```
+
+#### List Project Followers
+
+- `GET /api/v1/projects/{project_id}/followers/`
+
+Returns a list of investors following a specific project.
+
+**Authentication**: Required
+
+**Response**: 200 OK
+
+```json
+{
+  "count": 12,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "investor": 5,
+      "project": 3,
+      "followed_at": "2025-09-06T19:00:00Z",
+      "is_active": true,
+      "investor_name": "Tech Ventures Inc",
+      "investor_email": "contact@techventures.com"
+    }
+  ]
 }
 ```

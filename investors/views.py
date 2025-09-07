@@ -1,22 +1,34 @@
-from django.utils import timezone
 import logging
 from django.db import IntegrityError
-from rest_framework import viewsets, status, generics, pagination
-from rest_framework.permissions import IsAuthenticated, BasePermission
-from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from investors.models import Investor, SavedStartup
-from investors.permissions import IsSavedStartupOwner
-from investors.serializers.investor import InvestorSerializer, SavedStartupSerializer, ViewedStartupSerializer
-from investors.serializers.investor_create import InvestorCreateSerializer
 from django.shortcuts import get_object_or_404
-from .models import ViewedStartup
-from startups.models import Startup
+from django.utils import timezone
+from django.db.models import Q
+from rest_framework import viewsets, status, generics, pagination, permissions
+from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveUpdateAPIView
+from rest_framework.views import APIView
+from django_filters.rest_framework import DjangoFilterBackend
+
 from users.cookie_jwt import CookieJWTAuthentication
-from users.permissions import IsInvestor, CanCreateCompanyPermission, IsAuthenticatedOr401
-from startups.models import Startup
+from users.permissions import (
+    IsAuthenticatedOr401, CanCreateCompanyPermission, HasActiveCompanyAccount, 
+    IsAuthenticatedInvestor403, IsInvestor
+)
+from rest_framework.permissions import IsAuthenticated
+from .permissions import IsSavedStartupOwner
 from users.views.base_protected_view import CookieJWTProtectedView
+from .models import Investor, ProjectFollow, ViewedStartup, SavedStartup
+from .serializers import InvestorSerializer, InvestorCreateSerializer
+from .serializers.project_follow import (
+    ProjectFollowCreateSerializer,
+    ProjectFollowSerializer,
+)
+from .serializers.investor import SavedStartupSerializer, ViewedStartupSerializer, InvestorListSerializer
+from .filters import InvestorFilter
+from projects.models import Project
+from startups.models import Startup
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +42,7 @@ class InvestorViewSet(viewsets.ModelViewSet):
     serializer_class = InvestorSerializer
     authentication_classes = [CookieJWTAuthentication]
     permission_classes_by_action = {
-        "create": [IsAuthenticatedOr401, CanCreateCompanyPermission],
+        "create": [IsAuthenticatedOr401, CanCreateCompanyPermission, HasActiveCompanyAccount],
         "default": [IsAuthenticatedOr401],
     }
 
@@ -55,7 +67,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
     ViewSet for managing SavedStartup instances.
     Only authenticated investors who own the SavedStartup can modify/delete it.
     """
-    permission_classes = [IsAuthenticatedOr401, IsInvestor, IsSavedStartupOwner]
+    permission_classes = [IsAuthenticatedOr401, IsInvestor, IsSavedStartupOwner, HasActiveCompanyAccount]
     authentication_classes = [CookieJWTAuthentication]
     serializer_class = SavedStartupSerializer
 
@@ -215,6 +227,7 @@ class SavedStartupViewSet(viewsets.ModelViewSet):
         )
         super().perform_destroy(instance)
 
+
 class ViewedStartupPagination(pagination.PageNumberPagination):
     """
     Pagination class for recently viewed startups.
@@ -231,11 +244,14 @@ class ViewedStartupListView(generics.ListAPIView):
     Retrieve a paginated list of recently viewed startups for the authenticated investor.
     """
     serializer_class = ViewedStartupSerializer
-    permission_classes = [IsAuthenticated, IsInvestor]
+    permission_classes = [IsAuthenticated, IsInvestor, HasActiveCompanyAccount]
     pagination_class = ViewedStartupPagination
 
     def get_queryset(self):
-        return ViewedStartup.objects.filter(investor=self.request.user.investor).select_related('startup').order_by("-viewed_at")
+        return ViewedStartup.objects.filter(investor=self.request.user.investor).select_related('startup').order_by(
+            "-viewed_at")
+
+
 class ViewedStartupCreateView(APIView):
     """
     POST /api/v1/startups/view/{startup_id}/
@@ -248,7 +264,7 @@ class ViewedStartupCreateView(APIView):
         startup = get_object_or_404(Startup, id=startup_id)
         if not hasattr(request.user, "investor"):
             return Response({"detail": "User is not an investor."}, status=status.HTTP_403_FORBIDDEN)
-        investor = request.user.investor 
+        investor = request.user.investor
 
         viewed_obj, created = ViewedStartup.objects.update_or_create(
             investor=investor,
@@ -266,7 +282,7 @@ class ViewedStartupClearView(APIView):
     Clear the authenticated investor's viewed startups history.
     Return number of deleted entries.
     """
-    permission_classes = [IsAuthenticated, IsInvestor]
+    permission_classes = [IsAuthenticated, IsInvestor, HasActiveCompanyAccount]
 
     def delete(self, request):
         investor = request.user.investor
@@ -277,7 +293,10 @@ class ViewedStartupClearView(APIView):
             status=status.HTTP_200_OK
         )
 
-class SaveStartupView(CookieJWTProtectedView):
+
+class SaveStartupView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedOr401, HasActiveCompanyAccount]
 
     def post(self, request, startup_id: int):
         """
@@ -300,3 +319,220 @@ class SaveStartupView(CookieJWTProtectedView):
                 obj = SavedStartup.objects.get(investor=request.user.investor, startup=startup)
                 return Response(SavedStartupSerializer(obj).data, status=status.HTTP_200_OK)
             raise
+
+class InvestorListView(generics.ListAPIView):
+    """
+    API view to list investors with filtering and strict ordering validation.
+    Only authenticated users can access. Invalid ordering fields return 400.
+    """
+    queryset = Investor.objects.all()
+    serializer_class = InvestorListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = InvestorFilter
+
+    def get_queryset(self):
+        queryset = Investor.objects.all()
+        ordering = self.request.query_params.get("ordering")
+        allowed_ordering_fields = [f.name for f in Investor._meta.fields]
+
+        if ordering:
+            field_name = ordering.lstrip("-")
+            if field_name not in allowed_ordering_fields:
+                raise ValidationError({"error": "Invalid ordering field"})
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by("company_name")
+        return queryset
+
+class InvestorDetailView(generics.RetrieveAPIView):
+    """
+    Returns a single investor profile.
+    Only authenticated users can access.
+    """
+    queryset = Investor.objects.all()
+    serializer_class = InvestorSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class ProjectFollowCreateView(CreateAPIView):
+    """
+    API view for creating project follow relationships.
+    
+    Allows authenticated investors to follow projects to receive notifications
+    about project updates and milestones.
+    
+    POST /api/v1/projects/{project_id}/follow/
+    """
+    serializer_class = ProjectFollowCreateSerializer
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedInvestor403, HasActiveCompanyAccount]
+
+    def get_serializer_context(self):
+        """Add project and request to serializer context."""
+        context = super().get_serializer_context()
+        project_id = self.kwargs.get('project_id')
+        try:
+            project = get_object_or_404(Project, id=project_id)
+            context['project'] = project
+        except (ValueError, Project.DoesNotExist):
+            pass
+        return context
+
+    def create(self, request, *args, **kwargs):
+        """Create a new project follow relationship."""
+        project_id = self.kwargs.get('project_id')
+        
+        try:
+            project = get_object_or_404(Project, id=project_id)
+        except (ValueError, Project.DoesNotExist):
+            return Response(
+                {"detail": "Project not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = self.get_serializer(data=request.data)
+        
+        try:
+            serializer.is_valid(raise_exception=True)
+            project_follow = serializer.save()
+            
+            logger.info(
+                f"Project follow created: investor={request.user.investor.id}, project={project.id}",
+                extra={
+                    "investor_id": request.user.investor.id,
+                    "project_id": project.id,
+                    "project_follow_id": project_follow.id
+                }
+            )
+            
+            return Response(
+                ProjectFollowSerializer(project_follow).data,
+                status=status.HTTP_201_CREATED
+            )
+            
+        except IntegrityError:
+            return Response(
+                {"detail": "You are already following this project."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(
+                f"Error creating project follow: {str(e)}",
+                extra={
+                    "investor_id": getattr(request.user, 'investor', {}).get('id'),
+                    "project_id": project.id
+                },
+                exc_info=True
+            )
+            return Response(
+                {"detail": "An error occurred while following the project."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ProjectFollowListView(ListAPIView):
+    """
+    API view for listing project follows for the authenticated investor.
+    
+    GET /api/v1/investments/follows/
+    """
+    serializer_class = ProjectFollowSerializer
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedInvestor403, HasActiveCompanyAccount]
+    pagination_class = pagination.PageNumberPagination
+
+    def get_queryset(self):
+        """Return active project follows for the authenticated investor."""
+        return ProjectFollow.objects.filter(
+            investor=self.request.user.investor,
+            is_active=True
+        ).select_related(
+            'investor__user',
+            'project__startup'
+        ).order_by('-followed_at')
+
+
+class ProjectFollowDetailView(RetrieveUpdateAPIView):
+    """
+    API view for retrieving and updating (unfollowing) project follows.
+    
+    GET /api/v1/investments/follows/{id}/
+    PATCH /api/v1/investments/follows/{id}/ (for unfollowing)
+    """
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedInvestor403, HasActiveCompanyAccount]
+
+    def get_queryset(self):
+        """Return project follows for the authenticated investor."""
+        return ProjectFollow.objects.filter(
+            investor=self.request.user.investor
+        ).select_related(
+            'investor__user',
+            'project__startup'
+        )
+
+    def get_serializer_class(self):
+        """Return ProjectFollowSerializer for all operations."""
+        return ProjectFollowSerializer
+
+    def patch(self, request, *args, **kwargs):
+        """Handle unfollowing a project (soft delete)."""
+        instance = self.get_object()
+        
+        if not instance.is_active:
+            return Response(
+                {"detail": "You are not currently following this project."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        instance.is_active = False
+        instance.save(update_fields=['is_active'])
+        
+        logger.info(
+            f"Project unfollowed: investor={request.user.investor.id}, project={instance.project.id}",
+            extra={
+                "investor_id": request.user.investor.id,
+                "project_id": instance.project.id,
+                "project_follow_id": instance.id
+            }
+        )
+        
+        return Response(
+            {"detail": "Successfully unfollowed the project."},
+            status=status.HTTP_200_OK
+        )
+
+
+class ProjectFollowersListView(ListAPIView):
+    """
+    API view for listing followers of a specific project.
+    
+    This view is intended for startup owners to see who is following their projects.
+    
+    GET /api/v1/projects/{project_id}/followers/
+    """
+    serializer_class = ProjectFollowSerializer
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticatedOr401]
+    pagination_class = pagination.PageNumberPagination
+
+    def get_queryset(self):
+        """Return active followers for the specified project."""
+        project_id = self.kwargs.get('project_id')
+        
+        try:
+            project = get_object_or_404(Project, id=project_id)
+        except (ValueError, Project.DoesNotExist):
+            return ProjectFollow.objects.none()
+        
+        return ProjectFollow.objects.filter(
+            project=project,
+            is_active=True
+        ).select_related(
+            'investor__user',
+            'project__startup'
+        ).order_by('-followed_at')

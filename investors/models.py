@@ -151,3 +151,85 @@ class ViewedStartup(models.Model):
 
     def __str__(self):
         return f"{self.investor} viewed {self.startup} at {self.viewed_at}"
+
+
+class ProjectFollow(models.Model):
+    """
+    Represents an investor following a specific project.
+    
+    This model tracks when investors follow projects to receive updates
+    and notifications about project progress, milestones, and changes.
+    
+    Fields:
+        investor (ForeignKey): Reference to the Investor following the project.
+        project (ForeignKey): Reference to the Project being followed.
+        followed_at (DateTime): Timestamp when the follow relationship was created.
+        is_active (Boolean): Whether the follow relationship is currently active.
+        
+    Constraints:
+        - Investors cannot follow their own startup's projects.
+        - Each investor can follow a project only once (unique constraint).
+    """
+    
+    investor = models.ForeignKey(
+        'investors.Investor',
+        on_delete=models.CASCADE,
+        related_name='followed_projects'
+    )
+    project = models.ForeignKey(
+        'projects.Project',
+        on_delete=models.CASCADE,
+        related_name='followers'
+    )
+    followed_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this follow relationship is currently active"
+    )
+    
+    def clean(self):
+        """Custom validation to prevent investors from following their own projects."""
+        try:
+            if not self.investor_id or not self.project_id:
+                return
+                
+            startup = getattr(self.project, 'startup', None)
+            if not startup:
+                return
+                
+            investor_user = getattr(self.investor, 'user', None)
+            startup_user = getattr(startup, 'user', None)
+            
+            if (investor_user and startup_user and 
+                getattr(investor_user, 'pk', None) == getattr(startup_user, 'pk', None)):
+                raise ValidationError({
+                    "non_field_errors": ["Investors cannot follow their own startup's projects."]
+                })
+        except (AttributeError, self.DoesNotExist):
+            pass
+    
+    def save(self, *args, **kwargs):
+        """Override save to run validation."""
+        self.clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.investor.company_name} follows {self.project.title}"
+    
+    class Meta:
+        db_table = "project_follows"
+        ordering = ["-followed_at"]
+        verbose_name = "Project Follow"
+        verbose_name_plural = "Project Follows"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["investor", "project"],
+                name="unique_investor_project_follow"
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["investor"], name="idx_project_follow_investor"),
+            models.Index(fields=["project"], name="idx_project_follow_project"),
+            models.Index(fields=["followed_at"], name="idx_project_follow_followed_at"),
+            models.Index(fields=["is_active"], name="idx_project_follow_is_active"),
+        ]
