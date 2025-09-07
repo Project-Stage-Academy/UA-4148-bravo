@@ -80,6 +80,7 @@ class NotificationTriggersTests(TransactionTestCase):
         self.assertEqual(notif.notification_type.code, "startup_followed")
         self.assertEqual(int(notif.related_startup_id), int(self.startup.id))
         self.assertIn("followed your startup", notif.message.lower())
+
     def test_duplicate_follow_does_not_create_duplicate_notification(self):
         SavedStartup.objects.create(investor=self.investor, startup=self.startup)
         try:
@@ -103,3 +104,20 @@ class NotificationTriggersTests(TransactionTestCase):
             pass
 
         self.assertEqual(Notification.objects.count(), 1, "Duplicate notification created")
+
+    def test_follow_own_startup_does_not_create_notification(self):
+        """An investor should not receive a notification for saving their own startup."""
+        investor_owned_startup = Startup.objects.create(
+            user=self.investor_user,
+            company_name="My Own Startup",
+            industry=self.industry,
+            location=self.location,
+            founded_year=2023,
+            email="myown@example.com",
+        )
+        
+        self.assertEqual(Notification.objects.count(), 0)
+
+        SavedStartup.objects.create(investor=self.investor, startup=investor_owned_startup)
+
+        self.assertEqual(Notification.objects.count(), 0, "Notification was created for saving one's own startup.")

@@ -3,6 +3,10 @@ from pathlib import Path
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 from utils.get_env import get_env
+from decouple import config
+from dotenv import load_dotenv 
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
