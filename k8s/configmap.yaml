@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: django-config
+  namespace: forum
+data:
+  # Django
+  DJANGO_SETTINGS_MODULE: "core.settings.third_party_settings"
+  DEBUG: "False"
+  DOCS_ENABLED: "True"
+  ALLOWED_HOSTS: |
+    - "127.0.0.1"
+    - "localhost"
+    - "forum.local"
+
+  # Database
+  DB_NAME: "ua4148"
+  DB_USER: "postgres"
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+
+  # Redis (for Celery & Channels)
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+
+  # Elasticsearch
+  ELASTICSEARCH_HOST: "http://elasticsearch:9200"
+
+  # Locale
+  LANGUAGE_CODE: "en-us"
+  TIME_ZONE: "UTC"
+
+  # Frontend URL
+  FRONTEND_URL: "http://localhost:3000"
+
+  # Custom for entrypoint.sh
+  MAX_RETRIES: "5"
+  SLEEP_DURATION: "2"
+
+
+
+
+
+
+
