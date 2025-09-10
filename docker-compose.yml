@@ -174,7 +174,7 @@ services:
     command: ["db", "python", "manage.py", "test"]
     
   mongo:
-    image: mongo:6
+    image: mongo:4.4
     container_name: mongodb
     restart: always
     ports:

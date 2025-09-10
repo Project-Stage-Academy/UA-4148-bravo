@@ -678,9 +678,6 @@ registration. Users can either bind to an existing company or create a new one.
 ### Request Example
 
 - POST /api/v1/chat/conversations/
-  Headers:    
-  Content-Type: application/json        
-  Cookie: access_token=<JWT_TOKEN>
 
 ```json
 {
@@ -733,13 +730,10 @@ registration. Users can either bind to an existing company or create a new one.
 ### Request Example
 
 - POST /api/v1/chat/messages/
-  Headers:    
-  Content-Type: application/json    
-  Cookie: access_token=<JWT_TOKEN>
 
 ```json
 {
-  "room": "investor_startup_chat",
+  "room_name": "investor_startup_chat",
   "sender_email": "investor@example.com",
   "receiver_email": "startup@example.com",
   "text": "Hello!"
@@ -750,7 +744,7 @@ registration. Users can either bind to an existing company or create a new one.
 
 ```json
 {
-  "room": "investor_startup_chat",
+  "room_name": "investor_startup_chat",
   "sender_email": "investor@example.com",
   "receiver_email": "startup@example.com",
   "text": "Hello!",
@@ -794,8 +788,6 @@ registration. Users can either bind to an existing company or create a new one.
 ### Request Example
 
 - GET /api/v1/chat/conversations/investor_startup_chat/messages/
-  Headers:    
-  Cookie: access_token=<JWT_TOKEN>
 
 ### Example Response
 
